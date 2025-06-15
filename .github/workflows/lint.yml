@@ -22,8 +22,9 @@ jobs:
           fetch-depth: 0
       - name: Super-Linter
         uses: super-linter/super-linter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           gofmt_version: "1.24"
 
   govulncheck:
