@@ -1,5 +1,11 @@
 # MCP-RIPEStat
 
+[![Lint](https://github.com/taihen/mcp-ripestat/actions/workflows/lint.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/lint.yml)
+[![Test](https://github.com/taihen/mcp-ripestat/actions/workflows/test.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/test.yml)
+[![Build](https://github.com/taihen/mcp-ripestat/actions/workflows/build.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/build.yml)
+[![Release](https://github.com/taihen/mcp-ripestat/actions/workflows/release.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/taihen/mcp-ripestat)](https://goreportcard.com/report/github.com/taihen/mcp-ripestat)
+
 `mcp-ripestat` is a Go-based, locally run MCP server that fetches and serves data from the RIPEstat Data API.
 
 ## About RIPEstat
