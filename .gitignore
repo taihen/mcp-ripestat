@@ -26,6 +26,3 @@ local/
 
 # Build artifacts
 bin/
-*.o
-*.a
-mcp-ripestat 
