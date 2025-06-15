@@ -1,5 +1,7 @@
 # Sprints
 
+This file provides a high-level overview of the development sprints for the `mcp-ripestat` project. Each entry in the table below corresponds to a specific feature implementation, its associated development branch, the target release version, and the RIPEstat API endpoint(s) it utilizes.
+
 | Sprint | Branch | Version | Feature | RIPEstat Endpoint(s) |
 |--------|--------|---------|---------|----------------------|
 | 2 | `sprint-2` | v0.2.0 | Network Information | `network-info` |
