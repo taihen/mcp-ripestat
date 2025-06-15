@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.go text diff=gofmt
+*.mod text diff=gofmt
+*.sum text
+*.json text
+*.yml text
+*.yaml text
+*.md text
