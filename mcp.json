@@ -1,0 +1,14 @@
+{
+  "ripestat": {
+    "name": "mcp-ripestat-local",
+    "description": "Local MCP RIPEstat server for RIPEstat Data API integration.",
+    "url": "http://localhost:8080",
+    "endpoints": [
+      {
+        "path": "/network-info",
+        "method": "GET",
+        "description": "Get network information for an IP address or prefix. Query param: resource"
+      }
+    ]
+  }
+}

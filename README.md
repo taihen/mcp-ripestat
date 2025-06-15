@@ -8,6 +8,10 @@ RIPEstat is a large-scale information service and the RIPE NCC's open data platf
 
 For more information, visit the [RIPEstat website](https://stat.ripe.net/) and consult the [Data API documentation](https://stat.ripe.net/docs/data_api).
 
+## Architectural Rationale
+
+`mcp-ripestat` is implemented as an HTTP server rather than a command-line interface (CLI) tool to facilitate centralized deployment. This architecture allows the service to be installed on a single server and accessed by multiple team members and other MCP clients across a network. It promotes reusability, simplifies client-side configuration, and provides a single, consistent access point for RIPEstat data.
+
 ## Disclaimer
 
 This software is currently under active development. It may not be stable and is subject to change. Please use with caution.
@@ -24,11 +28,91 @@ go build -o mcp-ripestat ./cmd/mcp-ripestat
 
 ### Run
 
-To run the server:
+To run the server locally:
 
 ```sh
+go build -o mcp-ripestat ./cmd/mcp-ripestat
 ./mcp-ripestat
 ```
+
+By default, the server runs on port `8080`. You can change this by setting the `--port` flag. You can also enable debug logging with the `--debug` flag.
+
+```sh
+./mcp-ripestat --port=8888 --debug
+```
+
+## API Endpoints
+
+### `GET /network-info`
+
+Returns network information for an IP address or prefix using the RIPEstat `network-info` data API.
+
+**Query parameters:**
+
+- `resource` (required): The IP address or prefix to query (e.g., `140.78.90.50`).
+
+**Example:**
+
+```sh
+curl 'http://localhost:8080/network-info?resource=140.78.90.50'
+```
+
+**Sample response:**
+
+```json
+{
+  "messages": [],
+  "see_also": [],
+  "version": "1.1",
+  "data_call_name": "network-info",
+  "data_call_status": "supported",
+  "cached": false,
+  "data": {
+    "asns": ["1205"],
+    "prefix": "140.78.0.0/16"
+  },
+  "query_id": "...",
+  "process_time": 3,
+  "server_id": "...",
+  "build_version": "...",
+  "status": "ok",
+  "status_code": 200,
+  "time": "..."
+}
+```
+
+## MCP Configuration for Local Development
+
+To integrate the server with Cursor (and other MCP clients), add the following configuration to your global `mcp.json` file (e.g., `~/.cursor/mcp.json` on macOS/Linux).
+
+The example [mcp.json](./mcp.json) in this repository can be used as a reference.
+
+**Example Configuration:**
+
+Merge the `ripestat` object from this repository's `mcp.json` into your existing configuration file. For example:
+
+```json
+{
+  "anthropic": {
+    "url": "...",
+    "endpoints": []
+  },
+  "ripestat": {
+    "name": "mcp-ripestat-local",
+    "description": "Local MCP RIPEstat server for RIPEstat Data API integration.",
+    "url": "http://localhost:8080",
+    "endpoints": [
+      {
+        "path": "/network-info",
+        "method": "GET",
+        "description": "Get network information for an IP address or prefix. Query param: resource"
+      }
+    ]
+  }
+}
+```
+
+After adding this and restarting Cursor, you can test it with a prompt like: `What is the network info for 140.78.90.50?`
 
 ## License
 
