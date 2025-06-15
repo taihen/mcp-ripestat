@@ -82,7 +82,7 @@ func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := networkinfo.GetNetworkInfo(ctx, resource)
 	if err != nil {
 		slog.Error("network-info call failed", "err", err)
-		http.Error(w, `{"error":"failed to fetch network info"}`, http.StatusBadGateway)
+		writeJSONError(w, "failed to fetch network info", http.StatusBadGateway)
 		return
 	}
 
