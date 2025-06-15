@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -27,10 +28,18 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
 	slog.SetDefault(logger)
 
+	if err := run(context.Background(), *port); err != nil {
+		slog.Error("server failed", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, port string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/network-info", networkInfoHandler)
+	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
-	addr := ":" + *port
+	addr := ":" + port
 
 	server := &http.Server{
 		Addr:    addr,
@@ -41,25 +50,83 @@ func main() {
 		slog.Info("MCP RIPEstat server starting", "addr", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server failed to start", "err", err)
-			os.Exit(1)
 		}
 	}()
 
 	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	slog.Info("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	select {
+	case <-quit:
+		slog.Info("shutting down server...")
+	case <-ctx.Done():
+		slog.Info("shutting down server due to context cancellation...")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("server shutdown failed", "err", err)
-		os.Exit(1)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server shutdown failed: %w", err)
 	}
 
 	slog.Info("server exited gracefully")
+	return nil
+}
+
+// Manifest represents the structure of the .well-known/mcp/manifest.json file.
+type Manifest struct {
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Functions   []Function `json:"functions"`
+}
+
+// Function represents a single function in the manifest.
+type Function struct {
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Parameters  []Parameter `json:"parameters"`
+	Returns     Return      `json:"returns"`
+}
+
+// Parameter represents a single parameter for a function.
+type Parameter struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description"`
+}
+
+// Return represents the return type of a function.
+type Return struct {
+	Type string `json:"type"`
+}
+
+func manifestHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("received manifest request", "remote_addr", r.RemoteAddr)
+	manifest := Manifest{
+		Name:        "mcp-ripestat",
+		Description: "A server for the RIPEstat Data API, providing network information for IP addresses and prefixes.",
+		Functions: []Function{
+			{
+				Name:        "getNetworkInfo",
+				Description: "Get network information for an IP address or prefix.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP address or prefix to query.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
+		},
+	}
+	writeJSON(w, manifest, http.StatusOK)
 }
 
 func networkInfoHandler(w http.ResponseWriter, r *http.Request) {

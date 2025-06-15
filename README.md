@@ -49,6 +49,42 @@ By default, the server runs on port `8080`. You can change this by setting the `
 
 ## API Endpoints
 
+### `GET /.well-known/mcp/manifest.json`
+
+Returns the MCP manifest, which describes the server's capabilities.
+
+**Example:**
+
+```sh
+curl 'http://localhost:8080/.well-known/mcp/manifest.json'
+```
+
+**Sample response:**
+
+```json
+{
+  "name": "mcp-ripestat",
+  "description": "A server for the RIPEstat Data API, providing network information for IP addresses and prefixes.",
+  "functions": [
+    {
+      "name": "getNetworkInfo",
+      "description": "Get network information for an IP address or prefix.",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "required": true,
+          "description": "The IP address or prefix to query."
+        }
+      ],
+      "returns": {
+        "type": "object"
+      }
+    }
+  ]
+}
+```
+
 ### `GET /network-info`
 
 Returns network information for an IP address or prefix using the RIPEstat `network-info` data API.

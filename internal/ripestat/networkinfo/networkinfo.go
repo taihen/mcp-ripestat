@@ -22,8 +22,8 @@ type httpDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// GetNetworkInfo queries the RIPEstat network-info endpoint for the given resource (IP or prefix).
-func GetNetworkInfo(ctx context.Context, resource string) (*NetworkInfoResponse, error) {
+// GetNetworkInfo is a variable so it can be replaced during testing.
+var GetNetworkInfo = func(ctx context.Context, resource string) (*NetworkInfoResponse, error) {
 	return getNetworkInfoWithClient(ctx, resource, defaultHTTPClient, defaultBaseURL)
 }
 
