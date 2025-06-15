@@ -2,8 +2,10 @@ package networkinfo
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,6 +59,9 @@ func TestGetNetworkInfo_HTTPError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
+	if !strings.Contains(err.Error(), "unexpected status code: 502") {
+		t.Errorf("expected status code error, got %v", err)
+	}
 }
 
 func TestGetNetworkInfo_BadJSON(t *testing.T) {
@@ -71,6 +76,9 @@ func TestGetNetworkInfo_BadJSON(t *testing.T) {
 	_, err := getNetworkInfoWithClient(ctx, "140.78.90.50", client, ts.URL)
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to decode response") {
+		t.Errorf("expected decode error, got %v", err)
 	}
 }
 
@@ -87,6 +95,9 @@ func TestGetNetworkInfo_Timeout(t *testing.T) {
 	_, err := getNetworkInfoWithClient(ctx, "140.78.90.50", client, ts.URL)
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Errorf("expected deadline exceeded error, got %v", err)
 	}
 }
 
@@ -120,13 +131,12 @@ func TestGetNetworkInfo_Exported(t *testing.T) {
 func TestGetNetworkInfoWithClient_BadBaseURL(t *testing.T) {
 	ctx := context.Background()
 	_, err := getNetworkInfoWithClient(ctx, "140.78.90.50", http.DefaultClient, ":bad-url")
-	if err == nil || !contains(err.Error(), "failed to parse RIPEstat base URL") {
-		t.Error("expected URL parse error")
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) && (s[:len(substr)] == substr || contains(s[1:], substr))))
+	if !strings.Contains(err.Error(), "failed to parse RIPEstat base URL") {
+		t.Errorf("expected URL parse error, got %v", err)
+	}
 }
 
 func TestGetNetworkInfoWithClient_BadRequest(t *testing.T) {
@@ -135,6 +145,9 @@ func TestGetNetworkInfoWithClient_BadRequest(t *testing.T) {
 	cancel() // canceled context
 	_, err := getNetworkInfoWithClient(badCtx, "140.78.90.50", http.DefaultClient, "http://example.com")
 	if err == nil {
-		t.Error("expected request creation error")
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to create request") {
+		t.Errorf("expected request creation error, got %v", err)
 	}
 }

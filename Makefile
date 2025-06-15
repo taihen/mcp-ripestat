@@ -17,8 +17,12 @@ lint:
   @echo "Linting would run here."
 
 test:
-  @echo "Running tests..."
-  @go test -v ./...
+  @echo "Running unit tests..."
+  @go test -v -tags=unit ./...
+
+test-e2e:
+  @echo "Running end-to-end tests..."
+  @go test -v -tags=e2e ./...
 
 docker:
   @echo "Building Docker image..."
@@ -37,5 +41,6 @@ help:
   @echo "  clean    - Remove the built binary"
   @echo "  lint     - Run linters (primarily via CI)"
   @echo "  test     - Run unit tests"
+  @echo "  test-e2e  - Run end-to-end tests"
   @echo "  docker   - Placeholder for Docker image build"
   @echo "  release  - Placeholder for release process"

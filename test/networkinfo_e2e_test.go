@@ -1,8 +1,9 @@
+//go:build e2e
+
 package test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -10,9 +11,6 @@ import (
 )
 
 func TestNetworkInfoE2E(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("skipping live E2E test in CI")
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	resp, err := networkinfo.GetNetworkInfo(ctx, "140.78.90.50")
