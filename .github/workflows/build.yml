@@ -33,4 +33,4 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -v -o mcp-ripestat-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/mcp-ripestat
+        run: go build -v -o mcp-ripestat-${{ matrix.goos }}-${{ matrix.goarch }} github.com/taihen/mcp-ripestat/cmd/mcp-ripestat
