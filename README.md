@@ -1,6 +1,12 @@
-# mcp-ripestat
+# MCP-RIPEStat
 
-`mcp-ripestat` is a Go-based, single-binary, locally run MCP server that fetches and serves data from the RIPEstat Data API.
+`mcp-ripestat` is a Go-based, locally run MCP server that fetches and serves data from the RIPEstat Data API.
+
+## About RIPEstat
+
+RIPEstat is a large-scale information service and the RIPE NCC's open data platform. It provides essential data on IP address space and Autonomous System Numbers (ASNs), along with related statistics for specific hostnames and countries. This service is a valuable tool for network operators, security researchers, and anyone interested in the structure and performance of the Internet, offering insights into routing, registration data, DNS, and geographical information.
+
+For more information, visit the [RIPEstat website](https://stat.ripe.net/) and consult the [Data API documentation](https://stat.ripe.net/docs/data_api).
 
 ## Disclaimer
 
