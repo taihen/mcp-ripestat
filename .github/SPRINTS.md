@@ -4,7 +4,7 @@ This file provides a high-level overview of the development sprints for the `mcp
 
 | Sprint | Branch | Version | Feature | RIPEstat Endpoint(s) | Status |
 |--------|--------|---------|---------|----------------------|--------|
-| 0 | `main` | v0.1.0 | Project Bootstrap | N/A | Completed |
+| 0 | `sprint-0` | v0.1.0 | Project Bootstrap | N/A | Completed |
 | 1 | `sprint-1` | v0.1.0 | Research & Prompt Seeding | N/A | Completed |
 | 2 | `sprint-2` | v0.2.0 | Network Information | `network-info` | Planned |
 | 3 | `sprint-3` | v0.3.0 | AS Overview | `as-overview` | Planned |
