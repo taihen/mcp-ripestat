@@ -14,7 +14,7 @@ func TestGetNetworkInfo_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"messages":[],
 			"see_also":[],
 			"version":"1.1",
@@ -67,7 +67,7 @@ func TestGetNetworkInfo_HTTPError(t *testing.T) {
 func TestGetNetworkInfo_BadJSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"not_json":`))
+		_, _ = w.Write([]byte(`{"not_json":`))
 	}))
 	defer ts.Close()
 
@@ -86,7 +86,7 @@ func TestGetNetworkInfo_Timeout(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"messages":[],"see_also":[],"version":"1.1","data_call_name":"network-info","data_call_status":"supported","cached":false,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"},"query_id":"test-id","process_time":1,"server_id":"test-server","build_version":"test-build","status":"ok","status_code":200,"time":"2025-06-15T16:31:58.741967"}`))
+		_, _ = w.Write([]byte(`{"messages":[],"see_also":[],"version":"1.1","data_call_name":"network-info","data_call_status":"supported","cached":false,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"},"query_id":"test-id","process_time":1,"server_id":"test-server","build_version":"test-build","status":"ok","status_code":200,"time":"2025-06-15T16:31:58.741967"}`))
 	}))
 	defer ts.Close()
 
@@ -105,7 +105,7 @@ func TestGetNetworkInfo_Exported(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"messages":[],"see_also":[],"version":"1.1","data_call_name":"network-info","data_call_status":"supported","cached":false,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"},"query_id":"test-id","process_time":1,"server_id":"test-server","build_version":"test-build","status":"ok","status_code":200,"time":"2025-06-15T16:31:58.741967"}`))
+		_, _ = w.Write([]byte(`{"messages":[],"see_also":[],"version":"1.1","data_call_name":"network-info","data_call_status":"supported","cached":false,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"},"query_id":"test-id","process_time":1,"server_id":"test-server","build_version":"test-build","status":"ok","status_code":200,"time":"2025-06-15T16:31:58.741967"}`))
 	}))
 	defer ts.Close()
 

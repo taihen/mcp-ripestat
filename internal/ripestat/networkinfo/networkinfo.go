@@ -27,7 +27,7 @@ func GetNetworkInfo(ctx context.Context, resource string) (*NetworkInfoResponse,
 	return getNetworkInfoWithClient(ctx, resource, defaultHTTPClient, defaultBaseURL)
 }
 
-func getNetworkInfoWithClient(ctx context.Context, resource string, client httpDoer, baseURL string) (*NetworkInfoResponse, error) {
+func getNetworkInfoWithClient(ctx context.Context, resource string, client httpDoer, baseURL string) (response *NetworkInfoResponse, err error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse RIPEstat base URL: %w", err)
@@ -45,7 +45,11 @@ func getNetworkInfoWithClient(ctx context.Context, resource string, client httpD
 	if err != nil {
 		return nil, fmt.Errorf("failed to call RIPEstat: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", closeErr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)

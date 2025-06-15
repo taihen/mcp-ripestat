@@ -61,18 +61,13 @@ func main() {
 
 	slog.Info("server exited gracefully")
 }
-func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
-}
 
 func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("received network-info request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
 	resource := r.URL.Query().Get("resource")
 	if resource == "" {
 		slog.Warn("missing resource parameter")
-		writeJSONError(w, "missing resource parameter", http.StatusBadRequest)
+		writeJSONError(w, `missing resource parameter`, http.StatusBadRequest)
 		return
 	}
 
@@ -86,8 +81,17 @@ func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeJSON(w, resp, http.StatusOK)
+}
+
+func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		slog.Error("failed to write response", "err", err)
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		slog.Error("failed to write json response", "err", err)
 	}
+}
+
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	writeJSON(w, map[string]string{"error": message}, statusCode)
 }
