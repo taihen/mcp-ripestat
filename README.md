@@ -32,8 +32,12 @@ To run the server:
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [license](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please read [contributing guidelines](CONTRIBUTING.md) to see how you can participate.
 
 ## Development Sprints
 
-The development process is organized into sprints, with each sprint focused on a specific feature from the RIPEstat API. A detailed ledger of all sprints, including branches, target versions, and features, is available in the [SPRINTS.md](.github/SPRINTS.md) file.
+The development process is organized into sprints, with each sprint focused on a specific feature from the RIPEstat API. A detailed ledger of all the features, divided by sprints, is available in the [sprints](.github/SPRINTS.md) documentation.
