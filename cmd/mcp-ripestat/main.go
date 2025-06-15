@@ -61,13 +61,18 @@ func main() {
 
 	slog.Info("server exited gracefully")
 }
+func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
 
 func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("received network-info request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
 	resource := r.URL.Query().Get("resource")
 	if resource == "" {
 		slog.Warn("missing resource parameter")
-		http.Error(w, `{"error":"missing resource parameter"}`, http.StatusBadRequest)
+		writeJSONError(w, "missing resource parameter", http.StatusBadRequest)
 		return
 	}
 
