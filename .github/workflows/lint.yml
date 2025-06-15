@@ -24,8 +24,15 @@ jobs:
         uses: super-linter/super-linter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_GO: false
-          VALIDATE_GOMOD: false
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_BASH: true
+          VALIDATE_DOCKERFILE: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_GITATTRIBUTES: true
 
   golangci:
     name: golangci-lint
@@ -41,6 +48,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: "v1.59"
+          skip-cache: true
 
   govulncheck:
     name: Go Vulnerability Check
