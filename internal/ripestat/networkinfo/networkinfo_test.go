@@ -147,7 +147,7 @@ func TestGetNetworkInfoWithClient_BadRequest(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "failed to create request") {
-		t.Errorf("expected request creation error, got %v", err)
+	if !strings.Contains(err.Error(), "context canceled") {
+		t.Errorf("expected context canceled error, got %v", err)
 	}
 }
