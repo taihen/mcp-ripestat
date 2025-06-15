@@ -96,8 +96,8 @@ func TestGetNetworkInfo_Timeout(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
 	}
-	if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "context deadline exceeded") {
-		t.Errorf("expected deadline exceeded error, got %v", err)
+	if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "Client.Timeout exceeded") {
+		t.Errorf("expected timeout error (context deadline or client timeout), got %v", err)
 	}
 }
 
