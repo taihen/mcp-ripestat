@@ -56,15 +56,6 @@ func TestManifestHandler(t *testing.T) {
 	}
 }
 
-// Mock GetNetworkInfo function for testing
-var mockGetNetworkInfo func(ctx context.Context, resource string) (*networkinfo.NetworkInfoResponse, error)
-
-type mockNetworkInfo struct{}
-
-func (m *mockNetworkInfo) GetNetworkInfo(ctx context.Context, resource string) (*networkinfo.NetworkInfoResponse, error) {
-	return mockGetNetworkInfo(ctx, resource)
-}
-
 func TestNetworkInfoHandler_Success(t *testing.T) {
 	// Temporarily replace the real GetNetworkInfo with a mock
 	originalGetNetworkInfo := networkinfo.GetNetworkInfo
