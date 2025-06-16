@@ -266,7 +266,11 @@ Returns an overview for an AS (Autonomous System) using the RIPEstat
 
 - `resource`: The AS number to query (e.g., `3333`).
 
-**Example:**
+MCP Client Prompt:
+
+> What is the network info for 140.78.90.50?
+
+Development Testing:
 
 ```sh
 curl 'http://localhost:8080/as-overview?resource=3333'
