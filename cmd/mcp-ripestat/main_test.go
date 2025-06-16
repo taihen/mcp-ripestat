@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 )
 
@@ -37,22 +38,30 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("unexpected manifest name: got %q want %q", manifest.Name, "mcp-ripestat")
 	}
 
-	if len(manifest.Functions) != 1 {
-		t.Fatalf("expected 1 function, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 2 {
+		t.Fatalf("expected 2 functions, got %d", len(manifest.Functions))
 	}
 
-	function := manifest.Functions[0]
-	if function.Name != "getNetworkInfo" {
-		t.Errorf("unexpected function name: got %q want %q", function.Name, "getNetworkInfo")
+	funcNames := map[string]bool{}
+	for _, f := range manifest.Functions {
+		funcNames[f.Name] = true
 	}
 
-	if len(function.Parameters) != 1 {
-		t.Fatalf("expected 1 parameter, got %d", len(function.Parameters))
+	if !funcNames["getNetworkInfo"] {
+		t.Errorf("manifest is missing function getNetworkInfo")
 	}
 
-	parameter := function.Parameters[0]
+	if !funcNames["getASOverview"] {
+		t.Errorf("manifest is missing function getASOverview")
+	}
+
+	if len(manifest.Functions[0].Parameters) != 1 {
+		t.Fatalf("expected 1 parameter for getNetworkInfo, got %d", len(manifest.Functions[0].Parameters))
+	}
+
+	parameter := manifest.Functions[0].Parameters[0]
 	if parameter.Name != "resource" {
-		t.Errorf("unexpected parameter name: got %q want %q", parameter.Name, "resource")
+		t.Errorf("unexpected parameter name for getNetworkInfo: got %q want %q", parameter.Name, "resource")
 	}
 }
 
@@ -120,6 +129,77 @@ func TestNetworkInfoHandler_GetNetworkInfoError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(networkInfoHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadGateway {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadGateway)
+	}
+}
+
+func TestASOverviewHandler_Success(t *testing.T) {
+	// Temporarily replace the real Get with a mock
+	originalGet := asoverview.Get
+	asoverview.Get = func(ctx context.Context, resource string) (*asoverview.Response, error) {
+		return &asoverview.Response{
+			Data: asoverview.Data{
+				Resource:  "3333",
+				Announced: true,
+			},
+		}, nil
+	}
+	defer func() { asoverview.Get = originalGet }()
+
+	req, err := http.NewRequest("GET", "/as-overview?resource=3333", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(asOverviewHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp asoverview.Response
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("could not decode response: %v", err)
+	}
+	if resp.Data.Resource != "3333" {
+		t.Errorf("unexpected resource: got %s want %s", resp.Data.Resource, "3333")
+	}
+}
+
+func TestASOverviewHandler_MissingResource(t *testing.T) {
+	req, err := http.NewRequest("GET", "/as-overview", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(asOverviewHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestASOverviewHandler_GetError(t *testing.T) {
+	originalGet := asoverview.Get
+	asoverview.Get = func(ctx context.Context, resource string) (*asoverview.Response, error) {
+		return nil, errors.New("test error")
+	}
+	defer func() { asoverview.Get = originalGet }()
+
+	req, err := http.NewRequest("GET", "/as-overview?resource=3333", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(asOverviewHandler)
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusBadGateway {

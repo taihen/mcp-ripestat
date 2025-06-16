@@ -146,6 +146,11 @@ MCP client configuration file. For example:
         "path": "/network-info",
         "method": "GET",
         "description": "Get network information for an IP address or prefix. Query param: resource"
+      },
+      {
+        "path": "/as-overview",
+        "method": "GET",
+        "description": "Get an overview of an Autonomous System (AS). Query param: resource"
       }
     ]
   }
@@ -187,6 +192,21 @@ curl 'http://localhost:8080/.well-known/mcp/manifest.json'
       "returns": {
         "type": "object"
       }
+    },
+    {
+      "name": "getASOverview",
+      "description": "Get an overview of an Autonomous System (AS).",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "required": true,
+          "description": "The AS number to query."
+        }
+      ],
+      "returns": {
+        "type": "object"
+      }
     }
   ]
 }
@@ -199,8 +219,7 @@ Returns network information for an IP address or prefix using the RIPEstat
 
 **Query parameters:**
 
-- `resource` (required): The IP address or prefix to query (e.g.,
-  `140.78.90.50`).
+- `resource`: The IP address or prefix to query (e.g., `140.78.90.50`).
 
 **Example:**
 
@@ -236,6 +255,21 @@ curl 'http://localhost:8080/network-info?resource=140.78.90.50'
   "status_code": 200,
   "time": "..."
 }
+```
+
+### `GET /as-overview`
+
+Returns an overview for an AS (Autonomous System) using the RIPEstat
+`as-overview` data API.
+
+**Query parameters:**
+
+- `resource`: The AS number to query (e.g., `3333`).
+
+**Example:**
+
+```sh
+curl 'http://localhost:8080/as-overview?resource=3333'
 ```
 
 ## Contributing

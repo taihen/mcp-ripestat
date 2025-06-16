@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 )
 
@@ -37,6 +38,7 @@ func main() {
 func run(ctx context.Context, port string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/network-info", networkInfoHandler)
+	mux.HandleFunc("/as-overview", asOverviewHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -124,6 +126,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getASOverview",
+				Description: "Get an overview of an Autonomous System (AS).",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The AS number to query.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -145,6 +162,28 @@ func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("network-info call failed", "err", err)
 		writeJSONError(w, "failed to fetch network info", http.StatusBadGateway)
+		return
+	}
+
+	writeJSON(w, resp, http.StatusOK)
+}
+
+func asOverviewHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("received as-overview request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
+	resource := r.URL.Query().Get("resource")
+	if resource == "" {
+		slog.Warn("missing resource parameter")
+		writeJSONError(w, `missing resource parameter`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := asoverview.Get(ctx, resource)
+	if err != nil {
+		slog.Error("as-overview call failed", "err", err)
+		writeJSONError(w, "failed to fetch as overview", http.StatusBadGateway)
 		return
 	}
 

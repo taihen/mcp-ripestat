@@ -7,7 +7,7 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 0 | `sprint-0` | v1.0.0 | Project Bootstrap | N/A | Completed |
 | 1 | `sprint-1` | v1.0.0 | Research | N/A | Completed |
 | 2 | `sprint-2` | v1.1.0 | Network Information | `network-info` | Completed |
-| 3 | `sprint-3` | N/A | AS Overview | `as-overview` | Planned |
+| 3 | `sprint-3` | v1.2.0 | AS Overview | `as-overview` | Completed |
 | 4 | `sprint-4` | N/A | Announced Prefixes | `announced-prefixes` | Planned |
 | 5 | `sprint-5` | N/A | Routing Status | `routing-status` | Planned |
 | 6 | `sprint-6` | N/A | Whois | `whois` | Planned |
