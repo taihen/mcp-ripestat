@@ -28,6 +28,14 @@ consult the [Data API documentation](https://stat.ripe.net/docs/data_api).
 
 ## Use Cases
 
+Using MCP Client allows you to leverage a Large Language Model (LLM) to query
+RIPEStat using natural language. This means you can ask complex questions about
+network information, IP addresses, ASNs, and other RIPEStat data without needing
+to know the underlying API or query syntax. The client translates your natural
+language queries into appropriate API calls, making it easier and more intuitive
+to access and analyze RIPEStat data for research, troubleshooting, or network
+management tasks.
+
 ## Network Operations & Monitoring
 
 Quickly look up network information (ASN, prefix, routing, geolocation) for any
@@ -196,7 +204,7 @@ Returns network information for an IP address or prefix using the RIPEstat
 
 **Example:**
 
-Prompt:
+MCP Client Prompt:
 
 > What is the network info for 140.78.90.50?
 
@@ -242,6 +250,7 @@ specific feature from the RIPEstat API. A detailed ledger of all the features,
 divided by sprints, is available in the [sprints](.github/SPRINTS.md)
 documentation.
 
+> [!NOTE]
 > If a particular feature is not included, please feel free to open
 > [issue](https://github.com/taihen/mcp-ripestat/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen)
 > to discuss it.
