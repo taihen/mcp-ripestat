@@ -147,32 +147,24 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("received network-info request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
-	resource := r.URL.Query().Get("resource")
-	if resource == "" {
-		slog.Warn("missing resource parameter")
-		writeJSONError(w, `missing resource parameter`, http.StatusBadRequest)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	resp, err := networkinfo.GetNetworkInfo(ctx, resource)
-	if err != nil {
-		slog.Error("network-info call failed", "err", err)
-		writeJSONError(w, "failed to fetch network info", http.StatusBadGateway)
-		return
-	}
-
-	writeJSON(w, resp, http.StatusOK)
+	handleRIPEstatRequest(w, r, "network-info", func(ctx context.Context, resource string) (interface{}, error) {
+		return networkinfo.GetNetworkInfo(ctx, resource)
+	})
 }
 
 func asOverviewHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("received as-overview request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
+	handleRIPEstatRequest(w, r, "as-overview", func(ctx context.Context, resource string) (interface{}, error) {
+		return asoverview.Get(ctx, resource)
+	})
+}
+
+type ripeStatFunc func(ctx context.Context, resource string) (interface{}, error)
+
+func handleRIPEstatRequest(w http.ResponseWriter, r *http.Request, callName string, fn ripeStatFunc) {
+	slog.Debug("received request", "call_name", callName, "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
 	resource := r.URL.Query().Get("resource")
 	if resource == "" {
-		slog.Warn("missing resource parameter")
+		slog.Warn("missing resource parameter", "call_name", callName)
 		writeJSONError(w, `missing resource parameter`, http.StatusBadRequest)
 		return
 	}
@@ -180,10 +172,10 @@ func asOverviewHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	resp, err := asoverview.Get(ctx, resource)
+	resp, err := fn(ctx, resource)
 	if err != nil {
-		slog.Error("as-overview call failed", "err", err)
-		writeJSONError(w, "failed to fetch as overview", http.StatusBadGateway)
+		slog.Error("RIPEstat call failed", "call_name", callName, "err", err)
+		writeJSONError(w, fmt.Sprintf("failed to fetch %s", callName), http.StatusBadGateway)
 		return
 	}
 
