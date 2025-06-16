@@ -225,7 +225,7 @@ Returns network information for an IP address or prefix using the RIPEstat
 
 MCP Client Prompt:
 
-> What is the network info for 140.78.90.50?
+> Get the network info for 140.78.90.50,
 
 Development Testing:
 
@@ -266,14 +266,47 @@ Returns an overview for an AS (Autonomous System) using the RIPEstat
 
 - `resource`: The AS number to query (e.g., `3333`).
 
+**Example:**
+
 MCP Client Prompt:
 
-> What is the network info for 140.78.90.50?
+> Get the AS overview for 3333.
 
 Development Testing:
 
 ```sh
 curl 'http://localhost:8080/as-overview?resource=3333'
+```
+
+**Sample response:**
+
+```json
+{
+    "messages": [],
+    "see_also": [],
+    "version": "1.3",
+    "data_call_name": "as-overview",
+    "data_call_status": "supported - based on 2.1",
+    "cached": true,
+    "data": {
+        "type": "as",
+        "resource": "3333",
+        "block": {
+            "resource": "3154-3353",
+            "desc": "Assigned by RIPE NCC",
+            "name": "IANA 16-bit Autonomous System (AS) Numbers Registry"
+        },
+        "holder": "RIPE-NCC-AS - Reseaux IP Europeens Network Coordination Centre (RIPE NCC)",
+        "announced": true
+    },
+    "query_id": "...",
+    "process_time": 3,
+    "server_id": "...",
+    "build_version": "...",
+    "status": "ok",
+    "status_code": 200,
+    "time": "..."
+}
 ```
 
 ## Contributing
