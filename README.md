@@ -225,7 +225,7 @@ Returns network information for an IP address or prefix using the RIPEstat
 
 MCP Client Prompt:
 
-> Get the network info for 140.78.90.50,
+> Get the network info for 140.78.90.50.
 
 Development Testing:
 
