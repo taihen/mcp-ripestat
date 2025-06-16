@@ -8,8 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 )
 
 func TestManifestHandler(t *testing.T) {
@@ -37,90 +35,84 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("unexpected manifest name: got %q want %q", manifest.Name, "mcp-ripestat")
 	}
 
-	if len(manifest.Functions) != 1 {
-		t.Fatalf("expected 1 function, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 2 {
+		t.Fatalf("expected 2 functions, got %d", len(manifest.Functions))
 	}
 
-	function := manifest.Functions[0]
-	if function.Name != "getNetworkInfo" {
-		t.Errorf("unexpected function name: got %q want %q", function.Name, "getNetworkInfo")
+	funcNames := map[string]bool{}
+	for _, f := range manifest.Functions {
+		funcNames[f.Name] = true
 	}
 
-	if len(function.Parameters) != 1 {
-		t.Fatalf("expected 1 parameter, got %d", len(function.Parameters))
+	if !funcNames["getNetworkInfo"] {
+		t.Errorf("manifest is missing function getNetworkInfo")
 	}
 
-	parameter := function.Parameters[0]
+	if !funcNames["getASOverview"] {
+		t.Errorf("manifest is missing function getASOverview")
+	}
+
+	if len(manifest.Functions[0].Parameters) != 1 {
+		t.Fatalf("expected 1 parameter for getNetworkInfo, got %d", len(manifest.Functions[0].Parameters))
+	}
+
+	parameter := manifest.Functions[0].Parameters[0]
 	if parameter.Name != "resource" {
-		t.Errorf("unexpected parameter name: got %q want %q", parameter.Name, "resource")
+		t.Errorf("unexpected parameter name for getNetworkInfo: got %q want %q", parameter.Name, "resource")
 	}
 }
 
-func TestNetworkInfoHandler_Success(t *testing.T) {
-	// Temporarily replace the real GetNetworkInfo with a mock
-	originalGetNetworkInfo := networkinfo.GetNetworkInfo
-	networkinfo.GetNetworkInfo = func(ctx context.Context, resource string) (*networkinfo.NetworkInfoResponse, error) {
-		return &networkinfo.NetworkInfoResponse{
-			Data: networkinfo.NetworkInfoData{
-				Prefix: "1.1.1.0/24",
-				ASNs:   []string{"13335"},
-			},
-		}, nil
-	}
-	defer func() { networkinfo.GetNetworkInfo = originalGetNetworkInfo }()
-
-	req, err := http.NewRequest("GET", "/network-info?resource=1.1.1.1", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func TestHandleRIPEstatRequest_Success(t *testing.T) {
+	req := httptest.NewRequest("GET", "/test?resource=123", nil)
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(networkInfoHandler)
-	handler.ServeHTTP(rr, req)
+
+	mockFunc := func(ctx context.Context, resource string) (interface{}, error) {
+		if resource != "123" {
+			t.Errorf("expected resource 123, got %s", resource)
+		}
+		return map[string]string{"data": "success"}, nil
+	}
+
+	handleRIPEstatRequest(rr, req, "test", mockFunc)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var resp networkinfo.NetworkInfoResponse
+	var resp map[string]string
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("could not decode response: %v", err)
 	}
-	if resp.Data.Prefix != "1.1.1.0/24" {
-		t.Errorf("unexpected prefix: got %s want %s", resp.Data.Prefix, "1.1.1.0/24")
+	if resp["data"] != "success" {
+		t.Errorf("unexpected response body: got %v", resp)
 	}
 }
 
-func TestNetworkInfoHandler_MissingResource(t *testing.T) {
-	req, err := http.NewRequest("GET", "/network-info", nil)
-	if err != nil {
-		t.Fatal(err)
+func TestHandleRIPEstatRequest_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/test", nil)
+	rr := httptest.NewRecorder()
+
+	mockFunc := func(ctx context.Context, resource string) (interface{}, error) {
+		t.Fatal("mock function should not be called")
+		return nil, nil
 	}
 
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(networkInfoHandler)
-	handler.ServeHTTP(rr, req)
+	handleRIPEstatRequest(rr, req, "test", mockFunc)
 
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
 	}
 }
 
-func TestNetworkInfoHandler_GetNetworkInfoError(t *testing.T) {
-	originalGetNetworkInfo := networkinfo.GetNetworkInfo
-	networkinfo.GetNetworkInfo = func(ctx context.Context, resource string) (*networkinfo.NetworkInfoResponse, error) {
-		return nil, errors.New("test error")
-	}
-	defer func() { networkinfo.GetNetworkInfo = originalGetNetworkInfo }()
-
-	req, err := http.NewRequest("GET", "/network-info?resource=1.1.1.1", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func TestHandleRIPEstatRequest_BackendError(t *testing.T) {
+	req := httptest.NewRequest("GET", "/test?resource=123", nil)
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(networkInfoHandler)
-	handler.ServeHTTP(rr, req)
+
+	mockFunc := func(ctx context.Context, resource string) (interface{}, error) {
+		return nil, errors.New("backend failure")
+	}
+
+	handleRIPEstatRequest(rr, req, "test", mockFunc)
 
 	if status := rr.Code; status != http.StatusBadGateway {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadGateway)
