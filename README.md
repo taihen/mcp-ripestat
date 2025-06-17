@@ -117,6 +117,14 @@ By default, the server runs on port `8080`. You can change this by setting the
 ./mcp-ripestat --port=8888 --debug
 ```
 
+### Flags
+
+The following command-line flags are available:
+
+- `--port`: Sets the port for the server to listen on (default: `8080`).
+- `--debug`: Enables debug logging.
+- `--help`: Prints all possible flags.
+
 ### MCP Client Configuration
 
 To integrate the server with MCP client, add the following configuration to your

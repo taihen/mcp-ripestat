@@ -20,7 +20,20 @@ import (
 func main() {
 	port := flag.String("port", "8080", "Port for the server to listen on")
 	debug := flag.Bool("debug", false, "Enable debug logging")
+	help := flag.Bool("help", false, "Print all possible flags")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	logLevel := slog.LevelInfo
 	if *debug {
