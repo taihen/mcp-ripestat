@@ -55,12 +55,6 @@ Use the MCP server as a local API for scripts and automation tools to fetch
 RIPEstat data without each script needing to implement its own API logic.
 Batch process lists of IPs or prefixes for network inventory or audit tasks.
 
-## AI & Assistant Integration
-
-Enable AI assistants to answer questions about IP addresses, ASNs, or network
-blocks using up-to-date RIPEstat data. Provide context-aware suggestions or
-actions in developer tools or chatbots.
-
 ## Centralized Access for Teams
 
 Allow multiple team members to access RIPEstat data through a single, consistent
