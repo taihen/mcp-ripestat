@@ -8,7 +8,7 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 1 | `sprint-1` | v1.0.0 | Research | N/A | Completed |
 | 2 | `sprint-2` | v1.1.0 | Network Information | `network-info` | Completed |
 | 3 | `sprint-3` | v1.3.0 | AS Overview | `as-overview` | Completed |
-| 4 | `sprint-4` | N/A | Announced Prefixes | `announced-prefixes` | Planned |
+| 4 | `sprint-4` | v1.4.0 | Announced Prefixes | `announced-prefixes` | Completed |
 | 5 | `sprint-5` | N/A | Routing Status | `routing-status` | Planned |
 | 6 | `sprint-6` | N/A | Whois | `whois` | Planned |
 | 7 | `sprint-7` | N/A | Abuse Contact Finder | `abuse-contact-finder` | Planned |

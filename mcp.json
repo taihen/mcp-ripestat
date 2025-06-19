@@ -8,6 +8,16 @@
         "path": "/network-info",
         "method": "GET",
         "description": "Get network information for an IP address or prefix. Query param: resource"
+      },
+      {
+        "path": "/as-overview",
+        "method": "GET",
+        "description": "Get an overview of an Autonomous System (AS). Query param: resource"
+      },
+      {
+        "path": "/announced-prefixes",
+        "method": "GET",
+        "description": "Get a list of prefixes announced by an Autonomous System (AS). Query param: resource"
       }
     ]
   }

@@ -159,6 +159,11 @@ MCP client configuration file. For example:
         "path": "/as-overview",
         "method": "GET",
         "description": "Get an overview of an Autonomous System (AS). Query param: resource"
+      },
+      {
+        "path": "/announced-prefixes",
+        "method": "GET",
+        "description": "Get a list of prefixes announced by an Autonomous System (AS). Query param: resource"
       }
     ]
   }
@@ -204,6 +209,21 @@ curl 'http://localhost:8080/.well-known/mcp/manifest.json'
     {
       "name": "getASOverview",
       "description": "Get an overview of an Autonomous System (AS).",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "required": true,
+          "description": "The AS number to query."
+        }
+      ],
+      "returns": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "getAnnouncedPrefixes",
+      "description": "Get a list of prefixes announced by an Autonomous System (AS).",
       "parameters": [
         {
           "name": "resource",
@@ -309,6 +329,76 @@ curl 'http://localhost:8080/as-overview?resource=3333'
     },
     "query_id": "...",
     "process_time": 3,
+    "server_id": "...",
+    "build_version": "...",
+    "status": "ok",
+    "status_code": 200,
+    "time": "..."
+}
+```
+
+### `GET /announced-prefixes`
+
+Returns a list of prefixes announced by an AS (Autonomous System) using the
+RIPEstat `announced-prefixes` data API.
+
+**Query parameters:**
+
+- `resource`: The AS number to query (e.g., `3333`).
+
+**Example:**
+
+MCP Client Prompt:
+
+> Get the announced prefixes for AS3333.
+
+Development Testing:
+
+```sh
+curl 'http://localhost:8080/announced-prefixes?resource=3333'
+```
+
+**Sample response:**
+
+```json
+{
+    "messages": [
+        ["info", "Results exclude routes with very low visibility."]
+    ],
+    "see_also": [],
+    "version": "1.2",
+    "data_call_name": "announced-prefixes",
+    "data_call_status": "supported",
+    "cached": false,
+    "data": {
+        "prefixes": [
+            {
+                "prefix": "193.0.0.0/21",
+                "timelines": [
+                    {
+                        "starttime": "2025-06-05T00:00:00",
+                        "endtime": "2025-06-19T00:00:00"
+                    }
+                ]
+            },
+            {
+                "prefix": "193.0.10.0/23",
+                "timelines": [
+                    {
+                        "starttime": "2025-06-05T00:00:00",
+                        "endtime": "2025-06-19T00:00:00"
+                    }
+                ]
+            }
+        ],
+        "query_starttime": "2025-06-05T00:00:00",
+        "query_endtime": "2025-06-19T00:00:00",
+        "resource": "3333",
+        "latest_time": "2025-06-19T00:00:00",
+        "earliest_time": "2000-08-01T00:00:00"
+    },
+    "query_id": "...",
+    "process_time": 21,
     "server_id": "...",
     "build_version": "...",
     "status": "ok",
