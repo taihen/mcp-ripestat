@@ -35,8 +35,8 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("unexpected manifest name: got %q want %q", manifest.Name, "mcp-ripestat")
 	}
 
-	if len(manifest.Functions) != 2 {
-		t.Fatalf("expected 2 functions, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 3 {
+		t.Fatalf("expected 3 functions, got %d", len(manifest.Functions))
 	}
 
 	funcNames := map[string]bool{}
@@ -50,6 +50,10 @@ func TestManifestHandler(t *testing.T) {
 
 	if !funcNames["getASOverview"] {
 		t.Errorf("manifest is missing function getASOverview")
+	}
+
+	if !funcNames["getAnnouncedPrefixes"] {
+		t.Errorf("manifest is missing function getAnnouncedPrefixes")
 	}
 
 	if len(manifest.Functions[0].Parameters) != 1 {

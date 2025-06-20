@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 )
@@ -52,6 +53,7 @@ func run(ctx context.Context, port string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/network-info", networkInfoHandler)
 	mux.HandleFunc("/as-overview", asOverviewHandler)
+	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -154,6 +156,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getAnnouncedPrefixes",
+				Description: "Get a list of prefixes announced by an Autonomous System (AS).",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The AS number to query.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -168,6 +185,12 @@ func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 func asOverviewHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "as-overview", func(ctx context.Context, resource string) (interface{}, error) {
 		return asoverview.Get(ctx, resource)
+	})
+}
+
+func announcedPrefixesHandler(w http.ResponseWriter, r *http.Request) {
+	handleRIPEstatRequest(w, r, "announced-prefixes", func(ctx context.Context, resource string) (interface{}, error) {
+		return announcedprefixes.Get(ctx, resource)
 	})
 }
 
