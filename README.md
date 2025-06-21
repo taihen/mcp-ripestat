@@ -401,6 +401,87 @@ curl 'http://localhost:8080/announced-prefixes?resource=3333'
 }
 ```
 
+### `GET /routing-status`
+
+Returns detailed routing status information for an IP prefix using the RIPEstat
+`routing-status` data API. This includes first/last seen dates, visibility metrics,
+origin ASNs, and related prefix information.
+
+**Query parameters:**
+
+- `resource`: The IP prefix to query (e.g., `193.0.0.0/21`).
+
+**Example:**
+
+MCP Client Prompt:
+
+> Get the routing status for 193.0.0.0/21.
+
+Development Testing:
+
+```sh
+curl 'http://localhost:8080/routing-status?resource=193.0.0.0/21'
+```
+
+**Sample response:**
+
+```json
+{
+  "messages": [
+    [
+      "info",
+      "Results exclude routes with very low visibility (less than 10 RIS full-feed peers seeing)."
+    ]
+  ],
+  "see_also": [],
+  "version": "3.4",
+  "data_call_name": "routing-status",
+  "data_call_status": "supported",
+  "cached": false,
+  "data": {
+    "first_seen": {
+      "prefix": "193.0.0.0/21",
+      "origin": "3333",
+      "time": "2000-10-31T00:00:00"
+    },
+    "last_seen": {
+      "prefix": "193.0.0.0/21",
+      "origin": "3333",
+      "time": "2025-06-21T16:00:00"
+    },
+    "visibility": {
+      "v4": {
+        "ris_peers_seeing": 342,
+        "total_ris_peers": 343
+      },
+      "v6": {
+        "ris_peers_seeing": 0,
+        "total_ris_peers": 0
+      }
+    },
+    "origins": [
+      {
+        "origin": 3333,
+        "route_objects": [
+          "RIPE"
+        ]
+      }
+    ],
+    "less_specifics": [],
+    "more_specifics": [],
+    "resource": "193.0.0.0/21",
+    "query_time": "2025-06-21T16:00:00"
+  },
+  "query_id": "...",
+  "process_time": 508,
+  "server_id": "...",
+  "build_version": "...",
+  "status": "ok",
+  "status_code": 200,
+  "time": "..."
+}
+```
+
 ## Contributing
 
 Contributions are welcome! Please read [contributing guidelines](CONTRIBUTING.md)

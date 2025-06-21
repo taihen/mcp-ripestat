@@ -16,6 +16,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 )
 
 func main() {
@@ -54,6 +55,7 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/network-info", networkInfoHandler)
 	mux.HandleFunc("/as-overview", asOverviewHandler)
 	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
+	mux.HandleFunc("/routing-status", routingStatusHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -171,6 +173,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getRoutingStatus",
+				Description: "Get the routing status for an IP prefix.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP prefix to query.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -191,6 +208,13 @@ func asOverviewHandler(w http.ResponseWriter, r *http.Request) {
 func announcedPrefixesHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "announced-prefixes", func(ctx context.Context, resource string) (interface{}, error) {
 		return announcedprefixes.Get(ctx, resource)
+	})
+}
+
+func routingStatusHandler(w http.ResponseWriter, r *http.Request) {
+	handleRIPEstatRequest(w, r, "routing-status", func(ctx context.Context, resource string) (interface{}, error) {
+		client := routingstatus.NewClient("https://stat.ripe.net", http.DefaultClient)
+		return client.Get(ctx, resource)
 	})
 }
 

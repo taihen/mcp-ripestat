@@ -18,6 +18,11 @@
         "path": "/announced-prefixes",
         "method": "GET",
         "description": "Get a list of prefixes announced by an Autonomous System (AS). Query param: resource"
+      },
+      {
+        "path": "/routing-status",
+        "method": "GET",
+        "description": "Get the routing status for an IP prefix. Query param: resource"
       }
     ]
   }
