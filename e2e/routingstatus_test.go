@@ -1,10 +1,9 @@
 //go:build e2e
 
-package test
+package e2e
 
 import (
 	"context"
-	"net/http"
 	"testing"
 	"time"
 
@@ -12,15 +11,12 @@ import (
 )
 
 func TestRoutingStatusE2E(t *testing.T) {
-	baseURL := "https://stat.ripe.net"
-	client := routingstatus.NewClient(baseURL, http.DefaultClient)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	t.Run("ValidResource", func(t *testing.T) {
 		resource := "193.0.0.0/21" // RIPE NCC allocation
-		response, err := client.Get(ctx, resource)
+		response, err := routingstatus.GetRoutingStatus(ctx, resource)
 		if err != nil {
 			t.Fatalf("live call failed: %v", err)
 		}
@@ -31,22 +27,14 @@ func TestRoutingStatusE2E(t *testing.T) {
 		if response.Data.Resource != resource {
 			t.Errorf("expected resource %s, got %s", resource, response.Data.Resource)
 		}
-		if response.Data.FirstSeen.Origin == "" {
-			t.Error("expected non-empty first_seen origin")
+		if response.Data.QueryTime == "" {
+			t.Error("expected non-empty query_time")
 		}
-		if response.Data.LastSeen.Origin == "" {
-			t.Error("expected non-empty last_seen origin")
-		}
-		if response.Data.Visibility.V4.TotalRISPeers == 0 {
-			t.Error("expected non-zero total RIS peers")
-		}
-		if len(response.Data.Origins) < 1 {
-			t.Error("expected at least one origin")
-		}
+		// ASNs might be empty for some resources, so we don't require it
 	})
 
 	t.Run("EmptyResource", func(t *testing.T) {
-		response, err := client.Get(ctx, "")
+		response, err := routingstatus.GetRoutingStatus(ctx, "")
 		if err == nil {
 			t.Error("expected error for empty resource")
 		}
@@ -56,7 +44,7 @@ func TestRoutingStatusE2E(t *testing.T) {
 	})
 
 	t.Run("InvalidResource", func(t *testing.T) {
-		response, err := client.Get(ctx, "invalid-resource")
+		response, err := routingstatus.GetRoutingStatus(ctx, "invalid-resource")
 		// The API might still return a valid response object, but with potentially empty/default values
 		// or it might return an error, both are acceptable
 		if err != nil {

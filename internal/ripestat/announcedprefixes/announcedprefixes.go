@@ -1,64 +1,57 @@
+// Package announcedprefixes provides access to the RIPEstat announced-prefixes API.
 package announcedprefixes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
-	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 )
 
 const (
-	ripeStatBaseURL = "https://stat.ripe.net/data/announced-prefixes/data.json"
+	// EndpointPath is the path to the RIPEstat data API for announced prefixes.
+	EndpointPath = "/data/announced-prefixes/data.json"
 )
 
-var (
-	defaultHTTPClient httpDoer = &http.Client{Timeout: 10 * time.Second}
-	defaultBaseURL             = ripeStatBaseURL
-)
-
-type httpDoer interface {
-	Do(req *http.Request) (*http.Response, error)
+// Client provides methods to interact with the RIPEstat announced-prefixes API.
+type Client struct {
+	client *client.Client
 }
 
-// Get is a variable so it can be replaced during testing.
-var Get = func(ctx context.Context, resource string) (*AnnouncedPrefixesResponse, error) {
-	return getWithClient(ctx, resource, defaultHTTPClient, defaultBaseURL)
+// NewClient creates a new Client for the RIPEstat announced-prefixes API.
+func NewClient(c *client.Client) *Client {
+	if c == nil {
+		c = client.DefaultClient()
+	}
+
+	return &Client{client: c}
 }
 
-func getWithClient(ctx context.Context, resource string, client httpDoer, baseURL string) (response *AnnouncedPrefixesResponse, err error) {
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse RIPEstat base URL: %w", err)
-	}
-	q := u.Query()
-	q.Set("resource", resource)
-	u.RawQuery = q.Encode()
+// DefaultClient returns a new Client with default settings.
+func DefaultClient() *Client {
+	return NewClient(nil)
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+// Get fetches announced prefixes for the specified AS number.
+func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
+	if resource == "" {
+		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call RIPEstat: %w", err)
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", closeErr)
-		}
-	}()
+	params := url.Values{}
+	params.Set("resource", resource)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	var response Response
+	if err := c.client.GetJSON(ctx, EndpointPath, params, &response); err != nil {
+		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get announced prefixes: %w", err))
 	}
 
-	var result AnnouncedPrefixesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
+	return &response, nil
+}
 
-	return &result, nil
+// GetAnnouncedPrefixes is a convenience function that uses the default client to get announced prefixes.
+func GetAnnouncedPrefixes(ctx context.Context, resource string) (*Response, error) {
+	return DefaultClient().Get(ctx, resource)
 }

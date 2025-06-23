@@ -1,4 +1,4 @@
-# MCP-RIPEStat
+# MCP RIPEstat
 
 [![Lint](https://github.com/taihen/mcp-ripestat/actions/workflows/lint.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/lint.yml)
 [![Test](https://github.com/taihen/mcp-ripestat/actions/workflows/test.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/test.yml)
@@ -6,8 +6,8 @@
 [![Release](https://github.com/taihen/mcp-ripestat/actions/workflows/release.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/taihen/mcp-ripestat)](https://goreportcard.com/report/github.com/taihen/mcp-ripestat)
 
-**`mcp-ripestat` is a Go-based MCP server that query data from the RIPEstat
-Data API.**
+
+A Model Context Protocol (MCP) server for the RIPEstat Data API, providing network information for IP addresses and prefixes.
 
 > [!CAUTION]
 > This MCP server is currently under active development. It may not be stable
@@ -36,42 +36,12 @@ language queries into appropriate API calls, making it easier and more intuitive
 to access and analyze RIPEStat data for research, troubleshooting, or network
 management tasks.
 
-## Network Operations & Monitoring
+## Features
 
-Quickly look up network information (ASN, prefix, routing, geolocation) for any
-IP address or prefix as part of incident response or troubleshooting.
-Integrate with monitoring dashboards to enrich alerts with RIPEstat data.
-
-## Security Analysis
-
-Automate enrichment of security events (e.g., SIEM logs, IDS alerts) with
-RIPEstat data to provide context about suspicious IPs or networks. Investigate
-the ownership and reputation of IP addresses seen in logs or threat intelligence
-needs.
-
-## Automation & Scripting
-
-Use the MCP server as a local API for scripts and automation tools to fetch
-RIPEstat data without each script needing to implement its own API logic.
-Batch process lists of IPs or prefixes for network inventory or audit tasks.
-
-## Centralized Access for Teams
-
-Allow multiple team members to access RIPEstat data through a single, consistent
-endpoint, reducing the need for individual API keys or configurations.
-Enforce organizational policies, logging, or access controls at the MCP
-server level.
-
-## Data Enrichment for Applications
-
-Enrich internal applications (e.g., asset management, customer portals) with
-authoritative network information from RIPEstat. Combine RIPEstat data with other
-sources for richer analytics or reporting.
-
-## Education & Research
-
-Provide students or researchers with easy access to Internet infrastructure data
-for analysis, visualization, or learning projects.
+- Network information for IP addresses and prefixes
+- AS overview for Autonomous System numbers
+- Announced prefixes for Autonomous Systems
+- Routing status for IP prefixes
 
 ## Architectural Rationale
 
@@ -85,41 +55,42 @@ point for RIPEstat data.
 > [!WARNING]
 > At current stage this MCP server does not provide authentication.
 
-## Quick Start
+## Installation
 
-### Build
+### Prerequisites
 
-To build the binary, run:
+- Go 1.24.4 or higher
+- Make
 
-```sh
-go build -o mcp-ripestat ./cmd/mcp-ripestat
+```bash
+# Clone the repository
+git clone https://github.com/taihen/mcp-ripestat.git
+cd mcp-ripestat
+
+# Install dependencies
+make deps
+
+# Build the application
+make build
 ```
 
-### Run
+## Usage
 
-To run the server locally:
+```bash
+# Run the server
+./bin/mcp-ripestat
 
-```sh
-go build -o mcp-ripestat ./cmd/mcp-ripestat
-./mcp-ripestat
+# Run with custom port
+./bin/mcp-ripestat --port 8081
+
+# Enable debug logging
+./bin/mcp-ripestat --debug
+
+# Show help
+./bin/mcp-ripestat --help
 ```
 
-By default, the server runs on port `8080`. You can change this by setting the
-`--port` flag. You can also enable debug logging with the `--debug` flag.
-
-```sh
-./mcp-ripestat --port=8888 --debug
-```
-
-### Flags
-
-The following command-line flags are available:
-
-- `--port`: Sets the port for the server to listen on (default: `8080`).
-- `--debug`: Enables debug logging.
-- `--help`: Prints all possible flags.
-
-### MCP Client Configuration
+## MCP Client Configuration
 
 To integrate the server with MCP client, add the following configuration to your
 global `mcp.json` file (e.g. for [Cursor](https://www.cursor.com/)
@@ -128,359 +99,54 @@ global `mcp.json` file (e.g. for [Cursor](https://www.cursor.com/)
 The example [mcp.json](./mcp.json) in this repository can be used as a
 reference.
 
-**Example Configuration:**
-
-Merge the `ripestat` object from this repository's `mcp.json` into your existing
-MCP client configuration file. For example:
-
-```json
-{
-  "anthropic": {
-    "url": "...",
-    "endpoints": []
-  },
-  "ripestat": {
-    "name": "mcp-ripestat-local",
-    "description": "Local MCP RIPEstat server for RIPEstat Data API integration.",
-    "url": "http://localhost:8080",
-    "endpoints": [
-      {
-        "path": "/network-info",
-        "method": "GET",
-        "description": "Get network information for an IP address or prefix. Query param: resource"
-      },
-      {
-        "path": "/as-overview",
-        "method": "GET",
-        "description": "Get an overview of an Autonomous System (AS). Query param: resource"
-      },
-      {
-        "path": "/announced-prefixes",
-        "method": "GET",
-        "description": "Get a list of prefixes announced by an Autonomous System (AS). Query param: resource"
-      }
-    ]
-  }
-}
-```
-
 ## API Endpoints
 
-### `GET /.well-known/mcp/manifest.json`
+- `/network-info` - Get network information for an IP address or prefix
+- `/as-overview` - Get an overview of an Autonomous System (AS)
+- `/announced-prefixes` - Get a list of prefixes announced by an Autonomous System (AS)
+- `/routing-status` - Get the routing status for an IP prefix
 
-Returns the MCP manifest for MCP client which describes the server's capabilities.
+## Development
 
-**Example:**
+```bash
+# Run tests
+make test
 
-Development Testing:
+# Run tests with coverage report
+make test-coverage
 
-```sh
-curl 'http://localhost:8080/.well-known/mcp/manifest.json'
+# Run end-to-end tests
+make e2e-test
+
+# Run linters
+make lint
+
+# Format code
+make fmt
+
+# Clean build artifacts
+make clean
+
+# Install dependencies
+make deps
 ```
 
-**Sample response:**
+### Project Structure
 
-```json
-{
-  "name": "mcp-ripestat",
-  "description": "A server for the RIPEstat Data API, providing network information for IP addresses and prefixes.",
-  "functions": [
-    {
-      "name": "getNetworkInfo",
-      "description": "Get network information for an IP address or prefix.",
-      "parameters": [
-        {
-          "name": "resource",
-          "type": "string",
-          "required": true,
-          "description": "The IP address or prefix to query."
-        }
-      ],
-      "returns": {
-        "type": "object"
-      }
-    },
-    {
-      "name": "getASOverview",
-      "description": "Get an overview of an Autonomous System (AS).",
-      "parameters": [
-        {
-          "name": "resource",
-          "type": "string",
-          "required": true,
-          "description": "The AS number to query."
-        }
-      ],
-      "returns": {
-        "type": "object"
-      }
-    },
-    {
-      "name": "getAnnouncedPrefixes",
-      "description": "Get a list of prefixes announced by an Autonomous System (AS).",
-      "parameters": [
-        {
-          "name": "resource",
-          "type": "string",
-          "required": true,
-          "description": "The AS number to query."
-        }
-      ],
-      "returns": {
-        "type": "object"
-      }
-    }
-  ]
-}
-```
+The project is organized into the following packages:
 
-### `GET /network-info`
-
-Returns network information for an IP address or prefix using the RIPEstat
-`network-info` data API.
-
-**Query parameters:**
-
-- `resource`: The IP address or prefix to query (e.g., `140.78.90.50`).
-
-**Example:**
-
-MCP Client Prompt:
-
-> Get the network info for 140.78.90.50.
-
-Development Testing:
-
-```sh
-curl 'http://localhost:8080/network-info?resource=140.78.90.50'
-```
-
-**Sample response:**
-
-```json
-{
-  "messages": [],
-  "see_also": [],
-  "version": "1.1",
-  "data_call_name": "network-info",
-  "data_call_status": "supported",
-  "cached": false,
-  "data": {
-    "asns": ["1205"],
-    "prefix": "140.78.0.0/16"
-  },
-  "query_id": "...",
-  "process_time": 3,
-  "server_id": "...",
-  "build_version": "...",
-  "status": "ok",
-  "status_code": 200,
-  "time": "..."
-}
-```
-
-### `GET /as-overview`
-
-Returns an overview for an AS (Autonomous System) using the RIPEstat
-`as-overview` data API.
-
-**Query parameters:**
-
-- `resource`: The AS number to query (e.g., `3333`).
-
-**Example:**
-
-MCP Client Prompt:
-
-> Get the AS overview for 3333.
-
-Development Testing:
-
-```sh
-curl 'http://localhost:8080/as-overview?resource=3333'
-```
-
-**Sample response:**
-
-```json
-{
-    "messages": [],
-    "see_also": [],
-    "version": "1.3",
-    "data_call_name": "as-overview",
-    "data_call_status": "supported - based on 2.1",
-    "cached": true,
-    "data": {
-        "type": "as",
-        "resource": "3333",
-        "block": {
-            "resource": "3154-3353",
-            "desc": "Assigned by RIPE NCC",
-            "name": "IANA 16-bit Autonomous System (AS) Numbers Registry"
-        },
-        "holder": "RIPE-NCC-AS - Reseaux IP Europeens Network Coordination Centre (RIPE NCC)",
-        "announced": true
-    },
-    "query_id": "...",
-    "process_time": 3,
-    "server_id": "...",
-    "build_version": "...",
-    "status": "ok",
-    "status_code": 200,
-    "time": "..."
-}
-```
-
-### `GET /announced-prefixes`
-
-Returns a list of prefixes announced by an AS (Autonomous System) using the
-RIPEstat `announced-prefixes` data API.
-
-**Query parameters:**
-
-- `resource`: The AS number to query (e.g., `3333`).
-
-**Example:**
-
-MCP Client Prompt:
-
-> Get the announced prefixes for AS3333.
-
-Development Testing:
-
-```sh
-curl 'http://localhost:8080/announced-prefixes?resource=3333'
-```
-
-**Sample response:**
-
-```json
-{
-    "messages": [
-        ["info", "Results exclude routes with very low visibility."]
-    ],
-    "see_also": [],
-    "version": "1.2",
-    "data_call_name": "announced-prefixes",
-    "data_call_status": "supported",
-    "cached": false,
-    "data": {
-        "prefixes": [
-            {
-                "prefix": "193.0.0.0/21",
-                "timelines": [
-                    {
-                        "starttime": "2025-06-05T00:00:00",
-                        "endtime": "2025-06-19T00:00:00"
-                    }
-                ]
-            },
-            {
-                "prefix": "193.0.10.0/23",
-                "timelines": [
-                    {
-                        "starttime": "2025-06-05T00:00:00",
-                        "endtime": "2025-06-19T00:00:00"
-                    }
-                ]
-            }
-        ],
-        "query_starttime": "2025-06-05T00:00:00",
-        "query_endtime": "2025-06-19T00:00:00",
-        "resource": "3333",
-        "latest_time": "2025-06-19T00:00:00",
-        "earliest_time": "2000-08-01T00:00:00"
-    },
-    "query_id": "...",
-    "process_time": 21,
-    "server_id": "...",
-    "build_version": "...",
-    "status": "ok",
-    "status_code": 200,
-    "time": "..."
-}
-```
-
-### `GET /routing-status`
-
-Returns detailed routing status information for an IP prefix using the RIPEstat
-`routing-status` data API. This includes first/last seen dates, visibility metrics,
-origin ASNs, and related prefix information.
-
-**Query parameters:**
-
-- `resource`: The IP prefix to query (e.g., `193.0.0.0/21`).
-
-**Example:**
-
-MCP Client Prompt:
-
-> Get the routing status for 193.0.0.0/21.
-
-Development Testing:
-
-```sh
-curl 'http://localhost:8080/routing-status?resource=193.0.0.0/21'
-```
-
-**Sample response:**
-
-```json
-{
-  "messages": [
-    [
-      "info",
-      "Results exclude routes with very low visibility (less than 10 RIS full-feed peers seeing)."
-    ]
-  ],
-  "see_also": [],
-  "version": "3.4",
-  "data_call_name": "routing-status",
-  "data_call_status": "supported",
-  "cached": false,
-  "data": {
-    "first_seen": {
-      "prefix": "193.0.0.0/21",
-      "origin": "3333",
-      "time": "2000-10-31T00:00:00"
-    },
-    "last_seen": {
-      "prefix": "193.0.0.0/21",
-      "origin": "3333",
-      "time": "2025-06-21T16:00:00"
-    },
-    "visibility": {
-      "v4": {
-        "ris_peers_seeing": 342,
-        "total_ris_peers": 343
-      },
-      "v6": {
-        "ris_peers_seeing": 0,
-        "total_ris_peers": 0
-      }
-    },
-    "origins": [
-      {
-        "origin": 3333,
-        "route_objects": [
-          "RIPE"
-        ]
-      }
-    ],
-    "less_specifics": [],
-    "more_specifics": [],
-    "resource": "193.0.0.0/21",
-    "query_time": "2025-06-21T16:00:00"
-  },
-  "query_id": "...",
-  "process_time": 508,
-  "server_id": "...",
-  "build_version": "...",
-  "status": "ok",
-  "status_code": 200,
-  "time": "..."
-}
-```
+- `cmd/mcp-ripestat` - Main application entry point
+- `internal/ripestat` - Core functionality
+  - `announcedprefixes` - Announced prefixes data
+  - `asoverview` - AS overview data
+  - `client` - HTTP client for RIPEstat API
+  - `config` - Configuration handling
+  - `errors` - Error types and handling
+  - `logging` - Logging utilities
+  - `networkinfo` - Network information data
+  - `routingstatus` - Routing status data
+  - `types` - Common type definitions
+  - `util` - Utility functions for IP, ASN validation, string manipulation, etc.
 
 ## Contributing
 
@@ -490,7 +156,7 @@ to see how you can participate.
 ## Development
 
 The development process is organized into sprints, with each sprint focused on a
-specific feature from the RIPEstat API. A detailed ledger of all the features,
+specific feature. A detailed ledger of all the past and feature changes,
 divided by sprints, is available in the [sprints](.github/SPRINTS.md)
 documentation.
 

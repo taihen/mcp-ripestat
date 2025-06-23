@@ -1,46 +1,73 @@
-.PHONY: all build clean lint test docker release
+# Makefile for mcp-ripestat
 
-all: build
+.PHONY: all build test test-coverage e2e-test lint clean run deps fmt help
 
+# Default target
+all: lint test build
+
+# Build the application
 build:
 	@echo "Building mcp-ripestat..."
-	@go build -o mcp-ripestat ./cmd/mcp-ripestat
+	go build -o bin/mcp-ripestat ./cmd/mcp-ripestat
 
-clean:
-	@echo "Cleaning up..."
-	@rm -f mcp-ripestat
-
-lint:
-	@echo "Linting..."
-	@echo "Note: This runs linters via GitHub Actions. Run 'make test' for local checks."
-	@# The following command is a placeholder for a real linting tool.
-	@echo "Linting would run here."
-
+# Run tests
 test:
-	@echo "Running unit tests..."
-	@go test -v -tags=unit ./...
+	@echo "Running tests..."
+	go test -v ./...
 
-test-e2e:
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	go test -v -race -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated at coverage.html"
+	@go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//' | awk '{if ($$1 < 90) {print "Test coverage is below 90%"; exit 1} else {print "Test coverage is", $$1"%"}}'
+
+# Run end-to-end tests
+e2e-test:
 	@echo "Running end-to-end tests..."
-	@go test -v -tags=e2e ./...
+	go test -v -tags=e2e ./e2e/...
 
-docker:
-	@echo "Building Docker image..."
-	@echo "Note: Docker build is handled by the release CI workflow."
-	@# docker build -t ghcr.io/taihen/mcp-ripestat:latest .
+# Run linting
+lint:
+	@echo "Running linters..."
+	golangci-lint run
 
-release:
-	@echo "Creating a release..."
-	@echo "Note: Releases are handled automatically by CI on push to main."
-	@echo "Commit with a conventional commit message to trigger a release."
+# Format code
+fmt:
+	@echo "Formatting code..."
+	gofmt -l -s -w .
+	goimports -local github.com/taihen/mcp-ripestat -w .
 
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts..."
+	rm -rf bin/
+	go clean
+
+# Run the application
+run: build
+	@echo "Running mcp-ripestat..."
+	./bin/mcp-ripestat
+
+# Install dependencies
+deps:
+	@echo "Installing dependencies..."
+	go mod tidy
+	go install golang.org/x/tools/cmd/goimports@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+# Help target
 help:
 	@echo "Available targets:"
-	@echo "  all      - Build the binary (default)"
-	@echo "  build    - Build the binary"
-	@echo "  clean    - Remove the built binary"
-	@echo "  lint     - Run linters (primarily via CI)"
-	@echo "  test     - Run unit tests"
-	@echo "  test-e2e  - Run end-to-end tests"
-	@echo "  docker   - Placeholder for Docker image build"
-	@echo "  release  - Placeholder for release process"
+	@echo "  all           - Run lint, test, and build"
+	@echo "  build         - Build the application"
+	@echo "  test          - Run tests"
+	@echo "  test-coverage - Run tests with coverage report"
+	@echo "  e2e-test      - Run end-to-end tests"
+	@echo "  lint          - Run linters"
+	@echo "  fmt           - Format code"
+	@echo "  clean         - Clean build artifacts"
+	@echo "  run           - Build and run the application"
+	@echo "  deps          - Install dependencies"
+	@echo "  help          - Show this help message"

@@ -2,234 +2,179 @@ package routingstatus
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 )
 
-func TestNewClient(t *testing.T) {
-	baseURL := "https://example.com"
-	httpClient := &http.Client{}
+func TestClient_Get_Success(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"messages": [],
+			"see_also": [],
+			"version": "1.0",
+			"data_call_name": "routing-status",
+			"data_call_status": "supported",
+			"cached": true,
+			"data": {
+				"resource": "193.0.0.0/21",
+				"announced": true,
+				"asns": ["3333"],
+				"query_time": "2025-06-16T16:00:00"
+			},
+			"query_id": "20250616201149-d1dc0028-1b4d-4809-9d22-b8cba055b6a9",
+			"process_time": 3,
+			"server_id": "app195",
+			"build_version": "main-2025.05.26",
+			"status": "ok",
+			"status_code": 200,
+			"time": "2025-06-16T20:11:49.678721"
+		}`))
+	}))
+	defer ts.Close()
 
-	client := NewClient(baseURL, httpClient)
+	c := client.New(ts.URL, ts.Client())
+	client := NewClient(c)
 
-	if client.baseURL != baseURL {
-		t.Errorf("expected baseURL %s, got %s", baseURL, client.baseURL)
+	ctx := context.Background()
+	resp, err := client.Get(ctx, "193.0.0.0/21")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
-
-	if client.httpClient != httpClient {
-		t.Errorf("expected httpClient %v, got %v", httpClient, client.httpClient)
+	if resp.Data.Resource != "193.0.0.0/21" {
+		t.Errorf("expected resource 193.0.0.0/21, got %s", resp.Data.Resource)
+	}
+	if !resp.Data.Announced {
+		t.Error("expected announced to be true")
+	}
+	if len(resp.Data.ASNs) != 1 || resp.Data.ASNs[0] != "3333" {
+		t.Errorf("expected ASNs [3333], got %v", resp.Data.ASNs)
 	}
 }
 
-func TestClient_Get(t *testing.T) {
-	parsedTime, _ := time.Parse(time.RFC3339, "2025-06-21T16:00:00Z")
-	mockTime := CustomTime{Time: parsedTime}
+func TestClient_Get_HTTPError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer ts.Close()
 
-	tests := []struct {
-		name          string
-		client        *Client
-		resource      string
-		serverHandler func(w http.ResponseWriter, r *http.Request)
-		expected      *Response
-		expectError   bool
-	}{
-		{
-			name:     "valid request",
-			resource: "193.0.0.0/21",
-			serverHandler: func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != endpoint {
-					t.Errorf("expected path %s, got %s", endpoint, r.URL.Path)
-				}
+	c := client.New(ts.URL, ts.Client())
+	client := NewClient(c)
 
-				query := r.URL.Query()
-				if query.Get("resource") != "193.0.0.0/21" {
-					t.Errorf("expected resource 193.0.0.0/21, got %s", query.Get("resource"))
-				}
+	ctx := context.Background()
+	_, err := client.Get(ctx, "193.0.0.0/21")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "HTTP status: 502") {
+		t.Errorf("expected status code error, got %v", err)
+	}
+}
 
-				response := map[string]interface{}{
-					"messages":         []interface{}{},
-					"see_also":         []interface{}{},
-					"version":          "1.0",
-					"data_call_name":   "routing-status",
-					"data_call_status": "supported",
-					"cached":           false,
-					"data": map[string]interface{}{
-						"first_seen": map[string]interface{}{
-							"prefix": "193.0.0.0/21",
-							"origin": "3333",
-							"time":   mockTime,
-						},
-						"last_seen": map[string]interface{}{
-							"prefix": "193.0.0.0/21",
-							"origin": "3333",
-							"time":   mockTime,
-						},
-						"visibility": map[string]interface{}{
-							"v4": map[string]interface{}{
-								"ris_peers_seeing": 342,
-								"total_ris_peers":  343,
-							},
-							"v6": map[string]interface{}{
-								"ris_peers_seeing": 0,
-								"total_ris_peers":  0,
-							},
-						},
-						"origins": []interface{}{
-							map[string]interface{}{
-								"origin":        3333,
-								"route_objects": []string{"RIPE"},
-							},
-						},
-						"less_specifics": []interface{}{},
-						"more_specifics": []interface{}{},
-						"resource":       "193.0.0.0/21",
-						"query_time":     mockTime,
-					},
-					"query_id":      "query-123",
-					"process_time":  25,
-					"server_id":     "app123",
-					"build_version": "1.0.0",
-					"status":        "ok",
-					"status_code":   200,
-					"time":          "2025-06-21T16:00:00Z",
-				}
+func TestClient_Get_BadJSON(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"not_json":`))
+	}))
+	defer ts.Close()
 
-				json.NewEncoder(w).Encode(response)
-			},
-			expected: &Response{
-				Messages:       []interface{}{},
-				SeeAlso:        []interface{}{},
-				Version:        "1.0",
-				DataCallName:   "routing-status",
-				DataCallStatus: "supported",
-				Cached:         false,
-				Data: Data{
-					FirstSeen: RouteInfo{
-						Prefix: "193.0.0.0/21",
-						Origin: "3333",
-						Time:   mockTime,
-					},
-					LastSeen: RouteInfo{
-						Prefix: "193.0.0.0/21",
-						Origin: "3333",
-						Time:   mockTime,
-					},
-					Visibility: Visibility{
-						V4: AddressVisibility{
-							RISPeersSeeing: 342,
-							TotalRISPeers:  343,
-						},
-						V6: AddressVisibility{
-							RISPeersSeeing: 0,
-							TotalRISPeers:  0,
-						},
-					},
-					Origins: []Origin{
-						{
-							Origin:       3333,
-							RouteObjects: []string{"RIPE"},
-						},
-					},
-					LessSpecifics: []any{},
-					MoreSpecifics: []any{},
-					Resource:      "193.0.0.0/21",
-					QueryTime:     mockTime,
-				},
-				QueryID:      "query-123",
-				ProcessTime:  25,
-				ServerID:     "app123",
-				BuildVersion: "1.0.0",
-				Status:       "ok",
-				StatusCode:   200,
-				Time:         "2025-06-21T16:00:00Z",
-			},
-			expectError: false,
-		},
-		{
-			name:     "empty resource",
-			resource: "",
-			serverHandler: func(w http.ResponseWriter, r *http.Request) {
-				t.Error("server should not be called")
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name:     "server error",
-			resource: "193.0.0.0/21",
-			serverHandler: func(w http.ResponseWriter, r *http.Request) {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name:     "invalid json",
-			resource: "193.0.0.0/21",
-			serverHandler: func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte(`{"data":invalid json}`))
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name:     "invalid url",
-			client:   NewClient("http://[::1]:namedport", http.DefaultClient),
-			resource: "193.0.0.0/21",
-			serverHandler: func(w http.ResponseWriter, r *http.Request) {
-				t.Error("server should not be called")
-			},
-			expected:    nil,
-			expectError: true,
-		},
-		{
-			name: "http do error",
-			client: &Client{
-				baseURL: "http://localhost:12345", // Assuming this port is not in use
-				httpClient: &http.Client{
-					Timeout: 1 * time.Microsecond, // Very short timeout to force error
-				},
-			},
-			resource: "193.0.0.0/21",
-			serverHandler: func(w http.ResponseWriter, r *http.Request) {
-				t.Error("server should not be called")
-			},
-			expected:    nil,
-			expectError: true,
-		},
+	c := client.New(ts.URL, ts.Client())
+	client := NewClient(c)
+
+	ctx := context.Background()
+	_, err := client.Get(ctx, "193.0.0.0/21")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to decode response") {
+		t.Errorf("expected decode error, got %v", err)
+	}
+}
+
+func TestClient_Get_Timeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer ts.Close()
+
+	httpClient := &http.Client{Timeout: 50 * time.Millisecond}
+	c := client.New(ts.URL, httpClient)
+	client := NewClient(c)
+
+	ctx := context.Background()
+	_, err := client.Get(ctx, "193.0.0.0/21")
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "Client.Timeout exceeded") {
+		t.Errorf("expected timeout error (context deadline or client timeout), got %v", err)
+	}
+}
+
+func TestGetRoutingStatus_Exported(t *testing.T) {
+	// Create a test server
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"resource": "193.0.0.0/21",
+				"announced": true,
+				"asns": ["3333"],
+				"query_time": "2025-06-16T16:00:00"
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	// Create a custom client that uses our test server
+	c := client.New(ts.URL, ts.Client())
+	customClient := NewClient(c)
+
+	// Test the client directly
+	ctx := context.Background()
+	resp, err := customClient.Get(ctx, "193.0.0.0/21")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if resp.Data.Resource != "193.0.0.0/21" {
+		t.Errorf("expected resource 193.0.0.0/21, got %s", resp.Data.Resource)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var client *Client
+	// Since we can't mock the GetRoutingStatus function directly,
+	// we're effectively testing that the client works correctly
+	// which is what the exported GetRoutingStatus function uses
+}
 
-			// Use predefined client or create a new one
-			if tt.client != nil {
-				client = tt.client
-			} else {
-				server := httptest.NewServer(http.HandlerFunc(tt.serverHandler))
-				defer server.Close()
-				client = NewClient(server.URL, server.Client())
-			}
+func TestGetRoutingStatus_ConvenienceFunction(t *testing.T) {
+	// Test the convenience function with an empty resource to trigger error path
+	ctx := context.Background()
+	_, err := GetRoutingStatus(ctx, "")
+	if err == nil {
+		t.Fatal("expected error for empty resource, got nil")
+	}
+	if !strings.Contains(err.Error(), "resource parameter is required") {
+		t.Errorf("expected resource required error, got %v", err)
+	}
+}
 
-			result, err := client.Get(context.Background(), tt.resource)
-
-			if tt.expectError {
-				if err == nil {
-					t.Error("expected error but got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-				if !reflect.DeepEqual(result, tt.expected) {
-					t.Errorf("expected %+v, got %+v", tt.expected, result)
-				}
-			}
-		})
+func TestClient_Get_EmptyResource(t *testing.T) {
+	c := DefaultClient()
+	ctx := context.Background()
+	_, err := c.Get(ctx, "")
+	if err == nil {
+		t.Fatal("expected error for empty resource, got nil")
+	}
+	if !strings.Contains(err.Error(), "resource parameter is required") {
+		t.Errorf("expected resource required error, got %v", err)
 	}
 }

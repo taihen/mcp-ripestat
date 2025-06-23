@@ -1,21 +1,14 @@
+// Package asoverview provides access to the RIPEstat as-overview API.
 package asoverview
+
+import (
+	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
+)
 
 // Response is the top-level structure for the RIPEstat AS Overview API response.
 type Response struct {
-	Messages       []interface{} `json:"messages"`
-	SeeAlso        []interface{} `json:"see_also"`
-	Version        string        `json:"version"`
-	DataCallName   string        `json:"data_call_name"`
-	DataCallStatus string        `json:"data_call_status"`
-	Cached         bool          `json:"cached"`
-	Data           Data          `json:"data"`
-	QueryID        string        `json:"query_id"`
-	ProcessTime    int           `json:"process_time"`
-	ServerID       string        `json:"server_id"`
-	BuildVersion   string        `json:"build_version"`
-	Status         string        `json:"status"`
-	StatusCode     int           `json:"status_code"`
-	Time           string        `json:"time"`
+	types.BaseResponse
+	Data Data `json:"data"`
 }
 
 // Data represents the core data of the AS Overview response.

@@ -1,0 +1,33 @@
+run:
+  concurrency: 4
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - typecheck
+    - unused
+    - whitespace
+    - revive
+    - gosec
+    - bodyclose
+    - noctx
+    - prealloc
+    - unconvert
+    - unparam
+    - gocritic
+    - godot
+    - gocyclo
+    - dupl
+    - copyloopvar
+    - nakedret
+    - dogsled
+    # - wsl

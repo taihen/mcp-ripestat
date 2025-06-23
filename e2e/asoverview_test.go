@@ -1,6 +1,6 @@
 //go:build e2e
 
-package test
+package e2e
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 func TestASOverviewE2E(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err := asoverview.Get(ctx, "3333")
+	resp, err := asoverview.GetASOverview(ctx, "3333")
 	if err != nil {
 		t.Fatalf("live call failed: %v", err)
 	}
