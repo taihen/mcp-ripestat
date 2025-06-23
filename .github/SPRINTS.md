@@ -13,7 +13,7 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 6 | `sprint-6` | v1.6.0 | Whois | `whois` | Completed |
 | 7 | `sprint-7` | v1.8.0 | Abuse Contact Finder | `abuse-contact-finder` | Completed |
 | 8 | `sprint-8` | v1.9.0 | RPKI Validation Status | `rpki-validation` | Completed |
-| 9 | `sprint-9` | N/A | ASN Neighbours | `asn-neighbours` | Planned |
+| 9 | `sprint-9` | v1.10.0 | ASN Neighbours | `asn-neighbours` | Completed |
 | 10 | `sprint-10` | N/A | Looking Glass | `looking-glass` | Planned |
 | 11 | `sprint-11` | N/A | What's My IP | `whats-my-ip` | Planned |
 | 12 | `sprint-12 | N/A | UX | N/A | Planned |
