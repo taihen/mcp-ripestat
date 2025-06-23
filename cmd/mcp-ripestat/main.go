@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
@@ -64,6 +66,7 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/whois", whoisHandler)
 	mux.HandleFunc("/abuse-contact-finder", abuseContactFinderHandler)
 	mux.HandleFunc("/rpki-validation", rpkiValidationHandler)
+	mux.HandleFunc("/asn-neighbours", asnNeighboursHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -252,6 +255,33 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getASNNeighbours",
+				Description: "Get ASN neighbours for an Autonomous System. Left neighbours are downstream providers, right neighbours are upstream providers.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The AS number to query for neighbours.",
+					},
+					{
+						Name:        "lod",
+						Type:        "string",
+						Required:    false,
+						Description: "Level of detail: 0 (basic) or 1 (detailed with power, v4_peers, v6_peers). Default is 0.",
+					},
+					{
+						Name:        "query_time",
+						Type:        "string",
+						Required:    false,
+						Description: "Query time in ISO8601 format for historical data. If omitted, uses latest snapshot.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -318,6 +348,43 @@ func rpkiValidationHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("RIPEstat call failed", "call_name", "rpki-validation", "err", err)
 		writeJSONError(w, "failed to fetch rpki-validation", http.StatusBadGateway)
+		return
+	}
+
+	writeJSON(w, resp, http.StatusOK)
+}
+
+func asnNeighboursHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("received asn-neighbours request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
+
+	resource := r.URL.Query().Get("resource")
+	lodStr := r.URL.Query().Get("lod")
+	queryTime := r.URL.Query().Get("query_time")
+
+	if resource == "" {
+		slog.Warn("missing resource parameter", "call_name", "asn-neighbours")
+		writeJSONError(w, "missing resource parameter", http.StatusBadRequest)
+		return
+	}
+
+	lod := 0 // default value
+	if lodStr != "" {
+		var err error
+		lod, err = strconv.Atoi(lodStr)
+		if err != nil || (lod != 0 && lod != 1) {
+			slog.Warn("invalid lod parameter", "call_name", "asn-neighbours", "lod", lodStr)
+			writeJSONError(w, "lod parameter must be 0 or 1", http.StatusBadRequest)
+			return
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := asnneighbours.GetASNNeighbours(ctx, resource, lod, queryTime)
+	if err != nil {
+		slog.Error("RIPEstat call failed", "call_name", "asn-neighbours", "err", err)
+		writeJSONError(w, "failed to fetch asn-neighbours", http.StatusBadGateway)
 		return
 	}
 

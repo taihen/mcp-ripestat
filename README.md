@@ -45,6 +45,7 @@ management tasks.
 - Whois information for IP addresses, prefixes, and ASNs
 - Abuse contact finder for IP addresses and prefixes
 - RPKI validation status for ASN and prefix combinations
+- ASN neighbours for Autonomous Systems (upstream/downstream relationships)
 
 ## Architectural Rationale
 
@@ -106,6 +107,7 @@ To use this MCP server, simply copy and paste the [MCP client configuration](./m
 - `/whois` - Get whois information for an IP address, prefix, or ASN
 - `/abuse-contact-finder` - Get abuse contact information for an IP address or prefix
 - `/rpki-validation` - Get RPKI validation status for a resource (ASN) and prefix combination
+- `/asn-neighbours` - Get ASN neighbours for an Autonomous System (upstream/downstream relationships)
 
 ## Testing
 
@@ -140,6 +142,7 @@ The project is organized into the following packages:
 - `internal/ripestat` - Core functionality
   - `abusecontactfinder` - Abuse contact finder data
   - `announcedprefixes` - Announced prefixes data
+  - `asnneighbours` - ASN neighbours data
   - `asoverview` - AS overview data
   - `client` - HTTP client for RIPEstat API
   - `config` - Configuration handling

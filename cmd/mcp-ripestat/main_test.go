@@ -127,8 +127,8 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("Expected manifest name to be 'mcp-ripestat', got %q", manifest.Name)
 	}
 
-	if len(manifest.Functions) != 7 {
-		t.Errorf("Expected 7 functions in manifest, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 8 {
+		t.Errorf("Expected 8 functions in manifest, got %d", len(manifest.Functions))
 	}
 
 	// Check that all expected functions are present
@@ -145,6 +145,7 @@ func TestManifestHandler(t *testing.T) {
 		"getWhois",
 		"getAbuseContactFinder",
 		"getRPKIValidation",
+		"getASNNeighbours",
 	}
 
 	for _, name := range expectedFunctions {
@@ -675,5 +676,75 @@ func TestRun_InvalidPort(t *testing.T) {
 	// The function should complete without error
 	if err != nil {
 		t.Fatalf("run() failed: %v", err)
+	}
+}
+
+func TestASNNeighboursHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/asn-neighbours?resource=AS1205&lod=0", nil)
+	w := httptest.NewRecorder()
+
+	asnNeighboursHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
+		// We accept either OK or BadGateway since this might be run without internet
+		t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestASNNeighboursHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/asn-neighbours?lod=0", nil)
+	w := httptest.NewRecorder()
+
+	asnNeighboursHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+		return
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestASNNeighboursHandler_InvalidLOD(t *testing.T) {
+	req := httptest.NewRequest("GET", "/asn-neighbours?resource=AS1205&lod=5", nil)
+	w := httptest.NewRecorder()
+
+	asnNeighboursHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+		return
+	}
+
+	if !strings.Contains(string(body), "lod parameter must be 0 or 1") {
+		t.Errorf("Expected error message about invalid lod, got %q", string(body))
 	}
 }
