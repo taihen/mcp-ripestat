@@ -574,6 +574,45 @@ func TestRPKIValidationHandler(t *testing.T) {
 	if resp.Header.Get("Content-Type") != "application/json" {
 		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
 	}
+
+	// If the request was successful, validate the JSON response body
+	if resp.StatusCode == http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read response body: %v", err)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal(body, &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+
+		// Validate key fields in the response
+		if status, ok := response["status"].(string); !ok || status == "" {
+			t.Errorf("Expected 'status' field to be a non-empty string, got %v", response["status"])
+		}
+
+		if resource, ok := response["resource"].(string); !ok || resource != "3333" {
+			t.Errorf("Expected 'resource' field to be '3333', got %v", response["resource"])
+		}
+
+		if prefix, ok := response["prefix"].(string); !ok || prefix != "193.0.0.0/21" {
+			t.Errorf("Expected 'prefix' field to be '193.0.0.0/21', got %v", response["prefix"])
+		}
+
+		if validator, ok := response["validator"].(string); !ok || validator == "" {
+			t.Errorf("Expected 'validator' field to be a non-empty string, got %v", response["validator"])
+		}
+
+		if fetchedAt, ok := response["fetched_at"].(string); !ok || fetchedAt == "" {
+			t.Errorf("Expected 'fetched_at' field to be a non-empty string, got %v", response["fetched_at"])
+		}
+
+		// Validate validating_roas field exists (can be empty array or contain ROAs)
+		if _, ok := response["validating_roas"]; !ok {
+			t.Error("Expected 'validating_roas' field to be present in response")
+		}
+	}
 }
 
 func TestRPKIValidationHandler_MissingResource(t *testing.T) {
