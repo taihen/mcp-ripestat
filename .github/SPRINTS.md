@@ -16,3 +16,4 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 9 | `sprint-9` | N/A | ASN Neighbours | `asn-neighbours` | Planned |
 | 10 | `sprint-10` | N/A | Looking Glass | `looking-glass` | Planned |
 | 11 | `sprint-11` | N/A | What's My IP | `whats-my-ip` | Planned |
+| 12 | `sprint-12 | N/A | UX | N/A | Planned

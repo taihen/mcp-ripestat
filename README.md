@@ -93,12 +93,7 @@ make build
 
 ## MCP Client Configuration
 
-To integrate the server with MCP client, add the following configuration to your
-global `mcp.json` file (e.g. for [Cursor](https://www.cursor.com/)
-`~/.cursor/mcp.json` on macOS/Linux).
-
-The example [mcp.json](./mcp.json) in this repository can be used as a
-reference.
+To use this MCP server, simply copy and paste the [MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor, place it in `~/.cursor/mcp.json` on macOS/Linux).
 
 ## API Endpoints
 

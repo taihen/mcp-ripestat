@@ -1,29 +1,92 @@
 {
-  "ripestat": {
-    "name": "mcp-ripestat-local",
-    "description": "Local MCP RIPEstat server for RIPEstat Data API integration.",
-    "url": "http://localhost:8080",
-    "endpoints": [
-      {
-        "path": "/network-info",
-        "method": "GET",
-        "description": "Get network information for an IP address or prefix. Query param: resource"
-      },
-      {
-        "path": "/as-overview",
-        "method": "GET",
-        "description": "Get an overview of an Autonomous System (AS). Query param: resource"
-      },
-      {
-        "path": "/announced-prefixes",
-        "method": "GET",
-        "description": "Get a list of prefixes announced by an Autonomous System (AS). Query param: resource"
-      },
-      {
-        "path": "/routing-status",
-        "method": "GET",
-        "description": "Get the routing status for an IP prefix. Query param: resource"
-      }
-    ]
-  }
+  "name": "ripestat",
+  "description": "RIPEStat MCP server providing network information APIs",
+  "version": "1.6.0",
+  "command": "./mcp-ripestat",
+  "working_directory": "",
+  "environment": {},
+  "resources": [
+    {
+      "uri": "ripe://network-info",
+      "description": "Get network information for an IP address or prefix"
+    },
+    {
+      "uri": "ripe://as-overview",
+      "description": "Get overview information for an Autonomous System"
+    },
+    {
+      "uri": "ripe://announced-prefixes",
+      "description": "Get announced prefixes for an Autonomous System"
+    },
+    {
+      "uri": "ripe://routing-status",
+      "description": "Get routing status for an IP prefix"
+    },
+    {
+      "uri": "ripe://whois",
+      "description": "Get WHOIS information for IPs, prefixes, and ASNs"
+    }
+  ],
+  "tools": [
+    {
+      "name": "get_network_info",
+      "description": "Get network information for an IP address or prefix",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "IP address or prefix (e.g., 8.8.8.8 or 2001:db8::/32)",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_as_overview",
+      "description": "Get overview information for an Autonomous System",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "AS number (e.g., AS3333)",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_announced_prefixes",
+      "description": "Get announced prefixes for an Autonomous System",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "AS number (e.g., AS3333)",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_routing_status",
+      "description": "Get routing status for an IP prefix",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "IP prefix (e.g., 193.0.0.0/21)",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_whois",
+      "description": "Get WHOIS information for IPs, prefixes, and ASNs",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "IP address, prefix, or AS number",
+          "required": true
+        }
+      ]
+    }
+  ]
 }
