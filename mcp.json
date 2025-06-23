@@ -1,7 +1,7 @@
 {
   "name": "ripestat",
   "description": "RIPEStat MCP server providing network information APIs",
-  "version": "1.7.0",
+  "version": "1.9.0",
   "command": "./mcp-ripestat",
   "working_directory": "",
   "environment": {},
@@ -29,6 +29,10 @@
     {
       "uri": "ripe://abuse-contact-finder",
       "description": "Get abuse contact information for an IP address or prefix"
+    },
+    {
+      "uri": "ripe://rpki-validation",
+      "description": "Get RPKI validation status for a resource (ASN) and prefix combination"
     }
   ],
   "tools": [
@@ -100,6 +104,24 @@
           "name": "resource",
           "type": "string",
           "description": "IP address or prefix (e.g., 8.8.8.8 or 193.0.0.0/21)",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_rpki_validation",
+      "description": "Get RPKI validation status for a resource (ASN) and prefix combination",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "AS number to validate against the prefix (e.g., 3333)",
+          "required": true
+        },
+        {
+          "name": "prefix",
+          "type": "string",
+          "description": "IP prefix to validate (e.g., 193.0.0.0/21)",
           "required": true
         }
       ]
