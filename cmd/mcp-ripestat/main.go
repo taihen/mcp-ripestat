@@ -18,6 +18,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
@@ -62,6 +63,7 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/routing-status", routingStatusHandler)
 	mux.HandleFunc("/whois", whoisHandler)
 	mux.HandleFunc("/abuse-contact-finder", abuseContactFinderHandler)
+	mux.HandleFunc("/rpki-validation", rpkiValidationHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -229,6 +231,27 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getRPKIValidation",
+				Description: "Get RPKI validation status for a resource (ASN) and prefix combination.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The ASN to validate against the prefix.",
+					},
+					{
+						Name:        "prefix",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP prefix to validate.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -268,6 +291,37 @@ func abuseContactFinderHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "abuse-contact-finder", func(ctx context.Context, resource string) (interface{}, error) {
 		return abusecontactfinder.GetAbuseContactFinder(ctx, resource)
 	})
+}
+
+func rpkiValidationHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("received rpki-validation request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
+
+	resource := r.URL.Query().Get("resource")
+	prefix := r.URL.Query().Get("prefix")
+
+	if resource == "" {
+		slog.Warn("missing resource parameter", "call_name", "rpki-validation")
+		writeJSONError(w, "missing resource parameter", http.StatusBadRequest)
+		return
+	}
+
+	if prefix == "" {
+		slog.Warn("missing prefix parameter", "call_name", "rpki-validation")
+		writeJSONError(w, "missing prefix parameter", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
+	if err != nil {
+		slog.Error("RIPEstat call failed", "call_name", "rpki-validation", "err", err)
+		writeJSONError(w, "failed to fetch rpki-validation", http.StatusBadGateway)
+		return
+	}
+
+	writeJSON(w, resp, http.StatusOK)
 }
 
 type ripeStatFunc func(ctx context.Context, resource string) (interface{}, error)
