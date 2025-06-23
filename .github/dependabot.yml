@@ -4,17 +4,20 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    reviewers:
-      - "taihen"
+    commit-message:
+      prefix: "fix(deps)"
+      include: scope
   - package-ecosystem: "github-actions"
     directory: "/.github"
     schedule:
       interval: "daily"
-    reviewers:
-      - "taihen"
+    commit-message:
+      prefix: "fix(deps)"
+      include: scope
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
-    reviewers:
-      - "taihen"
+    commit-message:
+      prefix: "fix(deps)"
+      include: scope
