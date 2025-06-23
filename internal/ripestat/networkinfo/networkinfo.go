@@ -1,64 +1,65 @@
+// Package networkinfo provides access to the RIPEstat network-info API.
 package networkinfo
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
-	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 )
 
 const (
-	ripeStatBaseURL = "https://stat.ripe.net/data/network-info/data.json"
+	// EndpointPath is the path to the RIPEstat data API for network information.
+	EndpointPath = "/data/network-info/data.json"
 )
 
-var (
-	defaultHTTPClient httpDoer = &http.Client{Timeout: 10 * time.Second}
-	defaultBaseURL             = ripeStatBaseURL
-)
-
-type httpDoer interface {
-	Do(req *http.Request) (*http.Response, error)
+// Client provides methods to interact with the RIPEstat network-info API.
+type Client struct {
+	client *client.Client
 }
 
-// GetNetworkInfo is a variable so it can be replaced during testing.
-var GetNetworkInfo = func(ctx context.Context, resource string) (*NetworkInfoResponse, error) {
-	return getNetworkInfoWithClient(ctx, resource, defaultHTTPClient, defaultBaseURL)
+// NewClient creates a new Client for the RIPEstat network-info API.
+func NewClient(c *client.Client) *Client {
+	if c == nil {
+		c = client.DefaultClient()
+	}
+
+	return &Client{client: c}
 }
 
-func getNetworkInfoWithClient(ctx context.Context, resource string, client httpDoer, baseURL string) (response *NetworkInfoResponse, err error) {
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse RIPEstat base URL: %w", err)
-	}
-	q := u.Query()
-	q.Set("resource", resource)
-	u.RawQuery = q.Encode()
+// DefaultClient returns a new Client with default settings.
+func DefaultClient() *Client {
+	return NewClient(nil)
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+// Get fetches network information for the specified resource.
+func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
+	if resource == "" {
+		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call RIPEstat: %w", err)
+	params := url.Values{}
+	params.Set("resource", resource)
+
+	var response Response
+	if err := c.client.GetJSON(ctx, EndpointPath, params, &response); err != nil {
+		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get network information: %w", err))
 	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", closeErr)
+
+	// Convert ASNs to strings if needed
+	for i, asn := range response.Data.ASNs {
+		if _, ok := asn.(string); !ok {
+			// Convert to string if it's not already a string
+			response.Data.ASNs[i] = fmt.Sprintf("%v", asn)
 		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var result NetworkInfoResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
+	return &response, nil
+}
 
-	return &result, nil
+// GetNetworkInfo is a convenience function that uses the default client to get network information.
+func GetNetworkInfo(ctx context.Context, resource string) (*Response, error) {
+	return DefaultClient().Get(ctx, resource)
 }

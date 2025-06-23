@@ -1,64 +1,57 @@
+// Package asoverview provides access to the RIPEstat as-overview API.
 package asoverview
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
-	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 )
 
 const (
-	baseURL = "https://stat.ripe.net/data/as-overview/data.json"
+	// EndpointPath is the path to the RIPEstat data API for AS overview information.
+	EndpointPath = "/data/as-overview/data.json"
 )
 
-var (
-	defaultHTTPClient httpDoer = &http.Client{Timeout: 10 * time.Second}
-	defaultBaseURL             = baseURL
-)
-
-type httpDoer interface {
-	Do(req *http.Request) (*http.Response, error)
+// Client provides methods to interact with the RIPEstat as-overview API.
+type Client struct {
+	client *client.Client
 }
 
-// Get is a variable so it can be replaced during testing.
-var Get = func(ctx context.Context, resource string) (*Response, error) {
-	return getWithClient(ctx, resource, defaultHTTPClient, defaultBaseURL)
+// NewClient creates a new Client for the RIPEstat as-overview API.
+func NewClient(c *client.Client) *Client {
+	if c == nil {
+		c = client.DefaultClient()
+	}
+
+	return &Client{client: c}
 }
 
-func getWithClient(ctx context.Context, resource string, client httpDoer, baseURL string) (response *Response, err error) {
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse RIPEstat base URL: %w", err)
-	}
-	q := u.Query()
-	q.Set("resource", resource)
-	u.RawQuery = q.Encode()
+// DefaultClient returns a new Client with default settings.
+func DefaultClient() *Client {
+	return NewClient(nil)
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+// Get fetches AS overview information for the specified resource.
+func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
+	if resource == "" {
+		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call RIPEstat: %w", err)
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", closeErr)
-		}
-	}()
+	params := url.Values{}
+	params.Set("resource", resource)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	var response Response
+	if err := c.client.GetJSON(ctx, EndpointPath, params, &response); err != nil {
+		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get AS overview: %w", err))
 	}
 
-	var result Response
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
+	return &response, nil
+}
 
-	return &result, nil
+// GetASOverview is a convenience function that uses the default client to get AS overview information.
+func GetASOverview(ctx context.Context, resource string) (*Response, error) {
+	return DefaultClient().Get(ctx, resource)
 }

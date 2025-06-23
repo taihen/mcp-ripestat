@@ -16,6 +16,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 )
 
 func main() {
@@ -40,7 +41,9 @@ func main() {
 	if *debug {
 		logLevel = slog.LevelDebug
 	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+
 	slog.SetDefault(logger)
 
 	if err := run(context.Background(), *port); err != nil {
@@ -54,18 +57,22 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/network-info", networkInfoHandler)
 	mux.HandleFunc("/as-overview", asOverviewHandler)
 	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
+	mux.HandleFunc("/routing-status", routingStatusHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
 
 	server := &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second, // Prevent Slowloris attacks
 	}
 
 	go func() {
 		slog.Info("MCP RIPEstat server starting", "addr", server.Addr)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		err := server.ListenAndServe()
+
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server failed to start", "err", err)
 		}
 	}()
@@ -89,6 +96,7 @@ func run(ctx context.Context, port string) error {
 	}
 
 	slog.Info("server exited gracefully")
+
 	return nil
 }
 
@@ -122,6 +130,7 @@ type Return struct {
 
 func manifestHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("received manifest request", "remote_addr", r.RemoteAddr)
+
 	manifest := Manifest{
 		Name:        "mcp-ripestat",
 		Description: "A server for the RIPEstat Data API, providing network information for IP addresses and prefixes.",
@@ -171,6 +180,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getRoutingStatus",
+				Description: "Get the routing status for an IP prefix.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP prefix to query.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -184,13 +208,19 @@ func networkInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 func asOverviewHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "as-overview", func(ctx context.Context, resource string) (interface{}, error) {
-		return asoverview.Get(ctx, resource)
+		return asoverview.GetASOverview(ctx, resource)
 	})
 }
 
 func announcedPrefixesHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "announced-prefixes", func(ctx context.Context, resource string) (interface{}, error) {
-		return announcedprefixes.Get(ctx, resource)
+		return announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
+	})
+}
+
+func routingStatusHandler(w http.ResponseWriter, r *http.Request) {
+	handleRIPEstatRequest(w, r, "routing-status", func(ctx context.Context, resource string) (interface{}, error) {
+		return routingstatus.GetRoutingStatus(ctx, resource)
 	})
 }
 
@@ -199,6 +229,7 @@ type ripeStatFunc func(ctx context.Context, resource string) (interface{}, error
 func handleRIPEstatRequest(w http.ResponseWriter, r *http.Request, callName string, fn ripeStatFunc) {
 	slog.Debug("received request", "call_name", callName, "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
 	resource := r.URL.Query().Get("resource")
+
 	if resource == "" {
 		slog.Warn("missing resource parameter", "call_name", callName)
 		writeJSONError(w, `missing resource parameter`, http.StatusBadRequest)
@@ -221,7 +252,9 @@ func handleRIPEstatRequest(w http.ResponseWriter, r *http.Request, callName stri
 func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+
+	err := json.NewEncoder(w).Encode(v)
+	if err != nil {
 		slog.Error("failed to write json response", "err", err)
 	}
 }

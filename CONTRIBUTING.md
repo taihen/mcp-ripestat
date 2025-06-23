@@ -1,36 +1,58 @@
-# Contributing to mcp-ripestat
+# Contributing to MCP RIPEstat
 
-First off, thank you for considering contributing to `mcp-ripestat`. It's people like you that make open-source such a great please to be.
+Thank you for considering contributing to MCP RIPEstat! This document provides simple guidelines for contributing to this project.
 
-Following these guidelines helps to communicate that you respect the time of the developer managing and developing this open source project. In return, he should reciprocate that respect in addressing your issue or assessing patches and features.
+## Code of Conduct
 
-## How Can I Contribute?
+By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## How to Contribute
 
 ### Reporting Bugs
 
-Following these guidelines helps maintainer to understand your report, reproduce the behavior, and find related reports.
-
-- **Use a clear and descriptive title** for the issue to identify the problem.
-- **Describe the exact steps which reproduce the problem** in as many details as possible.
-- **Provide specific examples to demonstrate the steps.** Include links to files or copy/pasteable snippets, which you use in those examples.
-- **Describe the behavior you observed after following the steps** and point out what exactly is the problem with that behavior.
-- **Explain which behavior you expected to see instead and why.**
+If you find a bug, please create an issue on GitHub with a clear description, steps to reproduce, and relevant environment details.
 
 ### Suggesting Enhancements
 
-- **Before creating enhancement suggestions, please check the [sprint planning file](.github/SPRINTS.md)** to see if the feature you are thinking of is already planned.
-- **Use a clear and descriptive title** for the issue to identify the suggestion.
-- **Explain why this enhancement would be useful** to most `mcp-ripestat` users.
-- **If this is a data point from RIPEStat** that is not planned, please explain why it would be useful.
+For enhancement suggestions, create an issue with a clear description and any relevant examples.
 
-## Code Contribution Guidelines
+### Pull Requests
 
-### Pull Request Process
+1. Fork the repository
+2. Create a new branch for your changes
+3. Make your changes
+4. Run tests and linters
+5. Submit a pull request
 
-When you're ready to submit a pull request, please follow these steps:
+## Development Setup
 
-1. **Ensure all GitHub Actions are passing.** Before you request a review, make sure all automated checks are green.
-2. **Update the documentation.** If your changes affect the tool's behavior or add new features, please update the `README.md` file with the necessary information.
-3. **Be patient.** After you've submitted your pull request, please allow for adequate time for a review.
+### Prerequisites
 
-A new release will be created automatically once your changes are merged.
+- Go 1.24.4 or higher
+- Make
+
+```bash
+# Clone the repository
+git clone https://github.com/taihen/mcp-ripestat.git
+cd mcp-ripestat
+
+# Install dependencies
+make deps
+
+# Run tests
+make test
+
+# Run linters
+make lint
+```
+
+## Coding Standards
+
+- Follow standard Go code style and best practices
+- Use `gofmt` and `goimports` to format your code
+- Write tests for new functionality
+- Document exported functions, types, and variables
+
+## License
+
+By contributing to this project, you agree that your contributions will be licensed under the project's [MIT License](LICENSE).

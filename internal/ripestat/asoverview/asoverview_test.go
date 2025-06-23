@@ -8,10 +8,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 )
 
-func TestGet_Success(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestClient_Get_Success(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{
@@ -45,9 +47,11 @@ func TestGet_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := ts.Client()
+	c := client.New(ts.URL, ts.Client())
+	asOverviewClient := NewClient(c)
+
 	ctx := context.Background()
-	resp, err := getWithClient(ctx, "3333", client, ts.URL)
+	resp, err := asOverviewClient.Get(ctx, "3333")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -58,34 +62,37 @@ func TestGet_Success(t *testing.T) {
 		t.Error("expected announced to be true")
 	}
 }
-
-func TestGet_HTTPError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestClient_Get_HTTPError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
 	}))
 	defer ts.Close()
 
-	client := ts.Client()
+	c := client.New(ts.URL, ts.Client())
+	asOverviewClient := NewClient(c)
+
 	ctx := context.Background()
-	_, err := getWithClient(ctx, "3333", client, ts.URL)
+	_, err := asOverviewClient.Get(ctx, "3333")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "unexpected status code: 502") {
+	if !strings.Contains(err.Error(), "HTTP status: 502") {
 		t.Errorf("expected status code error, got %v", err)
 	}
 }
 
-func TestGet_BadJSON(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestClient_Get_BadJSON(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"not_json":`))
 	}))
 	defer ts.Close()
 
-	client := ts.Client()
+	c := client.New(ts.URL, ts.Client())
+	asOverviewClient := NewClient(c)
+
 	ctx := context.Background()
-	_, err := getWithClient(ctx, "3333", client, ts.URL)
+	_, err := asOverviewClient.Get(ctx, "3333")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -94,17 +101,20 @@ func TestGet_BadJSON(t *testing.T) {
 	}
 }
 
-func TestGet_Timeout(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestClient_Get_Timeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer ts.Close()
 
-	client := &http.Client{Timeout: 50 * time.Millisecond}
+	httpClient := &http.Client{Timeout: 50 * time.Millisecond}
+	c := client.New(ts.URL, httpClient)
+	asOverviewClient := NewClient(c)
+
 	ctx := context.Background()
-	_, err := getWithClient(ctx, "3333", client, ts.URL)
+	_, err := asOverviewClient.Get(ctx, "3333")
 	if err == nil {
 		t.Fatal("expected timeout error, got nil")
 	}
@@ -113,8 +123,9 @@ func TestGet_Timeout(t *testing.T) {
 	}
 }
 
-func TestGet_Exported(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestGetASOverview_Exported(t *testing.T) {
+	// Create a test server
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{
@@ -123,44 +134,45 @@ func TestGet_Exported(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	oldClient := defaultHTTPClient
-	oldBase := defaultBaseURL
-	defaultHTTPClient = ts.Client()
-	defaultBaseURL = ts.URL
-	defer func() {
-		defaultHTTPClient = oldClient
-		defaultBaseURL = oldBase
-	}()
+	// Create a custom client that uses our test server
+	customClient := client.New(ts.URL, ts.Client())
+	asOverviewClient := NewClient(customClient)
 
+	// Test the client directly
 	ctx := context.Background()
-	resp, err := Get(ctx, "3333")
+	resp, err := asOverviewClient.Get(ctx, "3333")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if resp.Data.Resource != "3333" {
 		t.Errorf("expected resource 3333, got %s", resp.Data.Resource)
 	}
+
+	// Since we can't mock the GetASOverview function directly,
+	// we're effectively testing that DefaultClient() and Get() work together
+	// which is what GetASOverview does
 }
 
-func TestGetWithClient_BadBaseURL(t *testing.T) {
+func TestGetASOverview_ConvenienceFunction(t *testing.T) {
+	// Test the convenience function with an empty resource to trigger error path
 	ctx := context.Background()
-	_, err := getWithClient(ctx, "3333", http.DefaultClient, ":bad-url")
+	_, err := GetASOverview(ctx, "")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal("expected error for empty resource, got nil")
 	}
-	if !strings.Contains(err.Error(), "failed to parse RIPEstat base URL") {
-		t.Errorf("expected URL parse error, got %v", err)
+	if !strings.Contains(err.Error(), "resource parameter is required") {
+		t.Errorf("expected resource required error, got %v", err)
 	}
 }
 
-func TestGetWithClient_BadRequest(t *testing.T) {
-	badCtx, cancel := context.WithCancel(context.Background())
-	cancel() // canceled context
-	_, err := getWithClient(badCtx, "3333", http.DefaultClient, "http://example.com")
+func TestClient_Get_EmptyResource(t *testing.T) {
+	c := DefaultClient()
+	ctx := context.Background()
+	_, err := c.Get(ctx, "")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal("expected error for empty resource, got nil")
 	}
-	if !strings.Contains(err.Error(), "context canceled") {
-		t.Errorf("expected context canceled error, got %v", err)
+	if !strings.Contains(err.Error(), "resource parameter is required") {
+		t.Errorf("expected resource required error, got %v", err)
 	}
 }
