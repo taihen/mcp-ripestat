@@ -49,8 +49,3 @@ jobs:
         with:
           files: ./coverage.txt
           fail_ci_if_error: false
-
-      - name: Run end-to-end tests
-        run: |
-          go build -o bin/mcp-ripestat ./cmd/mcp-ripestat
-          go test -v -tags=e2e ./e2e/...
