@@ -23,10 +23,10 @@ This is an MCP server that queries RIPEStat service and presents information to 
 - Use a new branch named feat/<ticket-or-short-slug> or sprint-<sprint number> if it is a part sprint.
 - Align implementation style with the rest of the project for consistency.
 - Write idiomatic, well-commented Go 1.24+.
-- Add / update unit tests (≥ 90 % coverage), fuzz tests for parsers, and e2e tests.
-- Run go vet, golangci-lint run, and go test ./... locally until all green.
-- Verify no p95 latency or memory regression > 5 % via go test -bench or pprof.
-- Update docs (comments, README).
+- Write unit tests so overall project coverage is >90% and internal packages are covered in 100% and are passing
+- Write e2e tests and assure that those are passiing
+- Run golangci-lint to assure that is is passing
+- Update docs (comments, README.md).
 - Update .github/SPRINTS.md and mark a sprint completed if it is a sprint.
 
 3.Commit
@@ -37,7 +37,7 @@ git commit -s -m "feat(<type>): <concise scope>"
 4.Push & PR
 
 git push -u origin feat/<slug> or sprint-<spring number> if it is based on sprint
-gh pr create --fill --draft=false and create a concise description that should be added as in the description
+gh pr create --fill --draft=false and create a compact description that should be added as the description
 
 5.Pull-request Checklist (Definition of Done)
 

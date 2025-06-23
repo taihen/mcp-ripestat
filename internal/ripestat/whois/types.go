@@ -14,7 +14,7 @@ type Response struct {
 // Data represents the 'data' field in the response.
 type Data struct {
 	Records     [][]Record `json:"records"`
-	IRRRecords  []Record   `json:"irr_records"`
+	IRRRecords  [][]Record `json:"irr_records"`
 	Authorities []string   `json:"authorities"`
 	Resource    string     `json:"resource"`
 	QueryTime   string     `json:"query_time"`

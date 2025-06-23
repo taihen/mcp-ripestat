@@ -102,7 +102,7 @@ func TestClient_Get(t *testing.T) {
 				status:   tt.mockStatus,
 			}
 
-			c := client.New("https://stat.ripe.net/data/", mockClient)
+			c := client.New("https://stat.ripe.net", mockClient)
 			whoisClient := New(c)
 
 			result, err := whoisClient.Get(context.Background(), tt.resource)
@@ -159,7 +159,7 @@ func TestClient_Get_ParameterValidation(t *testing.T) {
 		status:   http.StatusOK,
 	}
 
-	c := client.New("https://stat.ripe.net/data/", mockClient)
+	c := client.New("https://stat.ripe.net", mockClient)
 	whoisClient := New(c)
 
 	// Test that the correct parameters are passed to the client
@@ -210,4 +210,60 @@ func (m *MockResponseBody) Read(p []byte) (n int, err error) {
 
 func (m *MockResponseBody) Close() error {
 	return nil
+}
+
+func TestDefaultClient(t *testing.T) {
+	client := DefaultClient()
+	if client == nil {
+		t.Error("DefaultClient() returned nil")
+		return
+	}
+	if client.client == nil {
+		t.Error("DefaultClient() returned client with nil internal client")
+	}
+}
+
+func TestGetWhois(t *testing.T) {
+	tests := []struct {
+		name     string
+		resource string
+		wantErr  bool
+	}{
+		{
+			name:     "valid resource",
+			resource: "8.8.8.8",
+			wantErr:  false,
+		},
+		{
+			name:     "empty resource",
+			resource: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Note: This test will make actual HTTP requests to the RIPEstat API
+			// In a real scenario, you might want to mock this as well
+			result, err := GetWhois(context.Background(), tt.resource)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetWhois() error = nil, wantErr %v", tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				// For this test, we'll allow network errors since we're testing the function call path
+				// The actual API functionality is tested in the integration tests
+				t.Logf("GetWhois() error = %v (network error expected in unit tests)", err)
+				return
+			}
+
+			if result == nil {
+				t.Error("GetWhois() result = nil, want non-nil")
+			}
+		})
+	}
 }

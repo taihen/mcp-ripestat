@@ -31,7 +31,7 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	params := url.Values{}
 	params.Set("resource", resource)
 
-	endpoint := "whois/data.json"
+	endpoint := "/data/whois/data.json"
 
 	var response Response
 	if err := c.client.GetJSON(ctx, endpoint, params, &response); err != nil {

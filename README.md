@@ -42,6 +42,7 @@ management tasks.
 - AS overview for Autonomous System numbers
 - Announced prefixes for Autonomous Systems
 - Routing status for IP prefixes
+- Whois information for IP addresses, prefixes, and ASNs
 
 ## Architectural Rationale
 
@@ -105,6 +106,7 @@ reference.
 - `/as-overview` - Get an overview of an Autonomous System (AS)
 - `/announced-prefixes` - Get a list of prefixes announced by an Autonomous System (AS)
 - `/routing-status` - Get the routing status for an IP prefix
+- `/whois` - Get whois information for an IP address, prefix, or ASN
 
 ## Testing
 
@@ -147,6 +149,7 @@ The project is organized into the following packages:
   - `routingstatus` - Routing status data
   - `types` - Common type definitions
   - `util` - Utility functions for IP, ASN validation, string manipulation, etc.
+  - `whois` - Whois information data
 
 ## Contributing
 

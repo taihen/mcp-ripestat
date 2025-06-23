@@ -127,8 +127,8 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("Expected manifest name to be 'mcp-ripestat', got %q", manifest.Name)
 	}
 
-	if len(manifest.Functions) != 4 {
-		t.Errorf("Expected 4 functions in manifest, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 5 {
+		t.Errorf("Expected 5 functions in manifest, got %d", len(manifest.Functions))
 	}
 
 	// Check that all expected functions are present
@@ -142,6 +142,7 @@ func TestManifestHandler(t *testing.T) {
 		"getASOverview",
 		"getAnnouncedPrefixes",
 		"getRoutingStatus",
+		"getWhois",
 	}
 
 	for _, name := range expectedFunctions {
