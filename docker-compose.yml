@@ -1,3 +1,4 @@
+---
 version: '3.8'
 
 services:
@@ -11,7 +12,10 @@ services:
       - PORT=8080
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/.well-known/mcp/manifest.json"]
+      test: [
+        "CMD", "wget", "--spider", "-q",
+        "http://localhost:8080/.well-known/mcp/manifest.json"
+      ]
       interval: 30s
       timeout: 10s
       retries: 3

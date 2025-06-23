@@ -106,7 +106,7 @@ reference.
 - `/announced-prefixes` - Get a list of prefixes announced by an Autonomous System (AS)
 - `/routing-status` - Get the routing status for an IP prefix
 
-## Development
+## Testing
 
 ```bash
 # Run tests
