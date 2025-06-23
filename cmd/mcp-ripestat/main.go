@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
@@ -60,6 +61,7 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
 	mux.HandleFunc("/routing-status", routingStatusHandler)
 	mux.HandleFunc("/whois", whoisHandler)
+	mux.HandleFunc("/abuse-contact-finder", abuseContactFinderHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -212,6 +214,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getAbuseContactFinder",
+				Description: "Get abuse contact information for an IP address or prefix.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP address or prefix to query for abuse contacts.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -244,6 +261,12 @@ func routingStatusHandler(w http.ResponseWriter, r *http.Request) {
 func whoisHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "whois", func(ctx context.Context, resource string) (interface{}, error) {
 		return whois.GetWhois(ctx, resource)
+	})
+}
+
+func abuseContactFinderHandler(w http.ResponseWriter, r *http.Request) {
+	handleRIPEstatRequest(w, r, "abuse-contact-finder", func(ctx context.Context, resource string) (interface{}, error) {
+		return abusecontactfinder.GetAbuseContactFinder(ctx, resource)
 	})
 }
 

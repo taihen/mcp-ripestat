@@ -1,7 +1,7 @@
 {
   "name": "ripestat",
   "description": "RIPEStat MCP server providing network information APIs",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "command": "./mcp-ripestat",
   "working_directory": "",
   "environment": {},
@@ -25,6 +25,10 @@
     {
       "uri": "ripe://whois",
       "description": "Get WHOIS information for IPs, prefixes, and ASNs"
+    },
+    {
+      "uri": "ripe://abuse-contact-finder",
+      "description": "Get abuse contact information for an IP address or prefix"
     }
   ],
   "tools": [
@@ -84,6 +88,18 @@
           "name": "resource",
           "type": "string",
           "description": "IP address, prefix, or AS number",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "get_abuse_contact_finder",
+      "description": "Get abuse contact information for an IP address or prefix",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "IP address or prefix (e.g., 8.8.8.8 or 193.0.0.0/21)",
           "required": true
         }
       ]

@@ -43,6 +43,7 @@ management tasks.
 - Announced prefixes for Autonomous Systems
 - Routing status for IP prefixes
 - Whois information for IP addresses, prefixes, and ASNs
+- Abuse contact finder for IP addresses and prefixes
 
 ## Architectural Rationale
 
@@ -102,6 +103,7 @@ To use this MCP server, simply copy and paste the [MCP client configuration](./m
 - `/announced-prefixes` - Get a list of prefixes announced by an Autonomous System (AS)
 - `/routing-status` - Get the routing status for an IP prefix
 - `/whois` - Get whois information for an IP address, prefix, or ASN
+- `/abuse-contact-finder` - Get abuse contact information for an IP address or prefix
 
 ## Testing
 
@@ -134,6 +136,7 @@ The project is organized into the following packages:
 
 - `cmd/mcp-ripestat` - Main application entry point
 - `internal/ripestat` - Core functionality
+  - `abusecontactfinder` - Abuse contact finder data
   - `announcedprefixes` - Announced prefixes data
   - `asoverview` - AS overview data
   - `client` - HTTP client for RIPEstat API
