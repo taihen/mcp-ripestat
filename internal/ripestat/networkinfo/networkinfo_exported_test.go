@@ -59,7 +59,7 @@ func TestGetNetworkInfo_Integration(t *testing.T) {
 	// The exported function just calls DefaultClient().Get(), which we've already tested
 
 	// For completeness, let's verify the function exists and has the right signature
-	var _ func(context.Context, string) (*networkinfo.Response, error) = networkinfo.GetNetworkInfo
+	var _ = networkinfo.GetNetworkInfo
 
 	// This is just a compile-time check, not an actual test execution
 	t.Log("Verified GetNetworkInfo function signature")

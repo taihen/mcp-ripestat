@@ -1,34 +1,43 @@
----
+version: "2"
 run:
   concurrency: 4
-  timeout: 5m
   tests: true
-
 linters:
   enable:
-    - errcheck
-    - gofmt
-    - goimports
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - staticcheck
-    - typecheck
-    - unused
-    - whitespace
-    - revive
-    - gosec
     - bodyclose
+    - copyloopvar
+    - dogsled
+    - dupl
+    - gocritic
+    - gocyclo
+    - godot
+    - gosec
+    - misspell
+    - nakedret
     - noctx
     - prealloc
+    - revive
     - unconvert
     - unparam
-    - gocritic
-    - godot
-    - gocyclo
-    - dupl
-    - copyloopvar
-    - nakedret
-    - dogsled
-    # - wsl
+    # - whitespace
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

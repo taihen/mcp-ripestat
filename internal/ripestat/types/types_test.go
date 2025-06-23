@@ -60,8 +60,8 @@ func TestCustomTime_UnmarshalJSON(t *testing.T) {
 				return
 			}
 
-			if !tt.wantErr && ct.Time.String() != tt.want {
-				t.Errorf("CustomTime.UnmarshalJSON() = %v, want %v", ct.Time.String(), tt.want)
+			if !tt.wantErr && ct.String() != tt.want {
+				t.Errorf("CustomTime.UnmarshalJSON() = %v, want %v", ct.String(), tt.want)
 			}
 		})
 	}
