@@ -25,3 +25,6 @@ Thumbs.db
 
 # Environment variables
 .env
+
+# Top-level binary
+/mcp-ripestat
