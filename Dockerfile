@@ -15,7 +15,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/mcp-ripestat ./cmd/mcp-ripestat
 
 # Use a minimal alpine image for the final stage
-FROM alpine:3.19
+FROM alpine:3.22
 
 # Install ca-certificates for HTTPS requests
 RUN apk --no-cache add ca-certificates
