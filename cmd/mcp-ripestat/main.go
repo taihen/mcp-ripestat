@@ -17,6 +17,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
 func main() {
@@ -58,6 +59,7 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/as-overview", asOverviewHandler)
 	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
 	mux.HandleFunc("/routing-status", routingStatusHandler)
+	mux.HandleFunc("/whois", whoisHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -195,6 +197,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getWhois",
+				Description: "Get whois information for an IP address, prefix, or ASN.",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP address, prefix, or ASN to query.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -221,6 +238,12 @@ func announcedPrefixesHandler(w http.ResponseWriter, r *http.Request) {
 func routingStatusHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "routing-status", func(ctx context.Context, resource string) (interface{}, error) {
 		return routingstatus.GetRoutingStatus(ctx, resource)
+	})
+}
+
+func whoisHandler(w http.ResponseWriter, r *http.Request) {
+	handleRIPEstatRequest(w, r, "whois", func(ctx context.Context, resource string) (interface{}, error) {
+		return whois.GetWhois(ctx, resource)
 	})
 }
 

@@ -42,6 +42,7 @@ management tasks.
 - AS overview for Autonomous System numbers
 - Announced prefixes for Autonomous Systems
 - Routing status for IP prefixes
+- Whois information for IP addresses, prefixes, and ASNs
 
 ## Architectural Rationale
 
@@ -92,12 +93,7 @@ make build
 
 ## MCP Client Configuration
 
-To integrate the server with MCP client, add the following configuration to your
-global `mcp.json` file (e.g. for [Cursor](https://www.cursor.com/)
-`~/.cursor/mcp.json` on macOS/Linux).
-
-The example [mcp.json](./mcp.json) in this repository can be used as a
-reference.
+To use this MCP server, simply copy and paste the [MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor, place it in `~/.cursor/mcp.json` on macOS/Linux).
 
 ## API Endpoints
 
@@ -105,6 +101,7 @@ reference.
 - `/as-overview` - Get an overview of an Autonomous System (AS)
 - `/announced-prefixes` - Get a list of prefixes announced by an Autonomous System (AS)
 - `/routing-status` - Get the routing status for an IP prefix
+- `/whois` - Get whois information for an IP address, prefix, or ASN
 
 ## Testing
 
@@ -147,6 +144,7 @@ The project is organized into the following packages:
   - `routingstatus` - Routing status data
   - `types` - Common type definitions
   - `util` - Utility functions for IP, ASN validation, string manipulation, etc.
+  - `whois` - Whois information data
 
 ## Contributing
 

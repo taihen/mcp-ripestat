@@ -9,11 +9,12 @@ bin/
 *.html
 
 
-# IDE specific files
+# IDE specific files and local development environment
 .idea/
 .vscode/
 *.swp
 *.swo
+local/
 
 # OS specific files
 .DS_Store
@@ -24,3 +25,6 @@ Thumbs.db
 
 # Environment variables
 .env
+
+# Top-level binary
+/mcp-ripestat
