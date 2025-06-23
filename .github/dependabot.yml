@@ -7,6 +7,12 @@ updates:
     reviewers:
       - "taihen"
   - package-ecosystem: "github-actions"
+    directory: "/.github"
+    schedule:
+      interval: "daily"
+    reviewers:
+      - "taihen"
+  - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
