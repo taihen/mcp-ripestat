@@ -336,3 +336,113 @@ func TestResponse_JSONUnmarshal(t *testing.T) {
 		t.Errorf("Expected prefix '140.78.0.0/16', got '%s'", peer.Prefix)
 	}
 }
+
+func TestLookingGlassIntegration(t *testing.T) {
+	// Test the actual GetLookingGlass function with a mock server
+	serverResponse := `{
+		"messages": [],
+		"see_also": [],
+		"version": "2.1",
+		"data_call_name": "looking-glass",
+		"data_call_status": "supported",
+		"cached": false,
+		"data": {
+			"rrcs": []
+		},
+		"query_time": "2025-06-24T03:07:22",
+		"latest_time": "2025-06-24T03:06:23",
+		"parameters": {
+			"resource": "140.78.0.0/16",
+			"look_back_limit": 3600,
+			"cache": null
+		},
+		"query_id": "test-query-id",
+		"process_time": 54,
+		"server_id": "app188",
+		"build_version": "main-2025.06.23",
+		"status": "ok",
+		"status_code": 200,
+		"time": "2025-06-24T03:07:22.385069"
+	}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(serverResponse))
+	}))
+	defer server.Close()
+
+	// Test using the direct function call
+	httpClient := &http.Client{}
+	testClient := NewClient(client.New(server.URL, httpClient))
+	
+	got, err := testClient.Get(context.Background(), "140.78.0.0/16", 3600)
+	if err != nil {
+		t.Errorf("Get() error = %v, want nil", err)
+		return
+	}
+
+	if got == nil {
+		t.Errorf("Get() returned nil response")
+		return
+	}
+}
+
+func TestLookingGlassErrorHandling(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(500)
+	}))
+	defer server.Close()
+
+	httpClient := &http.Client{}
+	c := NewClient(client.New(server.URL, httpClient))
+	_, err := c.Get(context.Background(), "140.78.0.0/16", 3600)
+
+	if err == nil {
+		t.Error("Expected error for server error, got nil")
+	}
+}
+
+func TestLookingGlassParameterValidation(t *testing.T) {
+	c := NewClient(client.New("http://example.com", &http.Client{}))
+
+	// Test empty resource
+	_, err := c.Get(context.Background(), "", 3600)
+	if err == nil {
+		t.Error("Expected error for empty resource")
+	}
+
+	// Test negative look back limit
+	_, err = c.Get(context.Background(), "140.78.0.0/16", -1)
+	if err == nil {
+		t.Error("Expected error for negative look back limit")
+	}
+
+	// Test look back limit too large
+	_, err = c.Get(context.Background(), "140.78.0.0/16", MaxLookBackLimit+1)
+	if err == nil {
+		t.Error("Expected error for look back limit too large")
+	}
+}
+
+func TestLookingGlassDefaultClient(t *testing.T) {
+	client := DefaultClient()
+	if client == nil {
+		t.Error("Expected non-nil default client")
+	}
+}
+
+func TestLookingGlassNewClientWithNil(t *testing.T) {
+	client := NewClient(nil)
+	if client == nil {
+		t.Error("Expected non-nil client")
+	}
+}
+
+func TestGetLookingGlassExported(t *testing.T) {
+	// Test the exported GetLookingGlass function
+	// This will make a real network call, so we expect it might fail in test environment
+	_, err := GetLookingGlass(context.Background(), "8.8.8.0/24", 3600)
+	if err != nil {
+		t.Logf("Network call failed (expected in test environment): %v", err)
+	}
+}

@@ -906,3 +906,177 @@ func TestWhatsMyIPHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestWhoisHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/whois?resource=8.8.8.8", nil)
+	w := httptest.NewRecorder()
+
+	whoisHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
+		t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestWhoisHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/whois", nil)
+	w := httptest.NewRecorder()
+
+	whoisHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestAbuseContactFinderHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/abuse-contact-finder?resource=8.8.8.8", nil)
+	w := httptest.NewRecorder()
+
+	abuseContactFinderHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
+		t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestAbuseContactFinderHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/abuse-contact-finder", nil)
+	w := httptest.NewRecorder()
+
+	abuseContactFinderHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestMCPHandler(t *testing.T) {
+	server := mcp.NewServer("test-server", "1.0.0", false)
+	
+	// Test initialize request
+	initReq := mcp.NewRequest("initialize", map[string]interface{}{
+		"protocolVersion": "2025-03-26",
+		"capabilities":    map[string]interface{}{},
+		"clientInfo": map[string]interface{}{
+			"name":    "test-client",
+			"version": "1.0.0",
+		},
+	}, 1)
+
+	reqBody, err := json.Marshal(initReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	mcpHandler(w, req, server)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestMCPHandler_Notification(t *testing.T) {
+	server := mcp.NewServer("test-server", "1.0.0", false)
+	
+	// Test initialized notification
+	notif := mcp.NewNotification("initialized", nil)
+
+	reqBody, err := json.Marshal(notif)
+	if err != nil {
+		t.Fatalf("Failed to marshal notification: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	mcpHandler(w, req, server)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		t.Errorf("Expected status code 204 for notification, got %d", resp.StatusCode)
+	}
+}
+
+func TestMCPHandler_InvalidJSON(t *testing.T) {
+	server := mcp.NewServer("test-server", "1.0.0", false)
+	
+	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte("{invalid json}")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	mcpHandler(w, req, server)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code 200 even for invalid JSON, got %d", resp.StatusCode)
+	}
+
+	// Should return a JSON-RPC error response
+	var response mcp.Response
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode error response: %v", err)
+	}
+
+	if response.Error == nil {
+		t.Error("Expected error response for invalid JSON")
+	}
+
+	if response.Error.Code != mcp.ParseError {
+		t.Errorf("Expected ParseError code %d, got %d", mcp.ParseError, response.Error.Code)
+	}
+}

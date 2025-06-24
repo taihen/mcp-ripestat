@@ -626,3 +626,218 @@ func TestCreateToolResultFromJSON_InvalidData(t *testing.T) {
 		t.Errorf("Expected error message about marshaling, got: %s", result.Content[0].Text)
 	}
 }
+
+func TestExecuteToolCall_AllToolFunctions(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	ctx := context.Background()
+
+	testCases := []struct {
+		name           string
+		toolName       string
+		args           map[string]interface{}
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:     "callASOverview success",
+			toolName: "getASOverview",
+			args:     map[string]interface{}{"resource": "15169"},
+		},
+		{
+			name:         "callASOverview missing resource",
+			toolName:     "getASOverview",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callAnnouncedPrefixes success",
+			toolName: "getAnnouncedPrefixes",
+			args:     map[string]interface{}{"resource": "15169"},
+		},
+		{
+			name:         "callAnnouncedPrefixes missing resource",
+			toolName:     "getAnnouncedPrefixes",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callRoutingStatus success",
+			toolName: "getRoutingStatus",
+			args:     map[string]interface{}{"resource": "8.8.8.8"},
+		},
+		{
+			name:         "callRoutingStatus missing resource",
+			toolName:     "getRoutingStatus",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callWhois success",
+			toolName: "getWhois",
+			args:     map[string]interface{}{"resource": "8.8.8.8"},
+		},
+		{
+			name:         "callWhois missing resource",
+			toolName:     "getWhois",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callAbuseContactFinder success",
+			toolName: "getAbuseContactFinder",
+			args:     map[string]interface{}{"resource": "8.8.8.8"},
+		},
+		{
+			name:         "callAbuseContactFinder missing resource",
+			toolName:     "getAbuseContactFinder",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callWhatsMyIP success",
+			toolName: "getWhatsMyIP",
+			args:     map[string]interface{}{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			params := &CallToolParams{
+				Name:      tc.toolName,
+				Arguments: tc.args,
+			}
+
+			result, err := server.executeToolCall(ctx, params)
+
+			if tc.expectError {
+				if err == nil {
+					t.Errorf("Expected error for %s, got none", tc.name)
+					return
+				}
+				if tc.errorMessage != "" && !strings.Contains(err.Error(), tc.errorMessage) {
+					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, err.Error())
+				}
+			} else {
+				// Note: These might fail due to network issues in tests, so we accept that
+				if err != nil {
+					t.Logf("Network call failed (expected in test environment): %v", err)
+				} else if result == nil {
+					t.Error("Expected non-nil result when no error occurred")
+				}
+			}
+		})
+	}
+}
+
+func TestExecuteToolCall_WhatsMyIPDisabledInDepth(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", true) // Disable whats-my-ip
+	ctx := context.Background()
+
+	params := &CallToolParams{
+		Name:      "getWhatsMyIP",
+		Arguments: map[string]interface{}{},
+	}
+
+	_, err := server.executeToolCall(ctx, params)
+	if err == nil {
+		t.Error("Expected error for disabled whats-my-ip tool")
+	}
+	if !strings.Contains(err.Error(), "disabled") {
+		t.Errorf("Expected error message to contain 'disabled', got %s", err.Error())
+	}
+}
+
+func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	ctx := context.Background()
+
+	// First initialize the server
+	initRequest := `{
+		"jsonrpc": "2.0",
+		"method": "initialize",
+		"params": {
+			"protocolVersion": "2025-03-26",
+			"capabilities": {},
+			"clientInfo": {
+				"name": "test-client",
+				"version": "1.0.0"
+			}
+		},
+		"id": 1
+	}`
+
+	_, err := server.ProcessMessage(ctx, []byte(initRequest))
+	if err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	// Send initialized notification
+	initializedNotif := `{
+		"jsonrpc": "2.0",
+		"method": "initialized"
+	}`
+
+	_, err = server.ProcessMessage(ctx, []byte(initializedNotif))
+	if err != nil {
+		t.Fatalf("Initialized notification failed: %v", err)
+	}
+
+	// Test tools/call for each tool
+	toolTests := []struct {
+		name   string
+		params string
+	}{
+		{
+			name: "getNetworkInfo",
+			params: `{
+				"jsonrpc": "2.0",
+				"method": "tools/call",
+				"params": {
+					"name": "getNetworkInfo",
+					"arguments": {"resource": "8.8.8.8"}
+				},
+				"id": 2
+			}`,
+		},
+		{
+			name: "getASOverview",
+			params: `{
+				"jsonrpc": "2.0",
+				"method": "tools/call",
+				"params": {
+					"name": "getASOverview",
+					"arguments": {"resource": "15169"}
+				},
+				"id": 3
+			}`,
+		},
+	}
+
+	for _, test := range toolTests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := server.ProcessMessage(ctx, []byte(test.params))
+			if err != nil {
+				t.Errorf("Tool call failed: %v", err)
+				return
+			}
+
+			response, ok := result.(*Response)
+			if !ok {
+				t.Errorf("Expected Response, got %T", result)
+				return
+			}
+
+			// Accept either success or error due to network conditions in tests
+			if response.Error != nil {
+				t.Logf("Tool call returned error (may be due to network): %v", response.Error)
+			} else if response.Result == nil {
+				t.Error("Expected result when no error occurred")
+			}
+		})
+	}
+}
