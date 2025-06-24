@@ -16,4 +16,4 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 9 | `sprint-9` | v1.10.0 | ASN Neighbours | `asn-neighbours` | Completed |
 | 10 | `sprint-10` | v1.11.0 | Looking Glass | `looking-glass` | Completed |
 | 11 | `sprint-11` | v1.12.0 | What's My IP | `whats-my-ip` | Completed |
-| 12 | `sprint-12 | N/A | UX | N/A | Planned |
+| 12 | `sprint-12` | v1.13.0 | User Experience | CI/CD Pipeline, Docker, MCP | Completed |

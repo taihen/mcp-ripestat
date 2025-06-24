@@ -1,10 +1,16 @@
 {
-  "name": "ripestat",
-  "description": "RIPEStat MCP server providing network information APIs",
-  "version": "1.12.0",
-  "command": "./mcp-ripestat",
-  "working_directory": "",
-  "environment": {},
+  "mcpServers": {
+    "ripestat": {
+      "type": "http",
+      "url": "http://localhost:8080",
+      "description": "RIPEStat MCP server providing network information APIs"
+    }
+  },
+  "_meta": {
+    "name": "ripestat", 
+    "description": "RIPEStat MCP server providing network information APIs",
+    "version": "1.13.0"
+  },
   "resources": [
     {
       "uri": "ripe://network-info",
