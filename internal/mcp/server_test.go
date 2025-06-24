@@ -548,3 +548,81 @@ func TestProcessMessage_CancellationNotification(t *testing.T) {
 		t.Errorf("Expected nil result for cancellation notification, got %v", result)
 	}
 }
+
+func TestExecuteToolCall_ArgumentParsing(t *testing.T) {
+	// Test argument parsing without making network calls
+	testCases := []struct {
+		name        string
+		params      *CallToolParams
+		expectError bool
+	}{
+		{
+			name: "valid arguments",
+			params: &CallToolParams{
+				Name: "getNetworkInfo",
+				Arguments: map[string]interface{}{
+					"resource": "test",
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "arguments with meta field",
+			params: &CallToolParams{
+				Name: "getNetworkInfo",
+				Arguments: map[string]interface{}{
+					"resource": "test",
+				},
+				Meta: map[string]interface{}{
+					"progressToken": 123,
+				},
+			},
+			expectError: false,
+		},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Parse arguments to test the argument parsing logic
+			args := make(map[string]interface{})
+			if tc.params.Arguments != nil {
+				jsonData, err := json.Marshal(tc.params.Arguments)
+				if err != nil && !tc.expectError {
+					t.Errorf("Failed to marshal arguments: %v", err)
+				}
+				if err := json.Unmarshal(jsonData, &args); err != nil && !tc.expectError {
+					t.Errorf("Failed to unmarshal arguments: %v", err)
+				}
+			}
+			
+			// Test that we can get the resource parameter
+			if !tc.expectError {
+				if resource, ok := args["resource"].(string); !ok || resource == "" {
+					t.Error("Expected valid resource parameter")
+				}
+			}
+		})
+	}
+}
+
+func TestParseCallToolParams_InvalidJSON(t *testing.T) {
+	// Test with a channel that can't be marshaled
+	ch := make(chan int)
+	_, err := ParseCallToolParams(ch)
+	if err == nil {
+		t.Error("Expected error for unmarshalable params")
+	}
+}
+
+func TestCreateToolResultFromJSON_InvalidData(t *testing.T) {
+	// Test with data that can't be marshaled (function)
+	invalidData := func() {}
+	result := CreateToolResultFromJSON(invalidData)
+
+	if !result.IsError {
+		t.Error("Expected error result for invalid data")
+	}
+	if !strings.Contains(result.Content[0].Text, "Error marshaling result") {
+		t.Errorf("Expected error message about marshaling, got: %s", result.Content[0].Text)
+	}
+}

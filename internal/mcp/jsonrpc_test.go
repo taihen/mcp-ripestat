@@ -234,3 +234,83 @@ func TestJSONSerialization(t *testing.T) {
 		t.Errorf("ID mismatch: got %v, want %v", parsedReq.ID, req.ID)
 	}
 }
+
+func TestIsNotification(t *testing.T) {
+	// Test request with ID
+	req := &Request{
+		JSONRPC: "2.0",
+		Method:  "test",
+		ID:      1,
+	}
+	if req.IsNotification() {
+		t.Error("Request with ID should not be a notification")
+	}
+	
+	// Test request without ID (nil ID)
+	reqNoID := &Request{
+		JSONRPC: "2.0",
+		Method:  "test",
+		ID:      nil,
+	}
+	if !reqNoID.IsNotification() {
+		t.Error("Request with nil ID should be a notification")
+	}
+}
+
+func TestParseMessage_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     string
+		wantType string
+		wantErr  bool
+	}{
+		{
+			name:     "empty object",
+			data:     `{}`,
+			wantType: "*mcp.Notification",
+			wantErr:  false,
+		},
+		{
+			name:     "notification with method only",
+			data:     `{"jsonrpc": "2.0", "method": "test"}`,
+			wantType: "*mcp.Notification",
+			wantErr:  false,
+		},
+		{
+			name:     "request with null ID",
+			data:     `{"jsonrpc": "2.0", "method": "test", "id": null}`,
+			wantType: "*mcp.Request",
+			wantErr:  false,
+		},
+		{
+			name:     "response with null result",
+			data:     `{"jsonrpc": "2.0", "result": null, "id": 1}`,
+			wantType: "*mcp.Response",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg, err := ParseMessage([]byte(tt.data))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseMessage() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				msgType := ""
+				switch msg.(type) {
+				case *Request:
+					msgType = "*mcp.Request"
+				case *Response:
+					msgType = "*mcp.Response"
+				case *Notification:
+					msgType = "*mcp.Notification"
+				}
+				if msgType != tt.wantType {
+					t.Errorf("ParseMessage() got type %s, want %s", msgType, tt.wantType)
+				}
+			}
+		})
+	}
+}
