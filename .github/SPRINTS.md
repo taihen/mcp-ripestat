@@ -17,3 +17,4 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 10 | `sprint-10` | v1.11.0 | Looking Glass | `looking-glass` | Completed |
 | 11 | `sprint-11` | v1.12.0 | What's My IP | `whats-my-ip` | Completed |
 | 12 | `sprint-12` | v1.13.0 | User Experience | CI/CD Pipeline, Docker, MCP | Completed |
+| 13 | `sprint-13` | v2.0.0 | MCP JSON-RPC 2025 Protocol | MCP JSON-RPC 2.0 Transport | Completed |

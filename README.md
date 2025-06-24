@@ -119,6 +119,22 @@ For shared team environments, you should disable the `What's My IP` endpoint
 using the `--disable-whats-my-ip` flag. This prevents team members from seeing
 each server IP addresses when using a shared MCP server instance.
 
+## MCP Protocol Support
+
+This server implements the Model Context Protocol (MCP) 2025 specification with
+JSON-RPC 2.0 transport. It provides two interfaces:
+
+### JSON-RPC 2.0 Endpoint (Recommended)
+- **Endpoint**: `/mcp`
+- **Protocol**: MCP 2025 JSON-RPC 2.0
+- **Usage**: Compatible with Cursor IDE and other MCP clients
+- **Features**: Full MCP handshake, capability negotiation, tool calling
+
+### Legacy REST API
+- **Endpoints**: Individual REST endpoints (e.g., `/network-info`)
+- **Protocol**: HTTP REST with query parameters
+- **Usage**: Direct API access and backward compatibility
+
 ## MCP Client Configuration
 
 To use this MCP server locally, simply copy and paste the

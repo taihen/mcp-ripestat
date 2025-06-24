@@ -32,7 +32,7 @@ func TestProcessMessage_Initialize(t *testing.T) {
 		"jsonrpc": "2.0",
 		"method": "initialize",
 		"params": {
-			"protocolVersion": "2024-11-05",
+			"protocolVersion": "2025-03-26",
 			"capabilities": {},
 			"clientInfo": {
 				"name": "test-client",
@@ -76,7 +76,7 @@ func TestProcessMessage_Initialized(t *testing.T) {
 		"jsonrpc": "2.0",
 		"method": "initialize",
 		"params": {
-			"protocolVersion": "2024-11-05",
+			"protocolVersion": "2025-03-26",
 			"capabilities": {},
 			"clientInfo": {
 				"name": "test-client",

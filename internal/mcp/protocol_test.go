@@ -184,8 +184,8 @@ func TestCreateToolResultFromJSON(t *testing.T) {
 }
 
 func TestProtocolVersion(t *testing.T) {
-	if ProtocolVersion != "2024-11-05" {
-		t.Errorf("ProtocolVersion = %s, want '2024-11-05'", ProtocolVersion)
+	if ProtocolVersion != "2025-03-26" {
+		t.Errorf("ProtocolVersion = %s, want '2025-03-26'", ProtocolVersion)
 	}
 }
 

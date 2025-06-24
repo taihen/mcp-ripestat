@@ -89,7 +89,7 @@ func (s *Server) handleNotification(_ context.Context, notif *Notification) (int
 	slog.Debug("handling notification", "method", notif.Method)
 
 	switch notif.Method {
-	case "initialized":
+	case "initialized", "notifications/initialized":
 		return s.handleInitialized(notif)
 	case "notifications/cancelled":
 		// Handle cancellation notifications
