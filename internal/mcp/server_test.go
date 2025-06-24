@@ -632,11 +632,11 @@ func TestExecuteToolCall_AllToolFunctions(t *testing.T) {
 	ctx := context.Background()
 
 	testCases := []struct {
-		name           string
-		toolName       string
-		args           map[string]interface{}
-		expectError    bool
-		errorMessage   string
+		name         string
+		toolName     string
+		args         map[string]interface{}
+		expectError  bool
+		errorMessage string
 	}{
 		{
 			name:     "callASOverview success",
