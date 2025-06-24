@@ -7,7 +7,7 @@ import (
 
 func TestNewRequest(t *testing.T) {
 	req := NewRequest("test", map[string]string{"key": "value"}, 1)
-	
+
 	if req.JSONRPC != "2.0" {
 		t.Errorf("Expected JSONRPC to be '2.0', got %s", req.JSONRPC)
 	}
@@ -21,7 +21,7 @@ func TestNewRequest(t *testing.T) {
 
 func TestNewResponse(t *testing.T) {
 	resp := NewResponse("result", 1)
-	
+
 	if resp.JSONRPC != "2.0" {
 		t.Errorf("Expected JSONRPC to be '2.0', got %s", resp.JSONRPC)
 	}
@@ -35,7 +35,7 @@ func TestNewResponse(t *testing.T) {
 
 func TestNewErrorResponse(t *testing.T) {
 	resp := NewErrorResponse(InvalidRequest, "Invalid request", "extra data", 1)
-	
+
 	if resp.JSONRPC != "2.0" {
 		t.Errorf("Expected JSONRPC to be '2.0', got %s", resp.JSONRPC)
 	}
@@ -55,7 +55,7 @@ func TestNewErrorResponse(t *testing.T) {
 
 func TestNewNotification(t *testing.T) {
 	notif := NewNotification("test", map[string]string{"key": "value"})
-	
+
 	if notif.JSONRPC != "2.0" {
 		t.Errorf("Expected JSONRPC to be '2.0', got %s", notif.JSONRPC)
 	}
@@ -120,10 +120,10 @@ func TestValidateRequest(t *testing.T) {
 
 func TestParseMessage(t *testing.T) {
 	tests := []struct {
-		name      string
-		data      string
-		wantType  string
-		wantErr   bool
+		name     string
+		data     string
+		wantType string
+		wantErr  bool
 	}{
 		{
 			name:     "parse request",
@@ -210,22 +210,22 @@ func TestErrorCodes(t *testing.T) {
 
 func TestJSONSerialization(t *testing.T) {
 	req := NewRequest("test", map[string]string{"key": "value"}, 1)
-	
+
 	data, err := json.Marshal(req)
 	if err != nil {
 		t.Fatalf("Failed to marshal request: %v", err)
 	}
-	
+
 	parsed, err := ParseMessage(data)
 	if err != nil {
 		t.Fatalf("Failed to parse marshaled request: %v", err)
 	}
-	
+
 	parsedReq, ok := parsed.(*Request)
 	if !ok {
 		t.Fatalf("Parsed message is not a Request")
 	}
-	
+
 	if parsedReq.Method != req.Method {
 		t.Errorf("Method mismatch: got %s, want %s", parsedReq.Method, req.Method)
 	}
@@ -245,7 +245,7 @@ func TestIsNotification(t *testing.T) {
 	if req.IsNotification() {
 		t.Error("Request with ID should not be a notification")
 	}
-	
+
 	// Test request without ID (nil ID)
 	reqNoID := &Request{
 		JSONRPC: "2.0",

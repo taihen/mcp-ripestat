@@ -7,7 +7,7 @@ import (
 
 func TestCreateInitializeResult(t *testing.T) {
 	result := CreateInitializeResult("test-server", "1.0.0")
-	
+
 	if result.ProtocolVersion != ProtocolVersion {
 		t.Errorf("Expected ProtocolVersion to be %s, got %s", ProtocolVersion, result.ProtocolVersion)
 	}
@@ -24,11 +24,11 @@ func TestCreateInitializeResult(t *testing.T) {
 
 func TestCreateToolsList(t *testing.T) {
 	tools := CreateToolsList()
-	
+
 	if len(tools.Tools) == 0 {
 		t.Error("Expected tools list to have at least one tool")
 	}
-	
+
 	// Check that all expected tools are present
 	expectedTools := []string{
 		"getNetworkInfo",
@@ -42,11 +42,11 @@ func TestCreateToolsList(t *testing.T) {
 		"getLookingGlass",
 		"getWhatsMyIP",
 	}
-	
+
 	toolNames := make(map[string]bool)
 	for _, tool := range tools.Tools {
 		toolNames[tool.Name] = true
-		
+
 		// Check that each tool has required fields
 		if tool.Name == "" {
 			t.Error("Tool name should not be empty")
@@ -58,7 +58,7 @@ func TestCreateToolsList(t *testing.T) {
 			t.Error("Tool input schema should not be nil")
 		}
 	}
-	
+
 	for _, expectedTool := range expectedTools {
 		if !toolNames[expectedTool] {
 			t.Errorf("Expected tool %s not found in tools list", expectedTool)
@@ -138,7 +138,7 @@ func TestCreateToolResult(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := CreateToolResult(tt.text, tt.isError)
-			
+
 			if result.IsError != tt.isError {
 				t.Errorf("CreateToolResult() IsError = %v, want %v", result.IsError, tt.isError)
 			}
@@ -163,9 +163,9 @@ func TestCreateToolResultFromJSON(t *testing.T) {
 			"inner": "data",
 		},
 	}
-	
+
 	result := CreateToolResultFromJSON(testData)
-	
+
 	if result.IsError {
 		t.Error("CreateToolResultFromJSON() should not create error result for valid data")
 	}
@@ -175,7 +175,7 @@ func TestCreateToolResultFromJSON(t *testing.T) {
 	if result.Content[0].Type != "text" {
 		t.Errorf("CreateToolResultFromJSON() Content[0].Type = %s, want 'text'", result.Content[0].Type)
 	}
-	
+
 	// Verify the JSON is valid
 	var parsed interface{}
 	if err := json.Unmarshal([]byte(result.Content[0].Text), &parsed); err != nil {
@@ -196,13 +196,13 @@ func TestCapabilitiesStructure(t *testing.T) {
 		Prompts:   &PromptsCapability{},
 		Logging:   &LoggingCapability{},
 	}
-	
+
 	// Test that capabilities can be marshaled to JSON
 	data, err := json.Marshal(caps)
 	if err != nil {
 		t.Errorf("Failed to marshal Capabilities: %v", err)
 	}
-	
+
 	// Test that capabilities can be unmarshaled from JSON
 	var unmarshaled Capabilities
 	if err := json.Unmarshal(data, &unmarshaled); err != nil {
@@ -212,7 +212,7 @@ func TestCapabilitiesStructure(t *testing.T) {
 
 func TestToolInputSchema(t *testing.T) {
 	tools := CreateToolsList()
-	
+
 	for _, tool := range tools.Tools {
 		// Verify each tool has a valid input schema
 		schemaData, err := json.Marshal(tool.InputSchema)
@@ -220,19 +220,19 @@ func TestToolInputSchema(t *testing.T) {
 			t.Errorf("Tool %s has invalid input schema: %v", tool.Name, err)
 			continue
 		}
-		
+
 		// Verify the schema is a valid object
 		var schema map[string]interface{}
 		if err := json.Unmarshal(schemaData, &schema); err != nil {
 			t.Errorf("Tool %s input schema is not a valid object: %v", tool.Name, err)
 			continue
 		}
-		
+
 		// Check that it has a type field
 		if schemaType, ok := schema["type"].(string); !ok || schemaType != "object" {
 			t.Errorf("Tool %s input schema type should be 'object', got %v", tool.Name, schema["type"])
 		}
-		
+
 		// Check that it has properties
 		if _, ok := schema["properties"]; !ok {
 			t.Errorf("Tool %s input schema should have 'properties' field", tool.Name)
