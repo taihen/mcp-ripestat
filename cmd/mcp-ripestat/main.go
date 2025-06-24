@@ -18,6 +18,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
@@ -67,6 +68,7 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/abuse-contact-finder", abuseContactFinderHandler)
 	mux.HandleFunc("/rpki-validation", rpkiValidationHandler)
 	mux.HandleFunc("/asn-neighbours", asnNeighboursHandler)
+	mux.HandleFunc("/looking-glass", lookingGlassHandler)
 	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
 
 	addr := ":" + port
@@ -282,6 +284,27 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 					Type: "object",
 				},
 			},
+			{
+				Name:        "getLookingGlass",
+				Description: "Get looking glass information for an IP prefix, showing BGP routing data from RIPE NCC's Route Reflection Collectors (RRCs).",
+				Parameters: []Parameter{
+					{
+						Name:        "resource",
+						Type:        "string",
+						Required:    true,
+						Description: "The IP prefix to query for looking glass information.",
+					},
+					{
+						Name:        "look_back_limit",
+						Type:        "string",
+						Required:    false,
+						Description: "Time limit in seconds to look back for BGP data. Maximum is 172800 seconds (48 hours). Default is 0.",
+					},
+				},
+				Returns: Return{
+					Type: "object",
+				},
+			},
 		},
 	}
 	writeJSON(w, manifest, http.StatusOK)
@@ -385,6 +408,42 @@ func asnNeighboursHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("RIPEstat call failed", "call_name", "asn-neighbours", "err", err)
 		writeJSONError(w, "failed to fetch asn-neighbours", http.StatusBadGateway)
+		return
+	}
+
+	writeJSON(w, resp, http.StatusOK)
+}
+
+func lookingGlassHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("received looking-glass request", "remote_addr", r.RemoteAddr, "query", r.URL.RawQuery)
+
+	resource := r.URL.Query().Get("resource")
+	lookBackLimitStr := r.URL.Query().Get("look_back_limit")
+
+	if resource == "" {
+		slog.Warn("missing resource parameter", "call_name", "looking-glass")
+		writeJSONError(w, "missing resource parameter", http.StatusBadRequest)
+		return
+	}
+
+	lookBackLimit := 0 // default value
+	if lookBackLimitStr != "" {
+		var err error
+		lookBackLimit, err = strconv.Atoi(lookBackLimitStr)
+		if err != nil {
+			slog.Warn("invalid look_back_limit parameter", "call_name", "looking-glass", "look_back_limit", lookBackLimitStr)
+			writeJSONError(w, "look_back_limit parameter must be a valid integer", http.StatusBadRequest)
+			return
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := lookingglass.GetLookingGlass(ctx, resource, lookBackLimit)
+	if err != nil {
+		slog.Error("RIPEstat call failed", "call_name", "looking-glass", "err", err)
+		writeJSONError(w, "failed to fetch looking-glass", http.StatusBadGateway)
 		return
 	}
 
