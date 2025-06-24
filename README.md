@@ -3,7 +3,8 @@
 [![CI/CD](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/taihen/mcp-ripestat)](https://goreportcard.com/report/github.com/taihen/mcp-ripestat)
 
-A Model Context Protocol (MCP) server for the RIPEstat Data API, providing network information for IP addresses and prefixes.
+A Model Context Protocol (MCP) server for the RIPEstat Data API, providing
+network information for IP addresses and prefixes.
 
 > [!CAUTION]
 > This MCP server is currently under active development. It may not be stable
@@ -91,7 +92,7 @@ make build
 # Enable debug logging
 ./bin/mcp-ripestat --debug
 
-# Disable What's My IP endpoint (for shared environments)
+# Disable What's My IP endpoint (for shared environments this is undesirable)
 ./bin/mcp-ripestat --disable-whats-my-ip
 
 # Show help
@@ -100,25 +101,35 @@ make build
 
 ### Proxy Support
 
-The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client IP address when the server is behind a proxy or load balancer. It supports the following proxy headers:
+The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client
+IP address when the server is behind a proxy or load balancer. It supports the
+following proxy headers:
 
 - `X-Forwarded-For` - Standard proxy header (uses first IP in chain)
 - `X-Real-IP` - Alternative proxy header
 - `CF-Connecting-IP` - Cloudflare-specific header
 
-When running behind a proxy or Cloudflare tunnel, the endpoint will automatically use these headers to determine the actual client IP address instead of the proxy's IP.
+When running behind a proxy or Cloudflare tunnel, the endpoint will
+automatically use these headers to determine the actual client IP address
+instead of the proxy's IP.
 
 ### Shared Environment Configuration
 
-For shared team environments, you can disable the What's My IP endpoint using the `--disable-whats-my-ip` flag. This prevents team members from seeing each other's IP addresses when using a shared MCP server instance.
+For shared team environments, you should disable the `What's My IP` endpoint
+using the `--disable-whats-my-ip` flag. This prevents team members from seeing
+each server IP addresses when using a shared MCP server instance.
 
 ## MCP Client Configuration
 
-To use this MCP server, simply copy and paste the [MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor, place it in `~/.cursor/mcp.json` on macOS/Linux).
+To use this MCP server locally, simply copy and paste the
+[MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor,
+place it in `~/.cursor/mcp.json` on macOS/Linux).
 
 ## Example MCP Queries
 
-Once configured, you can ask your AI assistant natural language questions that will be translated into RIPEstat API calls. Here are some example queries you can use:
+Once configured, you can ask your AI assistant natural language questions that
+will be translated into RIPEstat API calls. Here are some example queries you
+can use:
 
 ### Network Information & IP Analysis
 
@@ -161,10 +172,14 @@ Once configured, you can ask your AI assistant natural language questions that w
 
 ### Complex Network Analysis Queries
 
-- "Analyze the network infrastructure behind cloudflare.com - show me the IP, AS information, and any related prefixes"
-- "Investigate potential abuse from this IP range: 203.0.113.0/24 - show network info, WHOIS, and abuse contacts"
-- "Compare the network paths and AS relationships between Google's DNS (8.8.8.8) and Cloudflare's DNS (1.1.1.1)"
-- "Perform a comprehensive security analysis of AS13335 including announced prefixes, neighbors, and RPKI validation status"
+- "Analyze the network infrastructure behind cloudflare.com - show me the IP,
+  AS information, and any related prefixes"
+- "Investigate potential abuse from this IP range: 203.0.113.0/24 - show network
+  info, WHOIS, and abuse contacts"
+- "Compare the network paths and AS relationships between Google's DNS (8.8.8.8)
+  and Cloudflare's DNS (1.1.1.1)"
+- "Perform a comprehensive security analysis of AS13335 including announced
+  prefixes, neighbors, and RPKI validation status"
 
 ## API Endpoints
 
