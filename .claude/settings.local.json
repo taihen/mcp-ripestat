@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(go test:*)",
-      "Bash(go tool cover:*)"
-    ],
-    "deny": []
-  }
-}

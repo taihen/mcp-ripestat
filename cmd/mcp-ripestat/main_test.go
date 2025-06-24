@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/mcp"
 )
 
 func TestNetworkInfoHandler(t *testing.T) {
