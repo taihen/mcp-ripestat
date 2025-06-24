@@ -125,12 +125,14 @@ This server implements the Model Context Protocol (MCP) 2025 specification with
 JSON-RPC 2.0 transport. It provides two interfaces:
 
 ### JSON-RPC 2.0 Endpoint (Recommended)
+
 - **Endpoint**: `/mcp`
 - **Protocol**: MCP 2025 JSON-RPC 2.0
 - **Usage**: Compatible with Cursor IDE and other MCP clients
 - **Features**: Full MCP handshake, capability negotiation, tool calling
 
 ### Legacy REST API
+
 - **Endpoints**: Individual REST endpoints (e.g., `/network-info`)
 - **Protocol**: HTTP REST with query parameters
 - **Usage**: Direct API access and backward compatibility
@@ -197,19 +199,6 @@ can use:
 - "Perform a comprehensive security analysis of AS13335 including announced
   prefixes, neighbors, and RPKI validation status"
 
-## API Endpoints
-
-- `/network-info` - Get network information for an IP address or prefix
-- `/as-overview` - Get an overview of an Autonomous System (AS)
-- `/announced-prefixes` - Get a list of prefixes announced by an Autonomous System (AS)
-- `/routing-status` - Get the routing status for an IP prefix
-- `/whois` - Get whois information for an IP address, prefix, or ASN
-- `/abuse-contact-finder` - Get abuse contact information for an IP address or prefix
-- `/rpki-validation` - Get RPKI validation status for a resource (ASN) and prefix combination
-- `/asn-neighbours` - Get ASN neighbours for an Autonomous System (upstream/downstream relationships)
-- `/looking-glass` - Get Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
-- `/whats-my-ip` - Get the caller's public IP address with proxy header support
-
 ## Testing
 
 ```bash
@@ -234,29 +223,6 @@ make clean
 # Install dependencies
 make deps
 ```
-
-### Project Structure
-
-The project is organized into the following packages:
-
-- `cmd/mcp-ripestat` - Main application entry point
-- `internal/ripestat` - Core functionality
-  - `abusecontactfinder` - Abuse contact finder data
-  - `announcedprefixes` - Announced prefixes data
-  - `asnneighbours` - ASN neighbours data
-  - `asoverview` - AS overview data
-  - `lookingglass` - Looking Glass data
-  - `client` - HTTP client for RIPEstat API
-  - `config` - Configuration handling
-  - `errors` - Error types and handling
-  - `logging` - Logging utilities
-  - `networkinfo` - Network information data
-  - `routingstatus` - Routing status data
-  - `rpkivalidation` - RPKI validation status data
-  - `types` - Common type definitions
-  - `util` - Utility functions for IP, ASN validation, string manipulation, etc.
-  - `whatsmyip` - What's My IP functionality with proxy header support
-  - `whois` - Whois information data
 
 ## Contributing
 
