@@ -3,6 +3,19 @@
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "mcp-ripestat-*",
+            "name": "${path}"
+          }
+        ],
+        "successComment": false,
+        "addReleases": "bottom",
+        "releaseBodyTemplate": "{{#each commits}}{{#if subject}}* {{subject}} ({{hash}}){{/if}}\n{{/each}}\n\n## Docker Images\nPull the Docker image:\n```bash\ndocker pull ghcr.io/taihen/mcp-ripestat:${nextRelease.version}\n# or latest\ndocker pull ghcr.io/taihen/mcp-ripestat:latest\n```"
+      }
+    ]
   ]
 }

@@ -233,7 +233,7 @@ to see how you can participate.
 
 The development process is organized into sprints, with each sprint focused on a
 specific feature. A detailed ledger of all the past and feature changes,
-divided by sprints, is available in the [sprints](.github/SPRINTS.md)
+divided by sprints, is available in the [sprints](SPRINTS.md)
 documentation.
 
 > [!NOTE]
