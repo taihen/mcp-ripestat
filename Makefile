@@ -3,7 +3,7 @@
 .PHONY: all build test test-coverage e2e-test lint clean run deps fmt help
 
 # Default target
-all: lint test build
+all: fmt lint test test-coverage e2e-test build
 
 # Build the application
 build:

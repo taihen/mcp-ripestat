@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/taihen/mcp-ripestat/internal/mcp"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
@@ -62,6 +64,16 @@ func main() {
 
 func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 	mux := http.NewServeMux()
+
+	// Create MCP server
+	mcpServer := mcp.NewServer("mcp-ripestat", "1.0.0", disableWhatsMyIP)
+
+	// Add MCP JSON-RPC endpoint
+	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
+		mcpHandler(w, r, mcpServer)
+	})
+
+	// Legacy REST API endpoints
 	mux.HandleFunc("/network-info", networkInfoHandler)
 	mux.HandleFunc("/as-overview", asOverviewHandler)
 	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
@@ -533,6 +545,47 @@ func handleRIPEstatRequest(w http.ResponseWriter, r *http.Request, callName stri
 	}
 
 	writeJSON(w, resp, http.StatusOK)
+}
+
+// mcpHandler handles MCP JSON-RPC requests.
+func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
+	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr)
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error("failed to read request body", "err", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	response, err := server.ProcessMessage(ctx, body)
+	if err != nil {
+		slog.Error("failed to process MCP message", "err", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// If no response (notification), return 204 No Content
+	if response == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to write MCP response", "err", err)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {

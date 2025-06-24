@@ -12,6 +12,7 @@ bin/
 # IDE specific files and local development environment
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 local/
