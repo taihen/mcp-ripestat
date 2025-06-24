@@ -374,7 +374,7 @@ func TestLookingGlassIntegration(t *testing.T) {
 	// Test using the direct function call
 	httpClient := &http.Client{}
 	testClient := NewClient(client.New(server.URL, httpClient))
-	
+
 	got, err := testClient.Get(context.Background(), "140.78.0.0/16", 3600)
 	if err != nil {
 		t.Errorf("Get() error = %v, want nil", err)

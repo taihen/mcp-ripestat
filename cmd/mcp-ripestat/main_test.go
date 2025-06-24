@@ -994,7 +994,7 @@ func TestAbuseContactFinderHandler_MissingResource(t *testing.T) {
 
 func TestMCPHandler(t *testing.T) {
 	server := mcp.NewServer("test-server", "1.0.0", false)
-	
+
 	// Test initialize request
 	initReq := mcp.NewRequest("initialize", map[string]interface{}{
 		"protocolVersion": "2025-03-26",
@@ -1030,7 +1030,7 @@ func TestMCPHandler(t *testing.T) {
 
 func TestMCPHandler_Notification(t *testing.T) {
 	server := mcp.NewServer("test-server", "1.0.0", false)
-	
+
 	// Test initialized notification
 	notif := mcp.NewNotification("initialized", nil)
 
@@ -1055,7 +1055,7 @@ func TestMCPHandler_Notification(t *testing.T) {
 
 func TestMCPHandler_InvalidJSON(t *testing.T) {
 	server := mcp.NewServer("test-server", "1.0.0", false)
-	
+
 	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte("{invalid json}")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
