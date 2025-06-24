@@ -150,6 +150,22 @@ jobs:
           branch: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update release with Docker info
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          RELEASE_BODY=$(gh release view ${{ steps.semantic.outputs.new_release_version }} --json body --jq '.body')
+          NEW_BODY="${RELEASE_BODY}
+
+          ## Docker Images
+          Pull the Docker image:
+          \`\`\`bash
+          docker pull ghcr.io/taihen/mcp-ripestat:${{ steps.semantic.outputs.new_release_version }}
+          # or latest
+          docker pull ghcr.io/taihen/mcp-ripestat:latest
+          \`\`\`"
+          gh release edit ${{ steps.semantic.outputs.new_release_version }} --notes "$NEW_BODY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Log in to GitHub Container Registry
         if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/login-action@v3
