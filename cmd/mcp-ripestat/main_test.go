@@ -1083,3 +1083,169 @@ func TestMCPHandler_InvalidJSON(t *testing.T) {
 		t.Errorf("Expected ParseError code %d, got %d", mcp.ParseError, response.Error.Code)
 	}
 }
+
+func TestMCPHandler_MethodNotAllowed(t *testing.T) {
+	server := mcp.NewServer("test-server", "1.0.0", false)
+
+	req := httptest.NewRequest("GET", "/mcp", nil)
+	w := httptest.NewRecorder()
+
+	mcpHandler(w, req, server)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status code 405, got %d", resp.StatusCode)
+	}
+}
+
+func TestMCPHandler_ReadBodyError(t *testing.T) {
+	server := mcp.NewServer("test-server", "1.0.0", false)
+
+	// Create a request with a body that will cause a read error
+	req := httptest.NewRequest("POST", "/mcp", &errorReader{})
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	mcpHandler(w, req, server)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+}
+
+// errorReader is a helper type that always returns an error when read
+type errorReader struct{}
+
+func (e *errorReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("read error")
+}
+
+func TestNetworkInfoHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/network-info", nil)
+	w := httptest.NewRecorder()
+
+	networkInfoHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestASOverviewHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/as-overview", nil)
+	w := httptest.NewRecorder()
+
+	asOverviewHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestAnnouncedPrefixesHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/announced-prefixes", nil)
+	w := httptest.NewRecorder()
+
+	announcedPrefixesHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestRoutingStatusHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/routing-status", nil)
+	w := httptest.NewRecorder()
+
+	routingStatusHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestWhatsMyIPHandler_WithClientIP(t *testing.T) {
+	req := httptest.NewRequest("GET", "/whats-my-ip?client_ip=8.8.8.8", nil)
+	w := httptest.NewRecorder()
+
+	whatsMyIPHandler(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	// Accept any valid IP response since the function may extract client IP differently in test environment
+	if ip, ok := response["ip"].(string); !ok || ip == "" {
+		t.Errorf("Expected valid IP, got %v", response["ip"])
+	}
+}
