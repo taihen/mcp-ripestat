@@ -275,7 +275,7 @@ func TestMCPConcurrency(t *testing.T) {
 
 	// First initialize the server
 	initReq := mcp.NewRequest("initialize", map[string]interface{}{
-		"protocolVersion": "2024-11-05",
+		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]interface{}{},
 		"clientInfo": map[string]interface{}{
 			"name":    "test-client",
