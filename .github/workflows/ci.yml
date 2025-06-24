@@ -194,7 +194,7 @@ jobs:
             mcp-ripestat-*
           body: |
             ## Docker Images
-            
+
             Pull the Docker image:
             ```bash
             docker pull ghcr.io/taihen/mcp-ripestat:${{ steps.semantic.outputs.new_release_version }}

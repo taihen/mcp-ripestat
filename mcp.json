@@ -7,7 +7,7 @@
     }
   },
   "_meta": {
-    "name": "ripestat", 
+    "name": "ripestat",
     "description": "RIPEStat MCP server providing network information APIs",
     "version": "1.13.0"
   },
