@@ -14,11 +14,8 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/mcp-ripestat ./cmd/mcp-ripestat
 
-# Use a minimal alpine image for the final stage
-FROM alpine:3.22
-
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+# Use taihen/base-image for the final stage
+FROM ghcr.io/taihen/base-image:v2025.06.24
 
 WORKDIR /app
 

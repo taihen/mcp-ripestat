@@ -1,13 +1,10 @@
 # MCP RIPEstat
 
-[![Lint](https://github.com/taihen/mcp-ripestat/actions/workflows/lint.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/lint.yml)
-[![Test](https://github.com/taihen/mcp-ripestat/actions/workflows/test.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/test.yml)
-[![Build](https://github.com/taihen/mcp-ripestat/actions/workflows/build.yml/badge.svg)](https://github.com/taihen/ppp-exporter/actions/workflows/build.yml)
-[![Release](https://github.com/taihen/mcp-ripestat/actions/workflows/release.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/release.yml)
+[![CI/CD](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/taihen/mcp-ripestat)](https://goreportcard.com/report/github.com/taihen/mcp-ripestat)
 
-
-A Model Context Protocol (MCP) server for the RIPEstat Data API, providing network information for IP addresses and prefixes.
+A Model Context Protocol (MCP) server for the RIPEstat Data API, providing
+network information for IP addresses and prefixes.
 
 > [!CAUTION]
 > This MCP server is currently under active development. It may not be stable
@@ -68,6 +65,9 @@ point for RIPEstat data.
 - Go 1.24.4 or higher
 - Make
 
+> [!INFO]
+> No External Dependencies: This project uses only Go standard library.
+
 ```bash
 # Clone the repository
 git clone https://github.com/taihen/mcp-ripestat.git
@@ -92,7 +92,7 @@ make build
 # Enable debug logging
 ./bin/mcp-ripestat --debug
 
-# Disable What's My IP endpoint (for shared environments)
+# Disable What's My IP endpoint (for shared environments this is undesirable)
 ./bin/mcp-ripestat --disable-whats-my-ip
 
 # Show help
@@ -101,21 +101,85 @@ make build
 
 ### Proxy Support
 
-The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client IP address when the server is behind a proxy or load balancer. It supports the following proxy headers:
+The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client
+IP address when the server is behind a proxy or load balancer. It supports the
+following proxy headers:
 
 - `X-Forwarded-For` - Standard proxy header (uses first IP in chain)
 - `X-Real-IP` - Alternative proxy header
 - `CF-Connecting-IP` - Cloudflare-specific header
 
-When running behind a proxy or Cloudflare tunnel, the endpoint will automatically use these headers to determine the actual client IP address instead of the proxy's IP.
+When running behind a proxy or Cloudflare tunnel, the endpoint will
+automatically use these headers to determine the actual client IP address
+instead of the proxy's IP.
 
 ### Shared Environment Configuration
 
-For shared team environments, you can disable the What's My IP endpoint using the `--disable-whats-my-ip` flag. This prevents team members from seeing each other's IP addresses when using a shared MCP server instance.
+For shared team environments, you should disable the `What's My IP` endpoint
+using the `--disable-whats-my-ip` flag. This prevents team members from seeing
+each server IP addresses when using a shared MCP server instance.
 
 ## MCP Client Configuration
 
-To use this MCP server, simply copy and paste the [MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor, place it in `~/.cursor/mcp.json` on macOS/Linux).
+To use this MCP server locally, simply copy and paste the
+[MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor,
+place it in `~/.cursor/mcp.json` on macOS/Linux).
+
+## Example MCP Queries
+
+Once configured, you can ask your AI assistant natural language questions that
+will be translated into RIPEstat API calls. Here are some example queries you
+can use:
+
+### Network Information & IP Analysis
+
+- "What network information can you tell me about the IP address 8.8.8.8?"
+- "Analyze the network details for the prefix 193.0.0.0/21"
+- "Show me the network information for 2001:db8::/32"
+
+### Autonomous System (AS) Investigation
+
+- "Give me an overview of AS3333"
+- "What prefixes are announced by AS15169?"
+- "Show me the routing status for the prefix 8.8.8.0/24"
+- "Who are the upstream and downstream neighbors of AS1205?"
+
+### Security & Abuse Investigation
+
+- "Find the abuse contact information for IP address 192.0.2.1"
+- "What's the abuse contact for the network containing 203.0.113.50?"
+
+### WHOIS & Registration Data
+
+- "Show me WHOIS information for AS64512"
+- "Get WHOIS data for the IP address 198.51.100.1"
+- "What's the WHOIS information for the prefix 2001:db8::/32?"
+
+### RPKI Validation
+
+- "Validate RPKI status for AS3333 announcing prefix 193.0.0.0/21"
+- "Check if AS15169 is authorized to announce 8.8.8.0/24"
+
+### BGP & Routing Analysis
+
+- "Show me BGP routing information for prefix 193.0.0.0/21 from RIPE's looking glass"
+- "Get looking glass data for 2001:7fb::/32 with 24-hour history"
+
+### IP Detection & Connectivity
+
+- "What's my public IP address?"
+- "Detect my current IP and show network information about it"
+
+### Complex Network Analysis Queries
+
+- "Analyze the network infrastructure behind cloudflare.com - show me the IP,
+  AS information, and any related prefixes"
+- "Investigate potential abuse from this IP range: 203.0.113.0/24 - show network
+  info, WHOIS, and abuse contacts"
+- "Compare the network paths and AS relationships between Google's DNS (8.8.8.8)
+  and Cloudflare's DNS (1.1.1.1)"
+- "Perform a comprehensive security analysis of AS13335 including announced
+  prefixes, neighbors, and RPKI validation status"
 
 ## API Endpoints
 
