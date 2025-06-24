@@ -40,6 +40,7 @@ type Capabilities struct {
 	Resources *ResourcesCapability `json:"resources,omitempty"`
 	Prompts   *PromptsCapability   `json:"prompts,omitempty"`
 	Logging   *LoggingCapability   `json:"logging,omitempty"`
+	Roots     *RootsCapability     `json:"roots,omitempty"`
 }
 
 // ToolsCapability represents tools capability.
@@ -61,6 +62,11 @@ type PromptsCapability struct {
 // LoggingCapability represents logging capability.
 type LoggingCapability struct{}
 
+// RootsCapability represents roots capability.
+type RootsCapability struct {
+	ListChanged bool `json:"listChanged,omitempty"`
+}
+
 // Tool represents a tool that can be called.
 type Tool struct {
 	Name        string      `json:"name"`
@@ -77,6 +83,7 @@ type ToolsListResult struct {
 type CallToolParams struct {
 	Name      string      `json:"name"`
 	Arguments interface{} `json:"arguments,omitempty"`
+	Meta      interface{} `json:"_meta,omitempty"`
 }
 
 // ToolResult represents the result of calling a tool.
@@ -96,7 +103,11 @@ func CreateInitializeResult(serverName, serverVersion string) *InitializeResult 
 	return &InitializeResult{
 		ProtocolVersion: ProtocolVersion,
 		Capabilities: &Capabilities{
-			Tools: &ToolsCapability{},
+			Tools:     &ToolsCapability{ListChanged: false},
+			Resources: &ResourcesCapability{Subscribe: false, ListChanged: false},
+			Prompts:   &PromptsCapability{ListChanged: false},
+			Logging:   &LoggingCapability{},
+			Roots:     &RootsCapability{ListChanged: false},
 		},
 		ServerInfo: ServerInfo{
 			Name:    serverName,
@@ -119,7 +130,8 @@ func CreateToolsList() *ToolsListResult {
 						"description": "The IP address or prefix to query.",
 					},
 				},
-				"required": []string{"resource"},
+				"required":             []string{"resource"},
+				"additionalProperties": false,
 			},
 		},
 		{
