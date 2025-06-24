@@ -46,6 +46,7 @@ management tasks.
 - Abuse contact finder for IP addresses and prefixes
 - RPKI validation status for ASN and prefix combinations
 - ASN neighbours for Autonomous Systems (upstream/downstream relationships)
+- Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
 
 ## Architectural Rationale
 
@@ -108,6 +109,7 @@ To use this MCP server, simply copy and paste the [MCP client configuration](./m
 - `/abuse-contact-finder` - Get abuse contact information for an IP address or prefix
 - `/rpki-validation` - Get RPKI validation status for a resource (ASN) and prefix combination
 - `/asn-neighbours` - Get ASN neighbours for an Autonomous System (upstream/downstream relationships)
+- `/looking-glass` - Get Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
 
 ## Testing
 
@@ -144,6 +146,7 @@ The project is organized into the following packages:
   - `announcedprefixes` - Announced prefixes data
   - `asnneighbours` - ASN neighbours data
   - `asoverview` - AS overview data
+  - `lookingglass` - Looking Glass data
   - `client` - HTTP client for RIPEstat API
   - `config` - Configuration handling
   - `errors` - Error types and handling

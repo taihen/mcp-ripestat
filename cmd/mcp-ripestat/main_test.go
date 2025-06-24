@@ -127,8 +127,8 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("Expected manifest name to be 'mcp-ripestat', got %q", manifest.Name)
 	}
 
-	if len(manifest.Functions) != 8 {
-		t.Errorf("Expected 8 functions in manifest, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 9 {
+		t.Errorf("Expected 9 functions in manifest, got %d", len(manifest.Functions))
 	}
 
 	// Check that all expected functions are present
@@ -146,6 +146,7 @@ func TestManifestHandler(t *testing.T) {
 		"getAbuseContactFinder",
 		"getRPKIValidation",
 		"getASNNeighbours",
+		"getLookingGlass",
 	}
 
 	for _, name := range expectedFunctions {
@@ -746,5 +747,75 @@ func TestASNNeighboursHandler_InvalidLOD(t *testing.T) {
 
 	if !strings.Contains(string(body), "lod parameter must be 0 or 1") {
 		t.Errorf("Expected error message about invalid lod, got %q", string(body))
+	}
+}
+
+func TestLookingGlassHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/looking-glass?resource=140.78.0.0/16&look_back_limit=3600", nil)
+	w := httptest.NewRecorder()
+
+	lookingGlassHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
+		// We accept either OK or BadGateway since this might be run without internet
+		t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+}
+
+func TestLookingGlassHandler_MissingResource(t *testing.T) {
+	req := httptest.NewRequest("GET", "/looking-glass?look_back_limit=3600", nil)
+	w := httptest.NewRecorder()
+
+	lookingGlassHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+		return
+	}
+
+	if !strings.Contains(string(body), "missing resource parameter") {
+		t.Errorf("Expected error message about missing resource, got %q", string(body))
+	}
+}
+
+func TestLookingGlassHandler_InvalidLookBackLimit(t *testing.T) {
+	req := httptest.NewRequest("GET", "/looking-glass?resource=140.78.0.0/16&look_back_limit=invalid", nil)
+	w := httptest.NewRecorder()
+
+	lookingGlassHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+		return
+	}
+
+	if !strings.Contains(string(body), "look_back_limit parameter must be a valid integer") {
+		t.Errorf("Expected error message about invalid look_back_limit, got %q", string(body))
 	}
 }
