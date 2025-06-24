@@ -15,5 +15,5 @@ Each entry in the table below corresponds to a specific feature implementation, 
 | 8 | `sprint-8` | v1.9.0 | RPKI Validation Status | `rpki-validation` | Completed |
 | 9 | `sprint-9` | v1.10.0 | ASN Neighbours | `asn-neighbours` | Completed |
 | 10 | `sprint-10` | v1.11.0 | Looking Glass | `looking-glass` | Completed |
-| 11 | `sprint-11` | N/A | What's My IP | `whats-my-ip` | Planned |
+| 11 | `sprint-11` | v1.12.0 | What's My IP | `whats-my-ip` | Completed |
 | 12 | `sprint-12 | N/A | UX | N/A | Planned |

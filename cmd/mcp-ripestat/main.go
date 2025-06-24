@@ -22,12 +22,14 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
 func main() {
 	port := flag.String("port", "8080", "Port for the server to listen on")
 	debug := flag.Bool("debug", false, "Enable debug logging")
+	disableWhatsMyIP := flag.Bool("disable-whats-my-ip", false, "Disable the whats-my-ip endpoint (useful for shared servers)")
 	help := flag.Bool("help", false, "Print all possible flags")
 
 	flag.Usage = func() {
@@ -52,13 +54,13 @@ func main() {
 
 	slog.SetDefault(logger)
 
-	if err := run(context.Background(), *port); err != nil {
+	if err := run(context.Background(), *port, *disableWhatsMyIP); err != nil {
 		slog.Error("server failed", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, port string) error {
+func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/network-info", networkInfoHandler)
 	mux.HandleFunc("/as-overview", asOverviewHandler)
@@ -69,7 +71,18 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/rpki-validation", rpkiValidationHandler)
 	mux.HandleFunc("/asn-neighbours", asnNeighboursHandler)
 	mux.HandleFunc("/looking-glass", lookingGlassHandler)
-	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
+
+	// Add whats-my-ip handler if not disabled
+	if !disableWhatsMyIP {
+		mux.HandleFunc("/whats-my-ip", whatsMyIPHandler)
+		slog.Info("whats-my-ip endpoint enabled")
+	} else {
+		slog.Info("whats-my-ip endpoint disabled")
+	}
+
+	mux.HandleFunc("/.well-known/mcp/manifest.json", func(w http.ResponseWriter, r *http.Request) {
+		manifestHandler(w, r, disableWhatsMyIP)
+	})
 
 	addr := ":" + port
 
@@ -139,173 +152,188 @@ type Return struct {
 	Type string `json:"type"`
 }
 
-func manifestHandler(w http.ResponseWriter, r *http.Request) {
+func manifestHandler(w http.ResponseWriter, r *http.Request, disableWhatsMyIP bool) {
 	slog.Debug("received manifest request", "remote_addr", r.RemoteAddr)
+
+	functions := []Function{
+		{
+			Name:        "getNetworkInfo",
+			Description: "Get network information for an IP address or prefix.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP address or prefix to query.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getASOverview",
+			Description: "Get an overview of an Autonomous System (AS).",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The AS number to query.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getAnnouncedPrefixes",
+			Description: "Get a list of prefixes announced by an Autonomous System (AS).",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The AS number to query.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getRoutingStatus",
+			Description: "Get the routing status for an IP prefix.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP prefix to query.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getWhois",
+			Description: "Get whois information for an IP address, prefix, or ASN.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP address, prefix, or ASN to query.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getAbuseContactFinder",
+			Description: "Get abuse contact information for an IP address or prefix.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP address or prefix to query for abuse contacts.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getRPKIValidation",
+			Description: "Get RPKI validation status for a resource (ASN) and prefix combination.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The ASN to validate against the prefix.",
+				},
+				{
+					Name:        "prefix",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP prefix to validate.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getASNNeighbours",
+			Description: "Get ASN neighbours for an Autonomous System. Left neighbours are downstream providers, right neighbours are upstream providers.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The AS number to query for neighbours.",
+				},
+				{
+					Name:        "lod",
+					Type:        "string",
+					Required:    false,
+					Description: "Level of detail: 0 (basic) or 1 (detailed with power, v4_peers, v6_peers). Default is 0.",
+				},
+				{
+					Name:        "query_time",
+					Type:        "string",
+					Required:    false,
+					Description: "Query time in ISO8601 format for historical data. If omitted, uses latest snapshot.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
+			Name:        "getLookingGlass",
+			Description: "Get looking glass information for an IP prefix, showing BGP routing data from RIPE NCC's Route Reflection Collectors (RRCs).",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP prefix to query for looking glass information.",
+				},
+				{
+					Name:        "look_back_limit",
+					Type:        "string",
+					Required:    false,
+					Description: "Time limit in seconds to look back for BGP data. Maximum is 172800 seconds (48 hours). Default is 0.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+	}
+
+	// Add whats-my-ip function if not disabled
+	if !disableWhatsMyIP {
+		whatsMyIPFunction := Function{
+			Name:        "getWhatsMyIP",
+			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
+			Parameters:  []Parameter{}, // No parameters required
+			Returns: Return{
+				Type: "object",
+			},
+		}
+		functions = append(functions, whatsMyIPFunction)
+	}
 
 	manifest := Manifest{
 		Name:        "mcp-ripestat",
 		Description: "A server for the RIPEstat Data API, providing network information for IP addresses and prefixes.",
-		Functions: []Function{
-			{
-				Name:        "getNetworkInfo",
-				Description: "Get network information for an IP address or prefix.",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The IP address or prefix to query.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getASOverview",
-				Description: "Get an overview of an Autonomous System (AS).",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The AS number to query.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getAnnouncedPrefixes",
-				Description: "Get a list of prefixes announced by an Autonomous System (AS).",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The AS number to query.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getRoutingStatus",
-				Description: "Get the routing status for an IP prefix.",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The IP prefix to query.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getWhois",
-				Description: "Get whois information for an IP address, prefix, or ASN.",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The IP address, prefix, or ASN to query.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getAbuseContactFinder",
-				Description: "Get abuse contact information for an IP address or prefix.",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The IP address or prefix to query for abuse contacts.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getRPKIValidation",
-				Description: "Get RPKI validation status for a resource (ASN) and prefix combination.",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The ASN to validate against the prefix.",
-					},
-					{
-						Name:        "prefix",
-						Type:        "string",
-						Required:    true,
-						Description: "The IP prefix to validate.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getASNNeighbours",
-				Description: "Get ASN neighbours for an Autonomous System. Left neighbours are downstream providers, right neighbours are upstream providers.",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The AS number to query for neighbours.",
-					},
-					{
-						Name:        "lod",
-						Type:        "string",
-						Required:    false,
-						Description: "Level of detail: 0 (basic) or 1 (detailed with power, v4_peers, v6_peers). Default is 0.",
-					},
-					{
-						Name:        "query_time",
-						Type:        "string",
-						Required:    false,
-						Description: "Query time in ISO8601 format for historical data. If omitted, uses latest snapshot.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-			{
-				Name:        "getLookingGlass",
-				Description: "Get looking glass information for an IP prefix, showing BGP routing data from RIPE NCC's Route Reflection Collectors (RRCs).",
-				Parameters: []Parameter{
-					{
-						Name:        "resource",
-						Type:        "string",
-						Required:    true,
-						Description: "The IP prefix to query for looking glass information.",
-					},
-					{
-						Name:        "look_back_limit",
-						Type:        "string",
-						Required:    false,
-						Description: "Time limit in seconds to look back for BGP data. Maximum is 172800 seconds (48 hours). Default is 0.",
-					},
-				},
-				Returns: Return{
-					Type: "object",
-				},
-			},
-		},
+		Functions:   functions,
 	}
 	writeJSON(w, manifest, http.StatusOK)
 }
@@ -444,6 +472,38 @@ func lookingGlassHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("RIPEstat call failed", "call_name", "looking-glass", "err", err)
 		writeJSONError(w, "failed to fetch looking-glass", http.StatusBadGateway)
+		return
+	}
+
+	writeJSON(w, resp, http.StatusOK)
+}
+
+func whatsMyIPHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("received whats-my-ip request", "remote_addr", r.RemoteAddr)
+
+	// Extract the real client IP from headers (for proxy scenarios)
+	clientIP := whatsmyip.ExtractClientIP(r)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	// Use the client IP if we're behind a proxy, otherwise use the RIPEstat service
+	var resp *whatsmyip.APIResponse
+	var err error
+
+	if clientIP != "" && clientIP != r.RemoteAddr {
+		// We're behind a proxy, use the extracted client IP
+		resp, err = whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
+		slog.Debug("using extracted client IP", "client_ip", clientIP, "remote_addr", r.RemoteAddr)
+	} else {
+		// Direct connection, use RIPEstat service
+		resp, err = whatsmyip.GetWhatsMyIP(ctx)
+		slog.Debug("using RIPEstat service for IP detection")
+	}
+
+	if err != nil {
+		slog.Error("RIPEstat call failed", "call_name", "whats-my-ip", "err", err)
+		writeJSONError(w, "failed to fetch whats-my-ip", http.StatusBadGateway)
 		return
 	}
 

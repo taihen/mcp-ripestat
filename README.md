@@ -47,6 +47,7 @@ management tasks.
 - RPKI validation status for ASN and prefix combinations
 - ASN neighbours for Autonomous Systems (upstream/downstream relationships)
 - Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
+- What's My IP functionality with proxy header support for IP detection
 
 ## Architectural Rationale
 
@@ -91,9 +92,26 @@ make build
 # Enable debug logging
 ./bin/mcp-ripestat --debug
 
+# Disable What's My IP endpoint (for shared environments)
+./bin/mcp-ripestat --disable-whats-my-ip
+
 # Show help
 ./bin/mcp-ripestat --help
 ```
+
+### Proxy Support
+
+The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client IP address when the server is behind a proxy or load balancer. It supports the following proxy headers:
+
+- `X-Forwarded-For` - Standard proxy header (uses first IP in chain)
+- `X-Real-IP` - Alternative proxy header
+- `CF-Connecting-IP` - Cloudflare-specific header
+
+When running behind a proxy or Cloudflare tunnel, the endpoint will automatically use these headers to determine the actual client IP address instead of the proxy's IP.
+
+### Shared Environment Configuration
+
+For shared team environments, you can disable the What's My IP endpoint using the `--disable-whats-my-ip` flag. This prevents team members from seeing each other's IP addresses when using a shared MCP server instance.
 
 ## MCP Client Configuration
 
@@ -110,6 +128,7 @@ To use this MCP server, simply copy and paste the [MCP client configuration](./m
 - `/rpki-validation` - Get RPKI validation status for a resource (ASN) and prefix combination
 - `/asn-neighbours` - Get ASN neighbours for an Autonomous System (upstream/downstream relationships)
 - `/looking-glass` - Get Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
+- `/whats-my-ip` - Get the caller's public IP address with proxy header support
 
 ## Testing
 
@@ -156,6 +175,7 @@ The project is organized into the following packages:
   - `rpkivalidation` - RPKI validation status data
   - `types` - Common type definitions
   - `util` - Utility functions for IP, ASN validation, string manipulation, etc.
+  - `whatsmyip` - What's My IP functionality with proxy header support
   - `whois` - Whois information data
 
 ## Contributing
