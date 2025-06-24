@@ -1118,10 +1118,10 @@ func TestMCPHandler_ReadBodyError(t *testing.T) {
 	}
 }
 
-// errorReader is a helper type that always returns an error when read
+// errorReader is a helper type that always returns an error when read.
 type errorReader struct{}
 
-func (e *errorReader) Read(p []byte) (n int, err error) {
+func (e *errorReader) Read(_ []byte) (n int, err error) {
 	return 0, errors.New("read error")
 }
 
