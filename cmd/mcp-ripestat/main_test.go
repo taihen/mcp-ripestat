@@ -98,7 +98,7 @@ func TestManifestHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/.well-known/mcp/manifest.json", nil)
 	w := httptest.NewRecorder()
 
-	manifestHandler(w, req)
+	manifestHandler(w, req, false) // Test with whats-my-ip enabled
 
 	resp := w.Result()
 
@@ -127,8 +127,8 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("Expected manifest name to be 'mcp-ripestat', got %q", manifest.Name)
 	}
 
-	if len(manifest.Functions) != 9 {
-		t.Errorf("Expected 9 functions in manifest, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 10 {
+		t.Errorf("Expected 10 functions in manifest, got %d", len(manifest.Functions))
 	}
 
 	// Check that all expected functions are present
@@ -147,12 +147,53 @@ func TestManifestHandler(t *testing.T) {
 		"getRPKIValidation",
 		"getASNNeighbours",
 		"getLookingGlass",
+		"getWhatsMyIP",
 	}
 
 	for _, name := range expectedFunctions {
 		if !functionNames[name] {
 			t.Errorf("Expected function %q in manifest", name)
 		}
+	}
+}
+
+func TestManifestHandler_WhatsMyIPDisabled(t *testing.T) {
+	req := httptest.NewRequest("GET", "/.well-known/mcp/manifest.json", nil)
+	w := httptest.NewRecorder()
+
+	manifestHandler(w, req, true) // Test with whats-my-ip disabled
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+		return
+	}
+
+	var manifest Manifest
+	if err := json.Unmarshal(body, &manifest); err != nil {
+		t.Fatalf("Failed to unmarshal manifest: %v", err)
+	}
+
+	if len(manifest.Functions) != 9 {
+		t.Errorf("Expected 9 functions in manifest when whats-my-ip is disabled, got %d", len(manifest.Functions))
+	}
+
+	// Check that whats-my-ip function is not present
+	functionNames := make(map[string]bool)
+	for _, fn := range manifest.Functions {
+		functionNames[fn.Name] = true
+	}
+
+	if functionNames["getWhatsMyIP"] {
+		t.Error("Expected getWhatsMyIP function to be absent when disabled")
 	}
 }
 
@@ -279,7 +320,7 @@ func TestRun_ServerStartup(t *testing.T) {
 	// Start the server in a goroutine
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- run(ctx, port)
+		errCh <- run(ctx, port, false)
 	}()
 
 	// Give the server a moment to start
@@ -309,7 +350,7 @@ func TestRun_ContextCancellation(t *testing.T) {
 	// Start the server in a goroutine
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- run(ctx, port)
+		errCh <- run(ctx, port, false)
 	}()
 
 	// Give the server a moment to start
@@ -508,7 +549,7 @@ func TestRun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	err := run(ctx, "0") // Use port 0 to let the OS choose a free port
+	err := run(ctx, "0", false) // Use port 0 to let the OS choose a free port
 	if err != nil {
 		t.Fatalf("run() failed: %v", err)
 	}
@@ -551,7 +592,7 @@ func TestRun_ServerShutdownError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	err := run(ctx, "0")
+	err := run(ctx, "0", false)
 	// The function should complete without error even with cancelled context
 	if err != nil {
 		t.Fatalf("run() failed: %v", err)
@@ -673,7 +714,7 @@ func TestRun_InvalidPort(t *testing.T) {
 	defer cancel()
 
 	// Use a very high port number that might cause issues
-	err := run(ctx, "99999")
+	err := run(ctx, "99999", false)
 	// The function should complete without error
 	if err != nil {
 		t.Fatalf("run() failed: %v", err)
@@ -817,5 +858,51 @@ func TestLookingGlassHandler_InvalidLookBackLimit(t *testing.T) {
 
 	if !strings.Contains(string(body), "look_back_limit parameter must be a valid integer") {
 		t.Errorf("Expected error message about invalid look_back_limit, got %q", string(body))
+	}
+}
+
+func TestWhatsMyIPHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/whats-my-ip", nil)
+	w := httptest.NewRecorder()
+
+	whatsMyIPHandler(w, req)
+
+	resp := w.Result()
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
+		// We accept either OK or BadGateway since this might be run without internet
+		t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
+	}
+
+	// If the request was successful, validate the JSON response body
+	if resp.StatusCode == http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("Failed to read response body: %v", err)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal(body, &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+
+		// Validate key fields in the response
+		if ip, ok := response["ip"].(string); !ok || ip == "" {
+			t.Errorf("Expected 'ip' field to be a non-empty string, got %v", response["ip"])
+		}
+
+		// Note: fetched_at might be empty when using client IP extraction in test environment
+		if fetchedAt, ok := response["fetched_at"]; ok {
+			if fetchedAtStr, isString := fetchedAt.(string); isString && fetchedAtStr == "" {
+				// This is acceptable in test environment when using client IP extraction
+				t.Logf("fetched_at is empty (expected in test environment with client IP extraction)")
+			}
+		}
 	}
 }

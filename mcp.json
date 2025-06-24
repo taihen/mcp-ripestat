@@ -1,7 +1,7 @@
 {
   "name": "ripestat",
   "description": "RIPEStat MCP server providing network information APIs",
-  "version": "1.10.0",
+  "version": "1.12.0",
   "command": "./mcp-ripestat",
   "working_directory": "",
   "environment": {},
@@ -37,6 +37,14 @@
     {
       "uri": "ripe://asn-neighbours",
       "description": "Get ASN neighbours for an Autonomous System (upstream/downstream relationships)"
+    },
+    {
+      "uri": "ripe://whats-my-ip",
+      "description": "Get the caller's public IP address with proxy header support"
+    },
+    {
+      "uri": "ripe://looking-glass",
+      "description": "Get looking glass information for an IP prefix, showing BGP routing data from RIPE NCC's Route Reflection Collectors (RRCs)"
     }
   ],
   "tools": [
@@ -150,6 +158,29 @@
           "name": "query_time",
           "type": "string",
           "description": "Query time in ISO8601 format for historical data (optional)",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "get_whats_my_ip",
+      "description": "Get the caller's public IP address with proxy header support",
+      "parameters": []
+    },
+    {
+      "name": "get_looking_glass",
+      "description": "Get looking glass information for an IP prefix, showing BGP routing data from RIPE NCC's Route Reflection Collectors (RRCs)",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "string",
+          "description": "IP prefix (e.g., 193.0.0.0/21)",
+          "required": true
+        },
+        {
+          "name": "look_back_limit",
+          "type": "string",
+          "description": "Time limit in seconds to look back for BGP data. Maximum is 172800 seconds (48 hours). Default is 0.",
           "required": false
         }
       ]
