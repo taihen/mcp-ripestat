@@ -993,7 +993,7 @@ func TestAbuseContactFinderHandler_MissingResource(t *testing.T) {
 }
 
 func TestMCPHandler(t *testing.T) {
-	server := mcp.NewServer("test-server", "1.0.0", false)
+	server := mcp.NewServer("test-server", version, false)
 
 	// Test initialize request
 	initReq := mcp.NewRequest("initialize", map[string]interface{}{
@@ -1001,7 +1001,7 @@ func TestMCPHandler(t *testing.T) {
 		"capabilities":    map[string]interface{}{},
 		"clientInfo": map[string]interface{}{
 			"name":    "test-client",
-			"version": "1.0.0",
+			"version": version,
 		},
 	}, 1)
 
@@ -1029,7 +1029,7 @@ func TestMCPHandler(t *testing.T) {
 }
 
 func TestMCPHandler_Notification(t *testing.T) {
-	server := mcp.NewServer("test-server", "1.0.0", false)
+	server := mcp.NewServer("test-server", version, false)
 
 	// Test initialized notification
 	notif := mcp.NewNotification("initialized", nil)
@@ -1054,7 +1054,7 @@ func TestMCPHandler_Notification(t *testing.T) {
 }
 
 func TestMCPHandler_InvalidJSON(t *testing.T) {
-	server := mcp.NewServer("test-server", "1.0.0", false)
+	server := mcp.NewServer("test-server", version, false)
 
 	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte("{invalid json}")))
 	req.Header.Set("Content-Type", "application/json")
@@ -1085,7 +1085,7 @@ func TestMCPHandler_InvalidJSON(t *testing.T) {
 }
 
 func TestMCPHandler_MethodNotAllowed(t *testing.T) {
-	server := mcp.NewServer("test-server", "1.0.0", false)
+	server := mcp.NewServer("test-server", version, false)
 
 	req := httptest.NewRequest("GET", "/mcp", nil)
 	w := httptest.NewRecorder()
@@ -1101,7 +1101,7 @@ func TestMCPHandler_MethodNotAllowed(t *testing.T) {
 }
 
 func TestMCPHandler_ReadBodyError(t *testing.T) {
-	server := mcp.NewServer("test-server", "1.0.0", false)
+	server := mcp.NewServer("test-server", version, false)
 
 	// Create a request with a body that will cause a read error
 	req := httptest.NewRequest("POST", "/mcp", &errorReader{})
@@ -1320,7 +1320,7 @@ func TestStatusHandler(t *testing.T) {
 			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"server":    "mcp-ripestat",
-			"version":   "1.0.0",
+			"version":   version,
 			"mcp_ready": true,
 			"uptime":    time.Since(time.Now()).String(),
 		}); err != nil {
@@ -1354,7 +1354,7 @@ func TestStatusHandler(t *testing.T) {
 	expectedFields := map[string]interface{}{
 		"status":    "ready",
 		"server":    "mcp-ripestat",
-		"version":   "1.0.0",
+		"version":   version,
 		"mcp_ready": true,
 	}
 
@@ -1380,7 +1380,7 @@ func TestStatusHandler(t *testing.T) {
 }
 
 func TestMCPHandler_ExtendedTimeout(t *testing.T) {
-	server := mcp.NewServer("test-server", "1.0.0", false)
+	server := mcp.NewServer("test-server", version, false)
 
 	// Create a request that should have extended timeout
 	initRequest := mcp.NewRequest("initialize", map[string]interface{}{
@@ -1392,7 +1392,7 @@ func TestMCPHandler_ExtendedTimeout(t *testing.T) {
 		},
 		"clientInfo": map[string]interface{}{
 			"name":    "test-client",
-			"version": "1.0.0",
+			"version": version,
 		},
 	}, "1")
 
@@ -1512,7 +1512,7 @@ func TestMCPHandler_ServerError(t *testing.T) {
 		}
 	}()
 
-	server := mcp.NewServer("test", "1.0.0", false)
+	server := mcp.NewServer("test", version, false)
 	mcpHandler(w, req, server)
 
 	// If we get here, check for proper error handling
@@ -1623,7 +1623,7 @@ func TestMCPEndpointIntegration(t *testing.T) {
 						"status":    "ready",
 						"timestamp": time.Now().UTC().Format(time.RFC3339),
 						"server":    "mcp-ripestat",
-						"version":   "1.0.0",
+						"version":   version,
 						"mcp_ready": true,
 						"uptime":    time.Since(time.Now()).String(),
 					}); err != nil {

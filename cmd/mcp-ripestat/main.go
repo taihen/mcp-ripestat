@@ -28,10 +28,14 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
+// version is set via -ldflags during build time.
+var version = "dev"
+
 func main() {
 	port := flag.String("port", "8080", "Port for the server to listen on")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	disableWhatsMyIP := flag.Bool("disable-whats-my-ip", false, "Disable the whats-my-ip endpoint (useful for shared servers)")
+	showVersion := flag.Bool("version", false, "Show version information")
 	help := flag.Bool("help", false, "Print all possible flags")
 
 	flag.Usage = func() {
@@ -44,6 +48,11 @@ func main() {
 
 	if *help {
 		flag.Usage()
+		os.Exit(0)
+	}
+
+	if *showVersion {
+		fmt.Printf("mcp-ripestat version %s\n", version)
 		os.Exit(0)
 	}
 
@@ -66,7 +75,7 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 	mux := http.NewServeMux()
 
 	// Create MCP server
-	mcpServer := mcp.NewServer("mcp-ripestat", "1.0.0", disableWhatsMyIP)
+	mcpServer := mcp.NewServer("mcp-ripestat", version, disableWhatsMyIP)
 
 	// Add MCP JSON-RPC endpoint
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +126,7 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"server":    "mcp-ripestat",
-			"version":   "1.0.0",
+			"version":   version,
 			"mcp_ready": true,
 			"uptime":    time.Since(time.Now()).String(),
 		}); err != nil {
