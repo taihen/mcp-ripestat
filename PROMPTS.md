@@ -3,6 +3,10 @@
 Here’s a grab-bag of “next-level” questions you can throw at the
 `mcp-ripestat` server. Feel free to contribute your own with a PR.
 
+> [!HINT]
+> Those prompts are also input into the development of the `mcp-ripestat`
+> to prioritize the next required feature based on prompt usecase.
+
 I’ve grouped them by investigation style and shown the workflow call(s) that will be issued under the hood for each prompt.
 
 ## BGP & RPKI threat hunting
@@ -50,12 +54,17 @@ You’re effectively turning the RIS network into a distributed “ping” witho
 
 > “Give me a timeline of BGP withdrawals for 2400:cb00::/32 during Cloudflare’s Oct-2024 outage and overlay it with the count of probes failing HTTPS from RIPE Atlas.”
 
-The LLM will federate: 1. RIPEstat (mcp-ripestat) for route, RPKI, Whois, visibility. 2. Shodan (mcp-shodan) for service & vuln intel. 3. Censys (mcp-censys) or any other MCP OSINT source for certificates/DNS. 4. Optionally, an Atlas or Pingdom MCP server for active-measurements.
+The LLM will federate:
+
+- RIPEstat (`mcp-ripestat`) for route, RPKI, Whois, visibility.
+- Shodan ([mcp-shodan]()) for service & vuln intel.
+- Censys ([mcp-censys]()) or any other MCP OSINT source for certificates/DNS.
+- (Optionally) Atlas or Pingdom MCP server for active-measurements.
 
 ## Tip: Hint the tool names
 
-If a client supports explicit tool selection, prefix can be specified
-to the prompt:
+If a client supports explicit tool selection, prefix can be
+specified to the prompt:
 
 ```sh
 @ripestat announced_prefixes AS61138 starttime=2025-06-24T00:00Z
