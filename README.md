@@ -105,7 +105,7 @@ The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client
 IP address when the server is behind a proxy or load balancer. It supports the
 following proxy headers:
 
-- `X-Forwarded-For` - Standard proxy header (uses first IP in chain)
+- `X-Forwarded-For` - Standard proxy header and extended (GCP CloudRun)
 - `X-Real-IP` - Alternative proxy header
 - `CF-Connecting-IP` - Cloudflare-specific header
 
@@ -115,9 +115,8 @@ instead of the proxy's IP.
 
 ### Shared Environment Configuration
 
-For shared team environments, you should disable the `What's My IP` endpoint
-using the `--disable-whats-my-ip` flag. This prevents team members from seeing
-each server IP addresses when using a shared MCP server instance.
+For shared team environments, you might disable the `What's My IP` endpoint
+using the `--disable-whats-my-ip` flag.
 
 ## MCP Protocol Support
 
