@@ -22,3 +22,4 @@ RIPEstat API endpoint(s) it utilizes.
 | 13     | `sprint-13` | v1.14.0 | MCP JSON-RPC 2025 Protocol | N/A                    | Completed |
 | 14     | `sprint-14` | v1.15.0 | MCP Authorization          | N/A                    | Planned   |
 | 15     | `sprint-15` | v1.16.0 | MCP Streaming Protocol     | N/A                    | Planned   |
+| 16     | `sprint-16` | v1.17.0 | BGPlay                     | `bgplay`               | Planned   |
