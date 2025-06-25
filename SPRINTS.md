@@ -28,9 +28,9 @@ RIPEstat API endpoint(s) it utilizes.
 | 14     | `sprint-14` | TBD     | MCP Authorization          | N/A                          | Planned   |
 | 15     | `sprint-15` | TBD     | MCP Streaming Protocol     | N/A                          | Planned   |
 | 16     | `sprint-16` | TBD     | BGPlay                     | `bgplay`                     | Planned   |
-| 17     | sprint-17`  | TBD     | Routing History            | `routing-history`            | Planned   |
-| 18     | sprint-18`  | TBD     | Country ASNs               | `country-asns-history`       | Planned   |
-| 19     | sprint-19`  | TBD     | Prefix Overview            | `prefix-overview`            | Planned   |
-| 20     | sprint-20`  | TBD     | RPKI History               | `rpki-history`               | Planned   |
-| 21     | sprint-21`  | TBD     | BGP Updates                | `bgp-updates`                | Planned   |
-| 21     | sprint-22`  | TBD     | Prefix Routing Consistency | `prefix-routing-consistency` | Planned   |
+| 17     | `sprint-17` | TBD     | Routing History            | `routing-history`            | Completed |
+| 18     | `sprint-18` | TBD     | Country ASNs               | `country-asns-history`       | Planned   |
+| 19     | `sprint-19` | TBD     | Prefix Overview            | `prefix-overview`            | Planned   |
+| 20     | `sprint-20` | TBD     | RPKI History               | `rpki-history`               | Planned   |
+| 21     | `sprint-21` | TBD     | BGP Updates                | `bgp-updates`                | Planned   |
+| 21     | `sprint-22` | TBD     | Prefix Routing Consistency | `prefix-routing-consistency` | Planned   |

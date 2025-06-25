@@ -13,6 +13,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
@@ -206,6 +207,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callAnnouncedPrefixes(ctx, args)
 	case "getRoutingStatus":
 		return s.callRoutingStatus(ctx, args)
+	case "getRoutingHistory":
+		return s.callRoutingHistory(ctx, args)
 	case "getWhois":
 		return s.callWhois(ctx, args)
 	case "getAbuseContactFinder":
@@ -277,6 +280,20 @@ func (s *Server) callRoutingStatus(ctx context.Context, args map[string]interfac
 	}
 
 	result, err := routingstatus.GetRoutingStatus(ctx, resource)
+	if err != nil {
+		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, ok := args["resource"].(string)
+	if !ok {
+		return nil, fmt.Errorf("resource parameter is required")
+	}
+
+	result, err := routinghistory.GetRoutingHistory(ctx, resource)
 	if err != nil {
 		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
 	}

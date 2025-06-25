@@ -22,6 +22,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
@@ -88,6 +89,7 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 	mux.HandleFunc("/as-overview", asOverviewHandler)
 	mux.HandleFunc("/announced-prefixes", announcedPrefixesHandler)
 	mux.HandleFunc("/routing-status", routingStatusHandler)
+	mux.HandleFunc("/routing-history", routingHistoryHandler)
 	mux.HandleFunc("/whois", whoisHandler)
 	mux.HandleFunc("/abuse-contact-finder", abuseContactFinderHandler)
 	mux.HandleFunc("/rpki-validation", rpkiValidationHandler)
@@ -247,6 +249,21 @@ func manifestHandler(w http.ResponseWriter, r *http.Request, disableWhatsMyIP bo
 			},
 		},
 		{
+			Name:        "getRoutingHistory",
+			Description: "Get routing history information for an IP address, prefix, or ASN.",
+			Parameters: []Parameter{
+				{
+					Name:        "resource",
+					Type:        "string",
+					Required:    true,
+					Description: "The IP address, prefix, or ASN to query for routing history.",
+				},
+			},
+			Returns: Return{
+				Type: "object",
+			},
+		},
+		{
 			Name:        "getWhois",
 			Description: "Get whois information for an IP address, prefix, or ASN.",
 			Parameters: []Parameter{
@@ -389,6 +406,12 @@ func announcedPrefixesHandler(w http.ResponseWriter, r *http.Request) {
 func routingStatusHandler(w http.ResponseWriter, r *http.Request) {
 	handleRIPEstatRequest(w, r, "routing-status", func(ctx context.Context, resource string) (interface{}, error) {
 		return routingstatus.GetRoutingStatus(ctx, resource)
+	})
+}
+
+func routingHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	handleRIPEstatRequest(w, r, "routing-history", func(ctx context.Context, resource string) (interface{}, error) {
+		return routinghistory.GetRoutingHistory(ctx, resource)
 	})
 }
 
