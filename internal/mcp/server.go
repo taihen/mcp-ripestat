@@ -103,8 +103,6 @@ func (s *Server) handleNotification(_ context.Context, notif *Notification) (int
 
 // handleInitialize handles the initialize request.
 func (s *Server) handleInitialize(req *Request) (interface{}, error) {
-	slog.Info("handling initialize request - server ready for MCP client")
-
 	var params InitializeParams
 	if req.Params != nil {
 		jsonData, err := json.Marshal(req.Params)
