@@ -1,5 +1,9 @@
 # Makefile for mcp-ripestat
 
+# Get version from git tag, fallback to commit hash if no tag
+VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
+LDFLAGS = -ldflags "-X main.version=$(VERSION)"
+
 .PHONY: all build test test-coverage e2e-test lint clean run deps fmt help
 
 # Default target
@@ -7,8 +11,8 @@ all: fmt lint test test-coverage e2e-test build
 
 # Build the application
 build:
-	@echo "Building mcp-ripestat..."
-	go build -o bin/mcp-ripestat ./cmd/mcp-ripestat
+	@echo "Building mcp-ripestat version $(VERSION)..."
+	go build $(LDFLAGS) -o bin/mcp-ripestat ./cmd/mcp-ripestat
 
 # Run tests
 test:

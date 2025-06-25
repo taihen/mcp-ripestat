@@ -103,11 +103,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
+          # Get version from git tag or commit hash
+          VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
           BINARY_NAME="mcp-ripestat-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
             BINARY_NAME="${BINARY_NAME}.exe"
           fi
-          go build -v -ldflags="-s -w" -o "${BINARY_NAME}" ./cmd/mcp-ripestat
+          go build -v -ldflags="-s -w -X main.version=${VERSION}" -o "${BINARY_NAME}" ./cmd/mcp-ripestat
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

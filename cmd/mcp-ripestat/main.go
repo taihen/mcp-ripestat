@@ -28,10 +28,14 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
+// version is set via -ldflags during build time.
+var version = "dev"
+
 func main() {
 	port := flag.String("port", "8080", "Port for the server to listen on")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	disableWhatsMyIP := flag.Bool("disable-whats-my-ip", false, "Disable the whats-my-ip endpoint (useful for shared servers)")
+	showVersion := flag.Bool("version", false, "Show version information")
 	help := flag.Bool("help", false, "Print all possible flags")
 
 	flag.Usage = func() {
@@ -44,6 +48,11 @@ func main() {
 
 	if *help {
 		flag.Usage()
+		os.Exit(0)
+	}
+
+	if *showVersion {
+		fmt.Printf("mcp-ripestat version %s\n", version)
 		os.Exit(0)
 	}
 
@@ -63,10 +72,11 @@ func main() {
 }
 
 func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
+	startTime := time.Now()
 	mux := http.NewServeMux()
 
 	// Create MCP server
-	mcpServer := mcp.NewServer("mcp-ripestat", "1.0.0", disableWhatsMyIP)
+	mcpServer := mcp.NewServer("mcp-ripestat", version, disableWhatsMyIP)
 
 	// Add MCP JSON-RPC endpoint
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +104,14 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 
 	mux.HandleFunc("/.well-known/mcp/manifest.json", func(w http.ResponseWriter, r *http.Request) {
 		manifestHandler(w, r, disableWhatsMyIP)
+	})
+
+	// Warmup endpoint to prevent cold starts
+	mux.HandleFunc("/warmup", warmupHandler)
+
+	// Status endpoint for debugging cold starts
+	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		statusHandler(w, r, startTime)
 	})
 
 	addr := ":" + port
@@ -491,7 +509,10 @@ func lookingGlassHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func whatsMyIPHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("received whats-my-ip request", "remote_addr", r.RemoteAddr)
+	slog.Debug("received whats-my-ip request",
+		"remote_addr", r.RemoteAddr,
+		"x_forwarded_for", r.Header.Get("X-Forwarded-For"),
+		"x_real_ip", r.Header.Get("X-Real-IP"))
 
 	// Extract the real client IP from headers (for proxy scenarios)
 	clientIP := whatsmyip.ExtractClientIP(r)
@@ -499,18 +520,26 @@ func whatsMyIPHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	// Use the client IP if we're behind a proxy, otherwise use the RIPEstat service
+	// Check if we have proxy headers indicating we're behind a load balancer
+	hasProxyHeaders := r.Header.Get("X-Forwarded-For") != "" ||
+		r.Header.Get("X-Real-IP") != "" ||
+		r.Header.Get("CF-Connecting-IP") != ""
+
+	// Use the client IP if we detected proxy headers or if the extracted IP is different from RemoteAddr
 	var resp *whatsmyip.APIResponse
 	var err error
 
-	if clientIP != "" && clientIP != r.RemoteAddr {
-		// We're behind a proxy, use the extracted client IP
+	if hasProxyHeaders && clientIP != "" {
+		// We're behind a proxy/load balancer, use the extracted client IP
 		resp, err = whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
-		slog.Debug("using extracted client IP", "client_ip", clientIP, "remote_addr", r.RemoteAddr)
+		slog.Debug("using extracted client IP from proxy headers",
+			"client_ip", clientIP,
+			"remote_addr", r.RemoteAddr,
+			"x_forwarded_for", r.Header.Get("X-Forwarded-For"))
 	} else {
-		// Direct connection, use RIPEstat service
+		// Direct connection or no proxy headers, use RIPEstat service
 		resp, err = whatsmyip.GetWhatsMyIP(ctx)
-		slog.Debug("using RIPEstat service for IP detection")
+		slog.Debug("using RIPEstat service for IP detection", "remote_addr", r.RemoteAddr)
 	}
 
 	if err != nil {
@@ -564,7 +593,8 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	}
 	defer r.Body.Close()
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	// Extended timeout for cold start scenarios
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
 	response, err := server.ProcessMessage(ctx, body)
@@ -600,4 +630,31 @@ func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {
 
 func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	writeJSON(w, map[string]string{"error": message}, statusCode)
+}
+
+func warmupHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "ready",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"server":    "mcp-ripestat",
+	}); err != nil {
+		slog.Error("failed to encode warmup response", "err", err)
+	}
+}
+
+func statusHandler(w http.ResponseWriter, _ *http.Request, startTime time.Time) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "ready",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"server":    "mcp-ripestat",
+		"version":   version,
+		"mcp_ready": true,
+		"uptime":    time.Since(startTime).String(),
+	}); err != nil {
+		slog.Error("failed to encode status response", "err", err)
+	}
 }

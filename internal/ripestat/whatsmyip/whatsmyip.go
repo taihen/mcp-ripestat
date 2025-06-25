@@ -88,21 +88,56 @@ func ExtractClientIP(r *http.Request) string {
 	// Check X-Forwarded-For header (most common for proxies/load balancers)
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-		// The first IP is typically the original client
 		ips := strings.Split(xff, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
+
+		// Clean up IPs by trimming whitespace
+		for i, ip := range ips {
+			ips[i] = strings.TrimSpace(ip)
+		}
+
+		// Strategy:
+		// 1. If exactly 2 IPs: Google Cloud Run format (client-ip, load-balancer-ip)
+		// 2. If more than 2 IPs: Traditional approach (first IP is client)
+		// 3. Fallback: First valid IP
+
+		if len(ips) == 2 {
+			// Likely Google Cloud Run format: client-ip, load-balancer-ip
+			// Take the first IP as the client IP
+			clientIP := ips[0]
+			if isValidIP(clientIP) {
+				return clientIP
+			}
+		} else if len(ips) > 2 {
+			// Traditional multi-proxy scenario or existing header + Google Cloud Run
+			// Standard approach: first IP is the original client
+			firstIP := ips[0]
+			if isValidIP(firstIP) {
+				return firstIP
+			}
+		}
+
+		// Fallback: find the first valid IP
+		for _, ip := range ips {
+			if isValidIP(ip) {
+				return ip
+			}
 		}
 	}
 
 	// Check X-Real-IP header (used by some proxies)
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
+		xri = strings.TrimSpace(xri)
+		if isValidIP(xri) {
+			return xri
+		}
 	}
 
 	// Check CF-Connecting-IP header (Cloudflare)
 	if cfip := r.Header.Get("CF-Connecting-IP"); cfip != "" {
-		return strings.TrimSpace(cfip)
+		cfip = strings.TrimSpace(cfip)
+		if isValidIP(cfip) {
+			return cfip
+		}
 	}
 
 	// Fall back to RemoteAddr (direct connection)
@@ -113,4 +148,9 @@ func ExtractClientIP(r *http.Request) string {
 
 	// If SplitHostPort fails, return RemoteAddr as-is
 	return r.RemoteAddr
+}
+
+// isValidIP checks if the given string is a valid IP address.
+func isValidIP(ip string) bool {
+	return net.ParseIP(ip) != nil
 }
