@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
@@ -13,11 +14,75 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
+
+// Error message constants for parameter validation.
+const (
+	ErrResourceRequired     = "Error: resource parameter is required"
+	ErrPrefixRequired       = "Error: prefix parameter is required"
+	ErrLODParameterInvalid  = "Error: lod parameter must be 0 or 1"
+	ErrLookBackLimitInvalid = "Error: look_back_limit parameter must be a valid integer"
+)
+
+// formatErrorMessage formats an error for tool results, avoiding duplicate "Error:" prefixes.
+func formatErrorMessage(err error) string {
+	errStr := err.Error()
+	// If the error already starts with "Error:", don't add another prefix
+	if strings.HasPrefix(errStr, "Error:") {
+		return errStr
+	}
+	return fmt.Sprintf("Error: %v", err)
+}
+
+// getRequiredStringParam extracts a required string parameter from args.
+func getRequiredStringParam(args map[string]interface{}, key, errorMsg string) (string, *ToolResult) {
+	value, ok := args[key].(string)
+	if !ok {
+		return "", CreateToolResult(errorMsg, true)
+	}
+	return value, nil
+}
+
+// getOptionalStringParam extracts an optional string parameter from args.
+func getOptionalStringParam(args map[string]interface{}, key string) string {
+	if value, ok := args[key].(string); ok {
+		return value
+	}
+	return ""
+}
+
+// validateLODParam validates and extracts the LOD parameter (0 or 1).
+func validateLODParam(args map[string]interface{}) (int, *ToolResult) {
+	lodStr, ok := args["lod"].(string)
+	if !ok {
+		return 0, nil // Default value when not provided
+	}
+
+	lod, err := strconv.Atoi(lodStr)
+	if err != nil || (lod != 0 && lod != 1) {
+		return 0, CreateToolResult(ErrLODParameterInvalid, true)
+	}
+	return lod, nil
+}
+
+// validateLookBackLimitParam validates and extracts the look_back_limit parameter.
+func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) {
+	lblStr, ok := args["look_back_limit"].(string)
+	if !ok {
+		return 0, nil // Default value when not provided
+	}
+
+	lookBackLimit, err := strconv.Atoi(lblStr)
+	if err != nil {
+		return 0, CreateToolResult(ErrLookBackLimitInvalid, true)
+	}
+	return lookBackLimit, nil
+}
 
 // Server represents an MCP server.
 type Server struct {
@@ -206,6 +271,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callAnnouncedPrefixes(ctx, args)
 	case "getRoutingStatus":
 		return s.callRoutingStatus(ctx, args)
+	case "getRoutingHistory":
+		return s.callRoutingHistory(ctx, args)
 	case "getWhois":
 		return s.callWhois(ctx, args)
 	case "getAbuseContactFinder":
@@ -229,154 +296,157 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 // Tool call implementations.
 
 func (s *Server) callNetworkInfo(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := networkinfo.GetNetworkInfo(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callASOverview(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := asoverview.GetASOverview(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callAnnouncedPrefixes(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callRoutingStatus(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := routingstatus.GetRoutingStatus(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := routinghistory.GetRoutingHistory(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callWhois(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := whois.GetWhois(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callAbuseContactFinder(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := abusecontactfinder.GetAbuseContactFinder(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callRPKIValidation(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
-	prefix, ok := args["prefix"].(string)
-	if !ok {
-		return nil, fmt.Errorf("prefix parameter is required")
+	prefix, errResult := getRequiredStringParam(args, "prefix", ErrPrefixRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callASNNeighbours(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
-	lod := 0
-	if lodStr, ok := args["lod"].(string); ok {
-		var err error
-		lod, err = strconv.Atoi(lodStr)
-		if err != nil || (lod != 0 && lod != 1) {
-			return nil, fmt.Errorf("lod parameter must be 0 or 1")
-		}
+	lod, errResult := validateLODParam(args)
+	if errResult != nil {
+		return errResult, nil
 	}
 
-	queryTime := ""
-	if qt, ok := args["query_time"].(string); ok {
-		queryTime = qt
-	}
+	queryTime := getOptionalStringParam(args, "query_time")
 
 	result, err := asnneighbours.GetASNNeighbours(ctx, resource, lod, queryTime)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
 }
 
 func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, ok := args["resource"].(string)
-	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
 	}
 
-	lookBackLimit := 0
-	if lblStr, ok := args["look_back_limit"].(string); ok {
-		var err error
-		lookBackLimit, err = strconv.Atoi(lblStr)
-		if err != nil {
-			return nil, fmt.Errorf("look_back_limit parameter must be a valid integer")
-		}
+	lookBackLimit, errResult := validateLookBackLimitParam(args)
+	if errResult != nil {
+		return errResult, nil
 	}
 
 	result, err := lookingglass.GetLookingGlass(ctx, resource, lookBackLimit)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -385,7 +455,7 @@ func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
 	result, err := whatsmyip.GetWhatsMyIP(ctx)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil

@@ -1,4 +1,4 @@
-package whois
+package routinghistory
 
 import (
 	"context"
@@ -21,71 +21,88 @@ func TestClient_Get(t *testing.T) {
 		errType      *ripestaterrors.Error
 	}{
 		{
-			name:     "valid IP address",
-			resource: "8.8.8.8",
-			mockResponse: `{
-				"status": "ok",
-				"status_code": 200,
-				"version": "1.0",
-				"data_call_name": "whois",
-				"data_call_status": "supported",
-				"cached": false,
-				"data": {
-					"records": [
-						[
-							{"key": "NetRange", "value": "8.0.0.0 - 8.255.255.255"},
-							{"key": "CIDR", "value": "8.0.0.0/8"},
-							{"key": "NetName", "value": "LEVEL3"}
-						]
-					],
-					"irr_records": [],
-					"authorities": ["whois.arin.net"],
-					"resource": "8.8.8.8",
-					"query_time": "2023-01-01T00:00:00Z"
-				}
-			}`,
-			mockStatus: http.StatusOK,
-			wantErr:    false,
-		},
-		{
 			name:     "valid ASN",
 			resource: "AS3333",
 			mockResponse: `{
 				"status": "ok",
 				"status_code": 200,
 				"version": "1.0",
-				"data_call_name": "whois",
+				"data_call_name": "routing-history",
 				"data_call_status": "supported",
 				"cached": false,
 				"data": {
-					"records": [
-						[
-							{"key": "aut-num", "value": "AS3333"},
-							{"key": "as-name", "value": "RIPE-NCC-AS"},
-							{"key": "descr", "value": "RIPE Network Coordination Centre"}
-						]
+					"by_origin": [
+						{
+							"origin": "3333",
+							"prefixes": [
+								{
+									"prefix": "193.0.0.0/21",
+									"timelines": [
+										{
+											"starttime": "2000-01-01T00:00:00",
+											"endtime": "2023-12-31T23:59:59",
+											"full_peers_seeing": 50.0
+										}
+									]
+								}
+							]
+						}
 					],
-					"irr_records": [],
-					"authorities": ["whois.ripe.net"],
-					"resource": "AS3333",
-					"query_time": "2023-01-01T00:00:00Z"
+					"resource": "AS3333"
 				}
 			}`,
 			mockStatus: http.StatusOK,
 			wantErr:    false,
 		},
 		{
-			name:     "empty resource",
-			resource: "",
-			wantErr:  true,
-			errType:  ripestaterrors.ErrInvalidParameter,
+			name:     "valid IP prefix",
+			resource: "193.0.0.0/21",
+			mockResponse: `{
+				"status": "ok",
+				"status_code": 200,
+				"version": "1.0",
+				"data_call_name": "routing-history",
+				"data_call_status": "supported",
+				"cached": false,
+				"data": {
+					"by_origin": [
+						{
+							"origin": "3333",
+							"prefixes": [
+								{
+									"prefix": "193.0.0.0/21",
+									"timelines": [
+										{
+											"starttime": "2000-01-01T00:00:00",
+											"endtime": "2023-12-31T23:59:59",
+											"full_peers_seeing": 50.0
+										}
+									]
+								}
+							]
+						}
+					],
+					"resource": "193.0.0.0/21"
+				}
+			}`,
+			mockStatus: http.StatusOK,
+			wantErr:    false,
 		},
 		{
-			name:       "server error",
-			resource:   "8.8.8.8",
-			mockStatus: http.StatusInternalServerError,
-			wantErr:    true,
-			errType:    ripestaterrors.ErrServerError,
+			name:         "empty resource",
+			resource:     "",
+			mockResponse: "",
+			mockStatus:   http.StatusOK,
+			wantErr:      true,
+			errType:      ripestaterrors.ErrInvalidParameter,
+		},
+		{
+			name:         "server error",
+			resource:     "AS3333",
+			mockResponse: `{"error": "internal server error"}`,
+			mockStatus:   http.StatusInternalServerError,
+			wantErr:      true,
+			errType:      ripestaterrors.ErrServerError,
 		},
 		{
 			name:       "not found",
@@ -104,9 +121,9 @@ func TestClient_Get(t *testing.T) {
 			}
 
 			c := client.New("https://stat.ripe.net", mockClient)
-			whoisClient := New(c)
+			routingHistoryClient := New(c)
 
-			result, err := whoisClient.Get(context.Background(), tt.resource)
+			result, err := routingHistoryClient.Get(context.Background(), tt.resource)
 
 			if tt.wantErr {
 				if err == nil {
@@ -120,7 +137,6 @@ func TestClient_Get(t *testing.T) {
 						t.Errorf("Get() error type = %T, want *ripestaterrors.Error", err)
 						return
 					}
-					// Check if the error is of the expected type by comparing messages
 					if targetErr.Message != tt.errType.Message {
 						t.Errorf("Get() error message = %v, want %v", targetErr.Message, tt.errType.Message)
 					}
@@ -134,21 +150,12 @@ func TestClient_Get(t *testing.T) {
 			}
 
 			if result == nil {
-				t.Error("Get() result = nil, want non-nil")
+				t.Error("Get() result is nil, want non-nil")
 				return
 			}
 
-			// Verify the response structure
-			if result.Status != "ok" {
-				t.Errorf("Get() result.Status = %v, want ok", result.Status)
-			}
-
-			if result.Data.Resource != tt.resource {
-				t.Errorf("Get() result.Data.Resource = %v, want %v", result.Data.Resource, tt.resource)
-			}
-
-			if len(result.Data.Records) == 0 {
-				t.Error("Get() result.Data.Records is empty, want non-empty")
+			if len(result.Data.ByOrigin) == 0 {
+				t.Error("Get() result.Data.ByOrigin is empty, want non-empty")
 			}
 		})
 	}
@@ -161,18 +168,16 @@ func TestClient_Get_ParameterValidation(t *testing.T) {
 	}
 
 	c := client.New("https://stat.ripe.net", mockClient)
-	whoisClient := New(c)
+	routingHistoryClient := New(c)
 
-	// Test that the correct parameters are passed to the client
-	_, err := whoisClient.Get(context.Background(), "8.8.8.8")
+	_, err := routingHistoryClient.Get(context.Background(), "AS3333")
 	if err != nil {
 		t.Errorf("Get() error = %v, want nil", err)
 	}
 
-	// Verify the URL was constructed correctly
-	expectedURL := "https://stat.ripe.net/data/whois/data.json?resource=8.8.8.8"
+	expectedURL := "https://stat.ripe.net/data/routing-history/data.json?resource=AS3333"
 	if mockClient.lastURL != expectedURL {
-		t.Errorf("Get() URL = %v, want %v", mockClient.lastURL, expectedURL)
+		t.Errorf("Get() called URL = %s, want %s", mockClient.lastURL, expectedURL)
 	}
 }
 
@@ -224,46 +229,37 @@ func TestDefaultClient(t *testing.T) {
 	}
 }
 
-func TestGetWhois(t *testing.T) {
+func TestGetRoutingHistory(t *testing.T) {
 	tests := []struct {
 		name     string
 		resource string
 		wantErr  bool
 	}{
 		{
-			name:     "valid resource",
-			resource: "8.8.8.8",
+			name:     "valid ASN",
+			resource: "AS3333",
 			wantErr:  false,
-		},
-		{
-			name:     "empty resource",
-			resource: "",
-			wantErr:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Note: This test will make actual HTTP requests to the RIPEstat API
-			// In a real scenario, you might want to mock this as well
-			result, err := GetWhois(context.Background(), tt.resource)
+			result, err := GetRoutingHistory(context.Background(), tt.resource)
 
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("GetWhois() error = nil, wantErr %v", tt.wantErr)
+					t.Errorf("GetRoutingHistory() error = nil, wantErr %v", tt.wantErr)
 				}
 				return
 			}
 
 			if err != nil {
-				// For this test, we'll allow network errors since we're testing the function call path
-				// The actual API functionality is tested in the integration tests
-				t.Logf("GetWhois() error = %v (network error expected in unit tests)", err)
+				t.Errorf("GetRoutingHistory() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
 			if result == nil {
-				t.Error("GetWhois() result = nil, want non-nil")
+				t.Error("GetRoutingHistory() result is nil, want non-nil")
 			}
 		})
 	}

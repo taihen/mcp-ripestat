@@ -177,6 +177,20 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getRoutingHistory",
+			Description: "Get routing history information for an IP address, prefix, or ASN.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "The IP address, prefix, or ASN to query for routing history.",
+					},
+				},
+				"required": []string{"resource"},
+			},
+		},
+		{
 			Name:        "getWhois",
 			Description: "Get whois information for an IP address, prefix, or ASN.",
 			InputSchema: map[string]interface{}{

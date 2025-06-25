@@ -130,8 +130,8 @@ func TestManifestHandler(t *testing.T) {
 		t.Errorf("Expected manifest name to be 'mcp-ripestat', got %q", manifest.Name)
 	}
 
-	if len(manifest.Functions) != 10 {
-		t.Errorf("Expected 10 functions in manifest, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 11 {
+		t.Errorf("Expected 11 functions in manifest, got %d", len(manifest.Functions))
 	}
 
 	// Check that all expected functions are present
@@ -185,8 +185,8 @@ func TestManifestHandler_WhatsMyIPDisabled(t *testing.T) {
 		t.Fatalf("Failed to unmarshal manifest: %v", err)
 	}
 
-	if len(manifest.Functions) != 9 {
-		t.Errorf("Expected 9 functions in manifest when whats-my-ip is disabled, got %d", len(manifest.Functions))
+	if len(manifest.Functions) != 10 {
+		t.Errorf("Expected 10 functions in manifest when whats-my-ip is disabled, got %d", len(manifest.Functions))
 	}
 
 	// Check that whats-my-ip function is not present
@@ -1441,12 +1441,12 @@ func TestManifestHandler_Integration(t *testing.T) {
 		{
 			name:               "with_whats_my_ip_enabled",
 			disableWhatsMyIP:   false,
-			expectedToolsCount: 10, // All tools including whats-my-ip
+			expectedToolsCount: 11, // All tools including whats-my-ip
 		},
 		{
 			name:               "with_whats_my_ip_disabled",
 			disableWhatsMyIP:   true,
-			expectedToolsCount: 9, // All tools except whats-my-ip
+			expectedToolsCount: 10, // All tools except whats-my-ip
 		},
 	}
 
