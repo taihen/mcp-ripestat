@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ripestat": {
+      "type": "http",
+      "url": "https://mcp-ripestat.taihen.org/mcp"
+    }
+  }
+}
