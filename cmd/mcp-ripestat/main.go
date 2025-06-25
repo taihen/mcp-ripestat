@@ -509,7 +509,10 @@ func lookingGlassHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func whatsMyIPHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("received whats-my-ip request", "remote_addr", r.RemoteAddr)
+	slog.Debug("received whats-my-ip request",
+		"remote_addr", r.RemoteAddr,
+		"x_forwarded_for", r.Header.Get("X-Forwarded-For"),
+		"x_real_ip", r.Header.Get("X-Real-IP"))
 
 	// Extract the real client IP from headers (for proxy scenarios)
 	clientIP := whatsmyip.ExtractClientIP(r)
@@ -517,18 +520,26 @@ func whatsMyIPHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	// Use the client IP if we're behind a proxy, otherwise use the RIPEstat service
+	// Check if we have proxy headers indicating we're behind a load balancer
+	hasProxyHeaders := r.Header.Get("X-Forwarded-For") != "" ||
+		r.Header.Get("X-Real-IP") != "" ||
+		r.Header.Get("CF-Connecting-IP") != ""
+
+	// Use the client IP if we detected proxy headers or if the extracted IP is different from RemoteAddr
 	var resp *whatsmyip.APIResponse
 	var err error
 
-	if clientIP != "" && clientIP != r.RemoteAddr {
-		// We're behind a proxy, use the extracted client IP
+	if hasProxyHeaders && clientIP != "" {
+		// We're behind a proxy/load balancer, use the extracted client IP
 		resp, err = whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
-		slog.Debug("using extracted client IP", "client_ip", clientIP, "remote_addr", r.RemoteAddr)
+		slog.Debug("using extracted client IP from proxy headers",
+			"client_ip", clientIP,
+			"remote_addr", r.RemoteAddr,
+			"x_forwarded_for", r.Header.Get("X-Forwarded-For"))
 	} else {
-		// Direct connection, use RIPEstat service
+		// Direct connection or no proxy headers, use RIPEstat service
 		resp, err = whatsmyip.GetWhatsMyIP(ctx)
-		slog.Debug("using RIPEstat service for IP detection")
+		slog.Debug("using RIPEstat service for IP detection", "remote_addr", r.RemoteAddr)
 	}
 
 	if err != nil {

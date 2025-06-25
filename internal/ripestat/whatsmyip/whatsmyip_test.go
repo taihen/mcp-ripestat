@@ -225,6 +225,38 @@ func TestExtractClientIP(t *testing.T) {
 			remoteAddr: "192.168.1.1:12345",
 			expected:   "203.0.113.6",
 		},
+		{
+			name: "Google Cloud Run format - client IP and load balancer IP",
+			headers: map[string]string{
+				"X-Forwarded-For": "203.0.113.7, 35.191.0.1",
+			},
+			remoteAddr: "10.0.0.1:12345",
+			expected:   "203.0.113.7",
+		},
+		{
+			name: "Google Cloud Run format - existing header with client and LB IPs",
+			headers: map[string]string{
+				"X-Forwarded-For": "192.168.1.100, 203.0.113.8, 35.191.0.1",
+			},
+			remoteAddr: "10.0.0.1:12345",
+			expected:   "192.168.1.100", // First IP in traditional multi-proxy case
+		},
+		{
+			name: "Invalid IP in X-Forwarded-For should be skipped",
+			headers: map[string]string{
+				"X-Forwarded-For": "invalid-ip, 203.0.113.9, 35.191.0.1",
+			},
+			remoteAddr: "10.0.0.1:12345",
+			expected:   "203.0.113.9",
+		},
+		{
+			name: "All invalid IPs should fallback to RemoteAddr",
+			headers: map[string]string{
+				"X-Forwarded-For": "invalid-ip, another-invalid",
+			},
+			remoteAddr: "203.0.113.10:12345",
+			expected:   "203.0.113.10",
+		},
 	}
 
 	for _, tt := range tests {
@@ -266,5 +298,33 @@ func TestDefaultClient(t *testing.T) {
 
 	if whatsMyIPClient.client == nil {
 		t.Error("Expected client to be initialized")
+	}
+}
+
+func TestIsValidIP(t *testing.T) {
+	tests := []struct {
+		ip       string
+		expected bool
+	}{
+		{"203.0.113.1", true},
+		{"192.168.1.1", true},
+		{"10.0.0.1", true},
+		{"127.0.0.1", true},
+		{"2001:db8::1", true},
+		{"::1", true},
+		{"invalid-ip", false},
+		{"256.256.256.256", false},
+		{"", false},
+		{"192.168.1", false},
+		{"192.168.1.1.1", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ip, func(t *testing.T) {
+			result := isValidIP(tt.ip)
+			if result != tt.expected {
+				t.Errorf("isValidIP(%q) = %v, expected %v", tt.ip, result, tt.expected)
+			}
+		})
 	}
 }
