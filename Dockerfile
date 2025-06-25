@@ -15,7 +15,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/mcp-ripestat ./cmd/mcp-ripestat
 
 # Use taihen/base-image for the final stage
-FROM ghcr.io/taihen/base-image:v2025.06.24
+FROM ghcr.io/taihen/base-image:v2025.06.24.1.1
 
 WORKDIR /app
 
