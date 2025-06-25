@@ -234,7 +234,7 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 func (s *Server) callNetworkInfo(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := networkinfo.GetNetworkInfo(ctx, resource)
@@ -248,7 +248,7 @@ func (s *Server) callNetworkInfo(ctx context.Context, args map[string]interface{
 func (s *Server) callASOverview(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := asoverview.GetASOverview(ctx, resource)
@@ -262,7 +262,7 @@ func (s *Server) callASOverview(ctx context.Context, args map[string]interface{}
 func (s *Server) callAnnouncedPrefixes(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
@@ -276,7 +276,7 @@ func (s *Server) callAnnouncedPrefixes(ctx context.Context, args map[string]inte
 func (s *Server) callRoutingStatus(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := routingstatus.GetRoutingStatus(ctx, resource)
@@ -290,7 +290,7 @@ func (s *Server) callRoutingStatus(ctx context.Context, args map[string]interfac
 func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := routinghistory.GetRoutingHistory(ctx, resource)
@@ -304,7 +304,7 @@ func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interfa
 func (s *Server) callWhois(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := whois.GetWhois(ctx, resource)
@@ -318,7 +318,7 @@ func (s *Server) callWhois(ctx context.Context, args map[string]interface{}) (*T
 func (s *Server) callAbuseContactFinder(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	result, err := abusecontactfinder.GetAbuseContactFinder(ctx, resource)
@@ -332,12 +332,12 @@ func (s *Server) callAbuseContactFinder(ctx context.Context, args map[string]int
 func (s *Server) callRPKIValidation(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	prefix, ok := args["prefix"].(string)
 	if !ok {
-		return nil, fmt.Errorf("prefix parameter is required")
+		return CreateToolResult("Error: prefix parameter is required", true), nil
 	}
 
 	result, err := rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
@@ -351,7 +351,7 @@ func (s *Server) callRPKIValidation(ctx context.Context, args map[string]interfa
 func (s *Server) callASNNeighbours(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	lod := 0
@@ -359,7 +359,7 @@ func (s *Server) callASNNeighbours(ctx context.Context, args map[string]interfac
 		var err error
 		lod, err = strconv.Atoi(lodStr)
 		if err != nil || (lod != 0 && lod != 1) {
-			return nil, fmt.Errorf("lod parameter must be 0 or 1")
+			return CreateToolResult("Error: lod parameter must be 0 or 1", true), nil
 		}
 	}
 
@@ -379,7 +379,7 @@ func (s *Server) callASNNeighbours(ctx context.Context, args map[string]interfac
 func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
 	resource, ok := args["resource"].(string)
 	if !ok {
-		return nil, fmt.Errorf("resource parameter is required")
+		return CreateToolResult("Error: resource parameter is required", true), nil
 	}
 
 	lookBackLimit := 0
@@ -387,7 +387,7 @@ func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface
 		var err error
 		lookBackLimit, err = strconv.Atoi(lblStr)
 		if err != nil {
-			return nil, fmt.Errorf("look_back_limit parameter must be a valid integer")
+			return CreateToolResult("Error: look_back_limit parameter must be a valid integer", true), nil
 		}
 	}
 

@@ -3,6 +3,7 @@ package whois
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"testing"
 
@@ -200,7 +201,7 @@ type MockResponseBody struct {
 
 func (m *MockResponseBody) Read(p []byte) (n int, err error) {
 	if m.pos >= len(m.content) {
-		return 0, nil // EOF
+		return 0, io.EOF
 	}
 
 	n = copy(p, m.content[m.pos:])

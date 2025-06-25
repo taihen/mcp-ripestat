@@ -379,12 +379,19 @@ func TestExecuteToolCall_NetworkInfo_MissingResource(t *testing.T) {
 		Arguments: map[string]interface{}{}, // Missing resource
 	}
 
-	_, err := server.executeToolCall(ctx, params)
-	if err == nil {
-		t.Error("Expected error for missing resource parameter")
+	result, err := server.executeToolCall(ctx, params)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "resource parameter is required") {
-		t.Errorf("Expected error message about missing resource, got %s", err.Error())
+	if result == nil {
+		t.Error("Expected ToolResult, got nil")
+		return
+	}
+	if !result.IsError {
+		t.Error("Expected error ToolResult")
+	}
+	if !strings.Contains(result.Content[0].Text, "resource parameter is required") {
+		t.Errorf("Expected error message about missing resource, got %s", result.Content[0].Text)
 	}
 }
 
@@ -399,12 +406,19 @@ func TestExecuteToolCall_RPKIValidation_MissingPrefix(t *testing.T) {
 		},
 	}
 
-	_, err := server.executeToolCall(ctx, params)
-	if err == nil {
-		t.Error("Expected error for missing prefix parameter")
+	result, err := server.executeToolCall(ctx, params)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "prefix parameter is required") {
-		t.Errorf("Expected error message about missing prefix, got %s", err.Error())
+	if result == nil {
+		t.Error("Expected ToolResult, got nil")
+		return
+	}
+	if !result.IsError {
+		t.Error("Expected error ToolResult")
+	}
+	if !strings.Contains(result.Content[0].Text, "prefix parameter is required") {
+		t.Errorf("Expected error message about missing prefix, got %s", result.Content[0].Text)
 	}
 }
 
@@ -420,12 +434,19 @@ func TestExecuteToolCall_ASNNeighbours_InvalidLOD(t *testing.T) {
 		},
 	}
 
-	_, err := server.executeToolCall(ctx, params)
-	if err == nil {
-		t.Error("Expected error for invalid LOD parameter")
+	result, err := server.executeToolCall(ctx, params)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "lod parameter must be 0 or 1") {
-		t.Errorf("Expected error message about invalid LOD, got %s", err.Error())
+	if result == nil {
+		t.Error("Expected ToolResult, got nil")
+		return
+	}
+	if !result.IsError {
+		t.Error("Expected error ToolResult")
+	}
+	if !strings.Contains(result.Content[0].Text, "lod parameter must be 0 or 1") {
+		t.Errorf("Expected error message about invalid LOD, got %s", result.Content[0].Text)
 	}
 }
 
@@ -441,12 +462,19 @@ func TestExecuteToolCall_LookingGlass_InvalidLookBackLimit(t *testing.T) {
 		},
 	}
 
-	_, err := server.executeToolCall(ctx, params)
-	if err == nil {
-		t.Error("Expected error for invalid look_back_limit parameter")
+	result, err := server.executeToolCall(ctx, params)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "look_back_limit parameter must be a valid integer") {
-		t.Errorf("Expected error message about invalid look_back_limit, got %s", err.Error())
+	if result == nil {
+		t.Error("Expected ToolResult, got nil")
+		return
+	}
+	if !result.IsError {
+		t.Error("Expected error ToolResult")
+	}
+	if !strings.Contains(result.Content[0].Text, "look_back_limit parameter must be a valid integer") {
+		t.Errorf("Expected error message about invalid look_back_limit, got %s", result.Content[0].Text)
 	}
 }
 
@@ -715,12 +743,20 @@ func TestExecuteToolCall_AllToolFunctions(t *testing.T) {
 			result, err := server.executeToolCall(ctx, params)
 
 			if tc.expectError {
-				if err == nil {
-					t.Errorf("Expected error for %s, got none", tc.name)
+				if err != nil {
+					t.Errorf("Expected no error, got %v", err)
 					return
 				}
-				if tc.errorMessage != "" && !strings.Contains(err.Error(), tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, err.Error())
+				if result == nil {
+					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
+					return
+				}
+				if !result.IsError {
+					t.Errorf("Expected error ToolResult for %s", tc.name)
+					return
+				}
+				if tc.errorMessage != "" && !strings.Contains(result.Content[0].Text, tc.errorMessage) {
+					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
 				}
 			} else {
 				// Note: These might fail due to network issues in tests, so we accept that
@@ -789,14 +825,22 @@ func TestExecuteToolCall_RPKIValidation_ErrorCases(t *testing.T) {
 				Arguments: tc.args,
 			}
 
-			_, err := server.executeToolCall(ctx, params)
+			result, err := server.executeToolCall(ctx, params)
 			if tc.expectError {
-				if err == nil {
-					t.Errorf("Expected error for %s, got none", tc.name)
+				if err != nil {
+					t.Errorf("Expected no error, got %v", err)
 					return
 				}
-				if !strings.Contains(err.Error(), tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, err.Error())
+				if result == nil {
+					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
+					return
+				}
+				if !result.IsError {
+					t.Errorf("Expected error ToolResult for %s", tc.name)
+					return
+				}
+				if !strings.Contains(result.Content[0].Text, tc.errorMessage) {
+					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
 				}
 			} else if err != nil {
 				t.Errorf("Unexpected error for %s: %v", tc.name, err)
@@ -842,14 +886,22 @@ func TestExecuteToolCall_LookingGlass_ErrorCases(t *testing.T) {
 				Arguments: tc.args,
 			}
 
-			_, err := server.executeToolCall(ctx, params)
+			result, err := server.executeToolCall(ctx, params)
 			if tc.expectError {
-				if err == nil {
-					t.Errorf("Expected error for %s, got none", tc.name)
+				if err != nil {
+					t.Errorf("Expected no error, got %v", err)
 					return
 				}
-				if !strings.Contains(err.Error(), tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, err.Error())
+				if result == nil {
+					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
+					return
+				}
+				if !result.IsError {
+					t.Errorf("Expected error ToolResult for %s", tc.name)
+					return
+				}
+				if !strings.Contains(result.Content[0].Text, tc.errorMessage) {
+					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
 				}
 			} else if err != nil {
 				t.Errorf("Unexpected error for %s: %v", tc.name, err)
@@ -907,14 +959,22 @@ func TestExecuteToolCall_ASNNeighbours_ErrorCases(t *testing.T) {
 				Arguments: tc.args,
 			}
 
-			_, err := server.executeToolCall(ctx, params)
+			result, err := server.executeToolCall(ctx, params)
 			if tc.expectError {
-				if err == nil {
-					t.Errorf("Expected error for %s, got none", tc.name)
+				if err != nil {
+					t.Errorf("Expected no error, got %v", err)
 					return
 				}
-				if !strings.Contains(err.Error(), tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, err.Error())
+				if result == nil {
+					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
+					return
+				}
+				if !result.IsError {
+					t.Errorf("Expected error ToolResult for %s", tc.name)
+					return
+				}
+				if !strings.Contains(result.Content[0].Text, tc.errorMessage) {
+					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
 				}
 			} else if err != nil {
 				t.Errorf("Unexpected error for %s: %v", tc.name, err)
