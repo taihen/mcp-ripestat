@@ -12,8 +12,8 @@ I’ve grouped them by investigation style and shown the workflow call(s) that w
 ## BGP & RPKI threat hunting
 
 | 🍳 Prompt                                                                                                                                          | 🔧 Workflow                                                                                                                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
-| “For AS 20940 (Akamai) list every prefix it originated in the last 48 h that is RPKI-invalid and tell me which RIS collectors first saw the leak.” | • announced-prefixes returns the live prefix set for AS 20940 ￼ • Each prefix/ASN pair is piped into rpki-validation for status=invalid_asn/invalid_length ￼ • bgp-updates filtered to those prefixes + “A”nnouncements surfaces the first RRC/time seen | ￼   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| “For AS 20940 (Akamai) list every prefix it originated in the last 48 h that is RPKI-invalid and tell me which RIS collectors first saw the leak.” | • announced-prefixes returns the live prefix set for AS 20940 ￼ • Each prefix/ASN pair is piped into rpki-validation for status=invalid_asn/invalid_length ￼ • bgp-updates filtered to those prefixes + “A”nnouncements surfaces the first RRC/time seen |
 | “Show me any /24s in 185.0.0.0/14 that went from ‘unknown’ to ‘valid’ RPKI state in the last week.”                                                | • Sliding-window diff of rpki-history (counts of VRPs) • Compare status snapshots, emit changed prefixes                                                                                                                                                 |
 
 **Why it’s fancy**:
@@ -42,8 +42,8 @@ You’re effectively turning the RIS network into a distributed “ping” witho
 ## Geo-policy & compliance checks
 
 | 🍳 Prompt                                                                                                                 | 🔧 Workflow                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | --- |
-| “List every routed ASN registered in 🇷🇺 Russia and the countries where their prefixes are actually being announced from.” | country-asns (registered vs routed) + prefix-overview for geolocation per prefix                                    | ￼   |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| “List every routed ASN registered in 🇷🇺 Russia and the countries where their prefixes are actually being announced from.” | country-asns (registered vs routed) + prefix-overview for geolocation per prefix                                    |
 | “Which ASNs that appear in OFAC-sanctioned countries are transiting traffic through EU IXPs?”                             | Combine previous query with public IX-prefix lists (or IX-API via another MCP server) and looking-glass visibility. |
 
 ## Historical forensics
