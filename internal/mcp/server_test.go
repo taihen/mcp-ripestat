@@ -1663,3 +1663,205 @@ func TestFormatErrorMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestParameterHelpers(t *testing.T) {
+	t.Run("getRequiredStringParam", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			args        map[string]interface{}
+			key         string
+			errorMsg    string
+			expectedVal string
+			expectError bool
+		}{
+			{
+				name:        "valid string parameter",
+				args:        map[string]interface{}{"resource": "test-value"},
+				key:         "resource",
+				errorMsg:    "Error: resource required",
+				expectedVal: "test-value",
+				expectError: false,
+			},
+			{
+				name:        "missing parameter",
+				args:        map[string]interface{}{},
+				key:         "resource",
+				errorMsg:    "Error: resource required",
+				expectedVal: "",
+				expectError: true,
+			},
+			{
+				name:        "wrong type parameter",
+				args:        map[string]interface{}{"resource": 123},
+				key:         "resource",
+				errorMsg:    "Error: resource required",
+				expectedVal: "",
+				expectError: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				val, errResult := getRequiredStringParam(tc.args, tc.key, tc.errorMsg)
+
+				if tc.expectError {
+					if errResult == nil {
+						t.Error("Expected error result but got none")
+					} else if errResult.Content[0].Text != tc.errorMsg {
+						t.Errorf("Expected error message '%s', got '%s'", tc.errorMsg, errResult.Content[0].Text)
+					}
+				} else {
+					if errResult != nil {
+						t.Errorf("Expected no error but got: %v", errResult.Content[0].Text)
+					}
+					if val != tc.expectedVal {
+						t.Errorf("Expected value '%s', got '%s'", tc.expectedVal, val)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("getOptionalStringParam", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			args        map[string]interface{}
+			key         string
+			expectedVal string
+		}{
+			{
+				name:        "existing parameter",
+				args:        map[string]interface{}{"query_time": "2023-01-01"},
+				key:         "query_time",
+				expectedVal: "2023-01-01",
+			},
+			{
+				name:        "missing parameter",
+				args:        map[string]interface{}{},
+				key:         "query_time",
+				expectedVal: "",
+			},
+			{
+				name:        "wrong type parameter",
+				args:        map[string]interface{}{"query_time": 123},
+				key:         "query_time",
+				expectedVal: "",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				val := getOptionalStringParam(tc.args, tc.key)
+				if val != tc.expectedVal {
+					t.Errorf("Expected value '%s', got '%s'", tc.expectedVal, val)
+				}
+			})
+		}
+	})
+
+	t.Run("validateLODParam", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			args        map[string]interface{}
+			expectedVal int
+			expectError bool
+		}{
+			{
+				name:        "valid LOD 0",
+				args:        map[string]interface{}{"lod": "0"},
+				expectedVal: 0,
+				expectError: false,
+			},
+			{
+				name:        "valid LOD 1",
+				args:        map[string]interface{}{"lod": "1"},
+				expectedVal: 1,
+				expectError: false,
+			},
+			{
+				name:        "missing LOD parameter",
+				args:        map[string]interface{}{},
+				expectedVal: 0,
+				expectError: false,
+			},
+			{
+				name:        "invalid LOD value",
+				args:        map[string]interface{}{"lod": "2"},
+				expectedVal: 0,
+				expectError: true,
+			},
+			{
+				name:        "non-numeric LOD",
+				args:        map[string]interface{}{"lod": "abc"},
+				expectedVal: 0,
+				expectError: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				val, errResult := validateLODParam(tc.args)
+
+				if tc.expectError {
+					if errResult == nil {
+						t.Error("Expected error result but got none")
+					}
+				} else {
+					if errResult != nil {
+						t.Errorf("Expected no error but got: %v", errResult.Content[0].Text)
+					}
+					if val != tc.expectedVal {
+						t.Errorf("Expected value %d, got %d", tc.expectedVal, val)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("validateLookBackLimitParam", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			args        map[string]interface{}
+			expectedVal int
+			expectError bool
+		}{
+			{
+				name:        "valid look back limit",
+				args:        map[string]interface{}{"look_back_limit": "10"},
+				expectedVal: 10,
+				expectError: false,
+			},
+			{
+				name:        "missing look back limit",
+				args:        map[string]interface{}{},
+				expectedVal: 0,
+				expectError: false,
+			},
+			{
+				name:        "invalid look back limit",
+				args:        map[string]interface{}{"look_back_limit": "abc"},
+				expectedVal: 0,
+				expectError: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				val, errResult := validateLookBackLimitParam(tc.args)
+
+				if tc.expectError {
+					if errResult == nil {
+						t.Error("Expected error result but got none")
+					}
+				} else {
+					if errResult != nil {
+						t.Errorf("Expected no error but got: %v", errResult.Content[0].Text)
+					}
+					if val != tc.expectedVal {
+						t.Errorf("Expected value %d, got %d", tc.expectedVal, val)
+					}
+				}
+			})
+		}
+	})
+}
