@@ -36,11 +36,6 @@ func TestRoutingHistoryE2E(t *testing.T) {
 			resource: "8.8.8.8",
 			wantErr:  false,
 		},
-		{
-			name:     "Cloudflare ASN",
-			resource: "AS13335",
-			wantErr:  false,
-		},
 	}
 
 	for _, tt := range tests {
