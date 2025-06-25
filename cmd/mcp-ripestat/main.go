@@ -72,6 +72,7 @@ func main() {
 }
 
 func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
+	startTime := time.Now()
 	mux := http.NewServeMux()
 
 	// Create MCP server
@@ -106,32 +107,11 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 	})
 
 	// Warmup endpoint to prevent cold starts
-	mux.HandleFunc("/warmup", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":    "ready",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"server":    "mcp-ripestat",
-		}); err != nil {
-			slog.Error("failed to encode warmup response", "err", err)
-		}
-	})
+	mux.HandleFunc("/warmup", warmupHandler)
 
 	// Status endpoint for debugging cold starts
-	mux.HandleFunc("/status", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":    "ready",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"server":    "mcp-ripestat",
-			"version":   version,
-			"mcp_ready": true,
-			"uptime":    time.Since(time.Now()).String(),
-		}); err != nil {
-			slog.Error("failed to encode status response", "err", err)
-		}
+	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		statusHandler(w, r, startTime)
 	})
 
 	addr := ":" + port
@@ -639,4 +619,31 @@ func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {
 
 func writeJSONError(w http.ResponseWriter, message string, statusCode int) {
 	writeJSON(w, map[string]string{"error": message}, statusCode)
+}
+
+func warmupHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "ready",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"server":    "mcp-ripestat",
+	}); err != nil {
+		slog.Error("failed to encode warmup response", "err", err)
+	}
+}
+
+func statusHandler(w http.ResponseWriter, _ *http.Request, startTime time.Time) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "ready",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"server":    "mcp-ripestat",
+		"version":   version,
+		"mcp_ready": true,
+		"uptime":    time.Since(startTime).String(),
+	}); err != nil {
+		slog.Error("failed to encode status response", "err", err)
+	}
 }

@@ -1254,20 +1254,7 @@ func TestWarmupHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/warmup", nil)
 	w := httptest.NewRecorder()
 
-	// Create handler similar to main.go
-	handler := func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":    "ready",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"server":    "mcp-ripestat",
-		}); err != nil {
-			t.Errorf("failed to encode response: %v", err)
-		}
-	}
-
-	handler(w, req)
+	warmupHandler(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -1309,26 +1296,11 @@ func TestWarmupHandler(t *testing.T) {
 }
 
 func TestStatusHandler(t *testing.T) {
+	startTime := time.Now()
 	req := httptest.NewRequest("GET", "/status", nil)
 	w := httptest.NewRecorder()
 
-	// Create handler similar to main.go
-	handler := func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":    "ready",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"server":    "mcp-ripestat",
-			"version":   version,
-			"mcp_ready": true,
-			"uptime":    time.Since(time.Now()).String(),
-		}); err != nil {
-			t.Errorf("failed to encode response: %v", err)
-		}
-	}
-
-	handler(w, req)
+	statusHandler(w, req, startTime)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -1376,6 +1348,17 @@ func TestStatusHandler(t *testing.T) {
 
 	if uptime, ok := response["uptime"].(string); !ok || uptime == "" {
 		t.Errorf("Expected valid uptime, got %v", response["uptime"])
+	} else {
+		// Parse uptime duration and verify it's reasonable (positive and less than test execution time)
+		duration, err := time.ParseDuration(uptime)
+		switch {
+		case err != nil:
+			t.Errorf("Expected valid duration format for uptime, got %s: %v", uptime, err)
+		case duration <= 0:
+			t.Errorf("Expected positive uptime duration, got %v", duration)
+		case duration > time.Since(startTime)+time.Second:
+			t.Errorf("Expected uptime to be reasonable, got %v which is greater than test duration %v", duration, time.Since(startTime))
+		}
 	}
 }
 
