@@ -39,6 +39,7 @@ management tasks.
 - AS overview for Autonomous System numbers
 - Announced prefixes for Autonomous Systems
 - Routing status for IP prefixes
+- Routing history for IP addresses, prefixes, and ASNs (historical BGP visibility data)
 - Whois information for IP addresses, prefixes, and ASNs
 - Abuse contact finder for IP addresses and prefixes
 - RPKI validation status for ASN and prefix combinations
@@ -185,6 +186,9 @@ can use:
 
 - "Show me BGP routing information for prefix 193.0.0.0/21 from RIPE's looking glass"
 - "Get looking glass data for 2001:7fb::/32 with 24-hour history"
+- "Show me the routing history for AS3333 - when did it start announcing its prefixes?"
+- "Get historical BGP visibility data for the prefix 193.0.0.0/21"
+- "Analyze the routing history timeline for 8.8.8.8 and show visibility changes over time"
 
 ### IP Detection & Connectivity
 
@@ -201,6 +205,8 @@ can use:
   and Cloudflare's DNS (1.1.1.1)"
 - "Perform a comprehensive security analysis of AS13335 including announced
   prefixes, neighbors, and RPKI validation status"
+- "Show me the complete historical timeline for AS3333 - when did it first appear,
+  what prefixes has it announced over time, and how has its BGP visibility changed?"
 
 ## Testing
 
