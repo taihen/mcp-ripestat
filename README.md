@@ -33,31 +33,48 @@ language queries into appropriate API calls, making it easier and more intuitive
 to access and analyze RIPEStat data for research, troubleshooting, or network
 management tasks.
 
+### Investigation Workflows
+
+For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS.md).
+
 ## Features
+
+**Core Network Analysis:**
 
 - Network information for IP addresses and prefixes
 - AS overview for Autonomous System numbers
+- Whois information for IP addresses, prefixes, and ASNs
+
+**Routing Intelligence:**
+
 - Announced prefixes for Autonomous Systems
 - Routing status for IP prefixes
 - Routing history for IP addresses, prefixes, and ASNs (historical BGP visibility data)
-- Whois information for IP addresses, prefixes, and ASNs
-- Abuse contact finder for IP addresses and prefixes
-- RPKI validation status for ASN and prefix combinations
 - ASN neighbours for Autonomous Systems (upstream/downstream relationships)
 - Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
+
+**Security & Compliance:**
+
+- RPKI validation status for ASN and prefix combinations
+- Abuse contact finder for IP addresses and prefixes
+
+**Utility:**
+
 - What's My IP functionality with proxy header support for IP detection
 
 ## Architectural Rationale
 
-`mcp-ripestat` is implemented as an HTTP server rather than a command-line
-interface (CLI) tool to facilitate centralized deployment. This architecture
-allows the service to be installed on a single server and accessed by multiple
-team members and other MCP clients across a network. It promotes reusability,
-simplifies client-side configuration, and provides a single, consistent access
-point for RIPEstat data.
+`mcp-ripestat` is implemented as an MCP HTTP (MCP 2025 compatible) server rather
+than a command-line interface (stdio) tool to facilitate centralized deployment
+and access control.
+
+This architecture allows the service to be installed on a single instance and
+be accessed by many users and other MCP clients across a network in
+private mode - not exposed to the internet.
 
 > [!WARNING]
 > At current stage this MCP server does not provide authentication.
+> Use firewall or other L3 networking to restrict access to the server.
 
 ## Installation
 
@@ -116,8 +133,10 @@ instead of the proxy's IP.
 
 ### Shared Environment Configuration
 
-For shared team environments, you might disable the `What's My IP` endpoint
-using the `--disable-whats-my-ip` flag.
+For shared environments, you might consider disabling the `What's My IP` endpoint
+using the `--disable-whats-my-ip` flag. If instance is behind a proxy or load
+balancer, you might see proxy IP address instead of the actual client IP. Check
+supported proxy headers above.
 
 ## MCP Protocol Support
 
@@ -131,7 +150,10 @@ JSON-RPC 2.0 transport. It provides two interfaces:
 - **Usage**: Compatible with Cursor IDE and other MCP clients
 - **Features**: Full MCP handshake, capability negotiation, tool calling
 
-### Legacy REST API
+### Legacy REST API (Deprecated)
+
+> [!FAIL]
+> This API is deprecated and will be removed in v2.
 
 - **Endpoints**: Individual REST endpoints (e.g., `/network-info`)
 - **Protocol**: HTTP REST with query parameters
@@ -146,67 +168,6 @@ place it in `~/.cursor/mcp.json` on macOS/Linux).
 ### Demo Server
 
 A demo MCP server is running at `https://mcp-ripestat.taihen.org/mcp`. Feel free to try it out, but there are no uptime promises.
-
-## Example MCP Queries
-
-Once configured, you can ask your AI assistant natural language questions that
-will be translated into RIPEstat API calls. Here are some example queries you
-can use:
-
-### Network Information & IP Analysis
-
-- "What network information can you tell me about the IP address 8.8.8.8?"
-- "Analyze the network details for the prefix 193.0.0.0/21"
-- "Show me the network information for 2001:db8::/32"
-
-### Autonomous System (AS) Investigation
-
-- "Give me an overview of AS3333"
-- "What prefixes are announced by AS15169?"
-- "Show me the routing status for the prefix 8.8.8.0/24"
-- "Who are the upstream and downstream neighbors of AS1205?"
-
-### Security & Abuse Investigation
-
-- "Find the abuse contact information for IP address 192.0.2.1"
-- "What's the abuse contact for the network containing 203.0.113.50?"
-
-### WHOIS & Registration Data
-
-- "Show me WHOIS information for AS64512"
-- "Get WHOIS data for the IP address 198.51.100.1"
-- "What's the WHOIS information for the prefix 2001:db8::/32?"
-
-### RPKI Validation
-
-- "Validate RPKI status for AS3333 announcing prefix 193.0.0.0/21"
-- "Check if AS15169 is authorized to announce 8.8.8.0/24"
-
-### BGP & Routing Analysis
-
-- "Show me BGP routing information for prefix 193.0.0.0/21 from RIPE's looking glass"
-- "Get looking glass data for 2001:7fb::/32 with 24-hour history"
-- "Show me the routing history for AS3333 - when did it start announcing its prefixes?"
-- "Get historical BGP visibility data for the prefix 193.0.0.0/21"
-- "Analyze the routing history timeline for 8.8.8.8 and show visibility changes over time"
-
-### IP Detection & Connectivity
-
-- "What's my public IP address?"
-- "Detect my current IP and show network information about it"
-
-### Complex Network Analysis Queries
-
-- "Analyze the network infrastructure behind cloudflare.com - show me the IP,
-  AS information, and any related prefixes"
-- "Investigate potential abuse from this IP range: 203.0.113.0/24 - show network
-  info, WHOIS, and abuse contacts"
-- "Compare the network paths and AS relationships between Google's DNS (8.8.8.8)
-  and Cloudflare's DNS (1.1.1.1)"
-- "Perform a comprehensive security analysis of AS13335 including announced
-  prefixes, neighbors, and RPKI validation status"
-- "Show me the complete historical timeline for AS3333 - when did it first appear,
-  what prefixes has it announced over time, and how has its BGP visibility changed?"
 
 ## Testing
 
@@ -242,8 +203,7 @@ to see how you can participate.
 
 The development process is organized into sprints, with each sprint focused on a
 specific feature. A detailed ledger of all the past and feature changes,
-divided by sprints, is available in the [sprints](SPRINTS.md)
-documentation.
+divided by sprints, is available in the [sprints](SPRINTS.md) documentation.
 
 > [!NOTE]
 > If a particular feature is not included, please feel free to open

@@ -1,80 +1,196 @@
-# 🍳 Next-level investigations
+# 🌊 RIPEstat Investigation Flows
 
-Here’s a grab-bag of “next-level” questions you can throw at the
-`mcp-ripestat` server. Feel free to contribute your own with a PR.
+This document provides investigation workflows and example prompts for the `mcp-ripestat` server. Each flow shows how to combine different tools to answer complex network analysis questions.
 
-> [!HINT]
->
-> Those prompts are also input into the development of the `mcp-ripestat`
-> to prioritize the next required feature based on prompt usecase.
+> [!NOTE]
+> These prompts serve as both user examples and development requirements for `mcp-ripestat`. They help prioritize new features based on real-world investigation scenarios.
 
-I’ve grouped them by investigation style and shown the workflow call(s) that will be issued under the hood for each prompt.
+## 🛠 Available Tools
 
-## BGP & RPKI threat hunting
+The current implementation provides these RIPEstat API endpoints:
 
-| 🍳 Prompt                                                                                                                                          | 🔧 Workflow                                                                                                                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| “For AS 20940 (Akamai) list every prefix it originated in the last 48 h that is RPKI-invalid and tell me which RIS collectors first saw the leak.” | • announced-prefixes returns the live prefix set for AS 20940 ￼ • Each prefix/ASN pair is piped into rpki-validation for status=invalid_asn/invalid_length ￼ • bgp-updates filtered to those prefixes + “A”nnouncements surfaces the first RRC/time seen |
-| “Show me any /24s in 185.0.0.0/14 that went from ‘unknown’ to ‘valid’ RPKI state in the last week.”                                                | • Sliding-window diff of rpki-history (counts of VRPs) • Compare status snapshots, emit changed prefixes                                                                                                                                                 |
+**Core Network Analysis:**
 
-**Why it’s fancy**:
+- `getNetworkInfo` - IP/prefix ownership and registration details
+- `getASOverview` - Autonomous System information and statistics
+- `getWhois` - Registry information for IPs, prefixes, or ASNs
 
-You get instant leak hijack detection without writing BGP parsers,
-plus provenance (which collector saw it first).
+**Routing Intelligence:**
 
-## Real-time outage triage
+- `getAnnouncedPrefixes` - Prefixes currently announced by an AS
+- `getRoutingStatus` - Current routing visibility for a prefix
+- `getRoutingHistory` - Historical routing changes and announcements
+- `getASNNeighbours` - Upstream/downstream AS relationships
+- `getLookingGlass` - Real-time BGP data from RIPE RRCs
 
-| 🍳 Prompt                                                                                                                     | 🔧 Workflow                                                                                                                     |
-| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| “Is there a routing black-hole around IP 203.0.113.45 right now? Show which collectors still see a path and the last AS hop.” | looking-glass gives per-RRC visibility and full AS-PATHs ￼; the LLM groups peers by last-updated timestamp and highlights gaps. |
-| “Compare the upstream set for AS 6453 today vs. 72 hours ago and highlight new or missing peers.”                             | Diff two asn-neighbours snapshots; render a before/after table.                                                                 |
+**Security & Compliance:**
 
-**Why it’s fancy**:
+- `getRPKIValidation` - RPKI validation status for ASN/prefix pairs
+- `getAbuseContactFinder` - Abuse contact information for resources
 
-You’re effectively turning the RIS network into a distributed “ping” without touching a router.
+**Utility:**
 
-## Abuse & takedown workflows (cross-dataset)
+- `getWhatsMyIP` - Caller's public IP address
 
-| 🍳 Prompt                                                                                                                                  | 🔧 Workflow                                                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| “Give me the abuse-mailbox for every prefix that belongs to the IPs hosting examplephish[.]com and tell me which of those IPs expose RDP.” | 1. mcp-censys → lookup_domain to enumerate host IPs & ports ￼ 2. abuse-contact-finder for each IP/prefix ￼ 3. The LLM correlates and outputs a ready-to-mail list.  |
-| “Find all Shodan-indexed hosts inside AS 9808 that run OpenSSH < 8.2 and whose RPKI status is invalid.”                                    | 1. mcp-shodan → search query org:"AS9808" product:"OpenSSH" version:<8.2 ￼ 2. For each hit, call rpki-validation to check prefix/ASN combo; filter status != valid. |
+---
 
-## Geo-policy & compliance checks
+## 📊 Basic Prompts by Input Type
 
-| 🍳 Prompt                                                                                                                 | 🔧 Workflow                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| “List every routed ASN registered in 🇷🇺 Russia and the countries where their prefixes are actually being announced from.” | country-asns (registered vs routed) + prefix-overview for geolocation per prefix                                    |
-| “Which ASNs that appear in OFAC-sanctioned countries are transiting traffic through EU IXPs?”                             | Combine previous query with public IX-prefix lists (or IX-API via another MCP server) and looking-glass visibility. |
+### IP Address Queries
 
-## Historical forensics
-
-| 🍳 Prompt                                                                                               | 🔧 Workflow                                                                         |
-| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| “When did AS 212238 first start announcing 2a0c:9a40::/29 and what other ASNs announced it beforehand?” | routing-history for that prefix; LLM finds earliest time & origin-change events.    |
-| “Plot the VRP count for 8.8.8.0/24 over the past year and annotate dips.”                               | rpki-history time-series; LLM (or a python_user_visible plot) highlights anomalies. |
-
-## Putting it all together in one sentence
-
-- “Over the last 24 h, which prefixes newly originated by AS 61138 are invalid in RPKI, have at least one open Telnet port according to Shodan, and lack an abuse mailbox?”
-
-- “Give me a timeline of BGP withdrawals for 2400:cb00::/32 during Cloudflare’s Oct-2024 outage and overlay it with the count of probes failing HTTPS from RIPE Atlas.”
-
-The LLM will federate:
-
-- RIPEstat (`mcp-ripestat`) for route, RPKI, Whois, visibility.
-- Shodan ([mcp-shodan](https://github.com/BurtTheCoder/mcp-shodan)) for service & vuln intel.
-- Censys ([mcp-censys](https://github.com/BurtTheCoder/mcp-shodan) or any other MCP OSINT source for certificates/DNS.
-- (Optionally) Atlas or Pingdom MCP server for active-measurements.
-
-## Tip: Hint the tool names
-
-If a client supports explicit tool selection, prefix can be
-specified to the prompt:
-
-```sh
-@ripestat announced_prefixes AS61138 starttime=2025-06-24T00:00Z
+```
+"What network information is available for 8.8.8.8?"
+"Show me WHOIS data for 192.0.2.1"
+"Find abuse contacts for IP 203.0.113.50"
+"Get routing history for 1.1.1.1"
+"What's the network ownership of 2001:db8::1?"
 ```
 
-…but 90 % of the time you can stay high-level and just say
-“Show/Get me...” — the LLM will decide which function to invoke.
+### IP Prefix Queries
+
+```
+"Analyze the prefix 193.0.0.0/21"
+"What's the routing status for 8.8.8.0/24?"
+"Show BGP data for 2001:7fb::/32 from RIPE looking glass"
+"Get historical routing changes for 104.16.0.0/13"
+"Find the network owner of 198.51.100.0/24"
+```
+
+### Autonomous System (ASN) Queries
+
+```
+"Give me an overview of AS3333"
+"What prefixes does AS15169 announce?"
+"Show me the neighbors of AS1205"
+"Get routing history for AS64512"
+"What's the WHOIS information for AS13335?"
+```
+
+### RPKI Validation Queries
+
+```
+"Validate RPKI for AS3333 announcing 193.0.0.0/21"
+"Check if AS15169 is authorized for 8.8.8.0/24"
+"Verify RPKI status of AS13335 and 104.16.0.0/13"
+"Is AS64496 valid for announcing 203.0.113.0/24?"
+```
+
+### Utility Queries
+
+```
+"What's my public IP address?"
+"Detect my current IP and show its network information"
+"Show me my IP and find its abuse contact"
+```
+
+---
+
+## 🔗 Advanced Chained Prompts
+
+### Security Analysis Chains
+
+```
+"For AS 20940, show me all announced prefixes that fail RPKI validation,
+then get the routing history for each invalid prefix to see when the
+announcements first appeared."
+
+"Investigate AS 64496: get an overview, list all announced prefixes,
+check RPKI validation for each, and find abuse contacts for any
+invalid routes."
+
+"For the prefix 8.8.8.0/24, show current routing status, check if
+Google (AS15169) is the only announcer in BGP history, and validate
+RPKI authorization."
+```
+
+### Network Forensics Chains
+
+```
+"Analyze 203.0.113.0/24: get network ownership details, check current
+routing status, review historical announcements, and find all abuse
+contact information."
+
+"For AS 174, compare current neighbors with those from 30 days ago,
+show any new peering relationships, and get WHOIS details for any
+new upstream or downstream partners."
+
+"Investigate routing instability for 192.0.2.0/24: show BGP visibility
+across RIPE collectors, check for multiple origin announcements, and
+verify RPKI status for all announcing ASNs."
+```
+
+### Compliance Verification Chains
+
+```
+"Audit AS 13335: list all announced prefixes, validate RPKI status
+for each, check for recent routing changes, and identify any prefixes
+announced in the last 7 days."
+
+"For organization compliance check: get AS overview for AS3333,
+verify all announced prefixes have valid RPKI, check abuse contact
+availability, and ensure WHOIS data is current."
+```
+
+### Infrastructure Analysis Chains
+
+```
+"Compare Google DNS (8.8.8.8) and Cloudflare DNS (1.1.1.1): get
+network information for both IPs, analyze their respective AS
+relationships, compare BGP paths from RIPE collectors, and check
+RPKI validation status."
+
+"Trace the network path for cloudflare.com: get IP addresses,
+identify owning prefixes and ASNs, show AS neighbor relationships,
+and verify routing stability over the past week."
+```
+
+---
+
+## 🌐 Multi-MCP Server Integration
+
+Combine `mcp-ripestat` with other MCP servers for comprehensive investigations:
+
+### Security Research with mcp-shodan
+
+```
+"Find all hosts in AS 64496 running SSH services (via Shodan),
+then use RIPEstat to check RPKI validation status for their
+announced prefixes and get abuse contact information for
+responsible disclosure."
+
+"Identify vulnerable HTTP servers in the 203.0.113.0/24 range
+(via Shodan), then use RIPEstat to verify network ownership,
+check routing legitimacy, and find appropriate abuse contacts."
+```
+
+---
+
+## 💡 Tips and Hints
+
+### Query Optimization
+
+- **Be specific with timeframes**: Use "last 24 hours", "past week", or specific dates for historical queries
+- **Combine related tools**: Chain network info → WHOIS → abuse contacts for complete investigations
+- **Use AS numbers and names**: "AS3333" and "RIPE NCC" both work for queries
+- **Leverage LOD parameters**: Request detailed neighbor information with "detailed view" or "LOD 1"
+
+### Natural Language Patterns
+
+- **Start broad, then narrow**: "Overview of AS15169" followed by "RPKI status for their prefixes"
+- **Use comparison language**: "Compare", "versus", "differences between" for temporal analysis
+- **Express investigation intent**: "Investigate", "analyze", "audit" for comprehensive checks
+- **Request verification**: "Verify", "validate", "confirm" for compliance checks
+
+### Advanced Techniques
+
+- **Historical snapshots**: Compare current state with specific past dates using `query_time`
+- **Regional analysis**: Request BGP data from specific RIPE RRC collectors
+- **Bulk operations**: Process multiple prefixes or ASNs in a single investigation
+- **Cross-validation**: Use multiple tools to verify the same information from different angles
+
+### Integration Strategies
+
+- **Start with RIPEstat**: Use network discovery as foundation for other MCP server queries
+- **Chain efficiently**: Pass RIPEstat results (IP ranges, ASNs) as input to other servers
+- **Correlate data**: Match timestamps between different data sources for event correlation
+- **Automate workflows**: Create repeatable investigation patterns for common use cases
