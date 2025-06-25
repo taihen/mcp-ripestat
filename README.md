@@ -143,6 +143,10 @@ To use this MCP server locally, simply copy and paste the
 [MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor,
 place it in `~/.cursor/mcp.json` on macOS/Linux).
 
+### Demo Server
+
+A demo MCP server is running at `https://mcp-ripestat.taihen.org/mcp`. Feel free to try it out, but there are no uptime promises.
+
 ## Example MCP Queries
 
 Once configured, you can ask your AI assistant natural language questions that
