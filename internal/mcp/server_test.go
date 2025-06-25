@@ -3,7 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -1639,17 +1639,17 @@ func TestFormatErrorMessage(t *testing.T) {
 	}{
 		{
 			name:     "error without Error prefix",
-			input:    fmt.Errorf("network timeout"),
+			input:    errors.New("network timeout"),
 			expected: "Error: network timeout",
 		},
 		{
 			name:     "error with Error prefix",
-			input:    fmt.Errorf("Error: invalid resource"),
+			input:    errors.New("Error: invalid resource"),
 			expected: "Error: invalid resource",
 		},
 		{
 			name:     "error with lowercase error prefix",
-			input:    fmt.Errorf("error: something went wrong"),
+			input:    errors.New("error: something went wrong"),
 			expected: "Error: error: something went wrong",
 		},
 	}
