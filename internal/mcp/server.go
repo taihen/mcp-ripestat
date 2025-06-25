@@ -122,8 +122,8 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 	}
 
 	// Log server readiness for debugging cold starts
-	slog.Info("MCP server responding to initialize request", 
-		"server_name", s.serverName, 
+	slog.Info("MCP server responding to initialize request",
+		"server_name", s.serverName,
 		"version", s.serverVersion,
 		"client_protocol", params.ProtocolVersion)
 

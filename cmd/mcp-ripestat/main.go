@@ -101,9 +101,9 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "ready",
+			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"server": "mcp-ripestat",
+			"server":    "mcp-ripestat",
 		})
 	})
 
@@ -112,12 +112,12 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":     "ready",
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"server":     "mcp-ripestat",
-			"version":    "1.0.0",
-			"mcp_ready":  true,
-			"uptime":     time.Since(time.Now()).String(),
+			"status":    "ready",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"server":    "mcp-ripestat",
+			"version":   "1.0.0",
+			"mcp_ready": true,
+			"uptime":    time.Since(time.Now()).String(),
 		})
 	})
 

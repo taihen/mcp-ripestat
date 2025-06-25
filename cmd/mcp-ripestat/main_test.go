@@ -1259,9 +1259,9 @@ func TestWarmupHandler(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "ready",
+			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"server": "mcp-ripestat",
+			"server":    "mcp-ripestat",
 		})
 	}
 
@@ -1315,12 +1315,12 @@ func TestStatusHandler(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":     "ready",
-			"timestamp":  time.Now().UTC().Format(time.RFC3339),
-			"server":     "mcp-ripestat",
-			"version":    "1.0.0",
-			"mcp_ready":  true,
-			"uptime":     time.Since(time.Now()).String(),
+			"status":    "ready",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"server":    "mcp-ripestat",
+			"version":   "1.0.0",
+			"mcp_ready": true,
+			"uptime":    time.Since(time.Now()).String(),
 		})
 	}
 
@@ -1447,9 +1447,9 @@ func TestRun_WhatsMyIPDisabled(t *testing.T) {
 
 func TestManifestHandler_Integration(t *testing.T) {
 	tests := []struct {
-		name                string
-		disableWhatsMyIP    bool
-		expectedToolsCount  int
+		name               string
+		disableWhatsMyIP   bool
+		expectedToolsCount int
 	}{
 		{
 			name:               "with_whats_my_ip_enabled",
@@ -1457,7 +1457,7 @@ func TestManifestHandler_Integration(t *testing.T) {
 			expectedToolsCount: 10, // All tools including whats-my-ip
 		},
 		{
-			name:               "with_whats_my_ip_disabled", 
+			name:               "with_whats_my_ip_disabled",
 			disableWhatsMyIP:   true,
 			expectedToolsCount: 9, // All tools except whats-my-ip
 		},
@@ -1506,7 +1506,7 @@ func TestMCPHandler_ServerError(t *testing.T) {
 			// Expected panic due to nil server
 		}
 	}()
-	
+
 	server := mcp.NewServer("test", "1.0.0", false)
 	mcpHandler(w, req, server)
 
@@ -1524,55 +1524,55 @@ func TestHandlerErrorPaths(t *testing.T) {
 	t.Run("rpki_validation_error_path", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/rpki-validation?resource=AS13335&prefix=1.1.1.0/24", nil)
 		w := httptest.NewRecorder()
-		
+
 		rpkiValidationHandler(w, req)
-		
+
 		// Either succeed or fail gracefully
 		resp := w.Result()
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
 			t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
 		}
 	})
-	
+
 	t.Run("asn_neighbours_error_path", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/asn-neighbours?resource=AS13335&lod=1", nil)
 		w := httptest.NewRecorder()
-		
+
 		asnNeighboursHandler(w, req)
-		
+
 		resp := w.Result()
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
 			t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
 		}
 	})
-	
+
 	t.Run("looking_glass_error_path", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/looking-glass?resource=193.0.0.0/21&look_back_limit=24", nil)
 		w := httptest.NewRecorder()
-		
+
 		lookingGlassHandler(w, req)
-		
+
 		resp := w.Result()
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadGateway {
 			t.Errorf("Expected status code 200 or 502, got %d", resp.StatusCode)
 		}
 	})
-	
+
 	t.Run("whats_my_ip_no_params", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/whats-my-ip", nil)
 		w := httptest.NewRecorder()
-		
+
 		whatsMyIPHandler(w, req)
-		
+
 		resp := w.Result()
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
@@ -1589,21 +1589,21 @@ func TestMCPEndpointIntegration(t *testing.T) {
 		{"/warmup", []string{"status", "timestamp", "server"}},
 		{"/status", []string{"status", "timestamp", "server", "version", "mcp_ready", "uptime"}},
 	}
-	
+
 	for _, ep := range endpoints {
 		t.Run(ep.path, func(t *testing.T) {
 			req := httptest.NewRequest("GET", ep.path, nil)
 			w := httptest.NewRecorder()
-			
+
 			// Simulate the mux routing by calling the handler directly
 			if ep.path == "/warmup" {
 				handler := func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					json.NewEncoder(w).Encode(map[string]interface{}{
-						"status": "ready",
+						"status":    "ready",
 						"timestamp": time.Now().UTC().Format(time.RFC3339),
-						"server": "mcp-ripestat",
+						"server":    "mcp-ripestat",
 					})
 				}
 				handler(w, req)
@@ -1612,29 +1612,29 @@ func TestMCPEndpointIntegration(t *testing.T) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					json.NewEncoder(w).Encode(map[string]interface{}{
-						"status":     "ready",
-						"timestamp":  time.Now().UTC().Format(time.RFC3339),
-						"server":     "mcp-ripestat",
-						"version":    "1.0.0",
-						"mcp_ready":  true,
-						"uptime":     time.Since(time.Now()).String(),
+						"status":    "ready",
+						"timestamp": time.Now().UTC().Format(time.RFC3339),
+						"server":    "mcp-ripestat",
+						"version":   "1.0.0",
+						"mcp_ready": true,
+						"uptime":    time.Since(time.Now()).String(),
 					})
 				}
 				handler(w, req)
 			}
-			
+
 			resp := w.Result()
 			defer resp.Body.Close()
-			
+
 			if resp.StatusCode != http.StatusOK {
 				t.Errorf("Expected status 200, got %d", resp.StatusCode)
 			}
-			
+
 			var response map[string]interface{}
 			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 				t.Fatalf("Failed to decode response: %v", err)
 			}
-			
+
 			for _, key := range ep.expectedKeys {
 				if _, ok := response[key]; !ok {
 					t.Errorf("Expected key %s in response", key)
