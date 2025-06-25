@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -1627,5 +1628,38 @@ func TestParseMessage_ErrorResponseEdgeCases(t *testing.T) {
 	_, err = ParseMessage([]byte(malformedResultResponse))
 	if err == nil {
 		t.Error("Expected error for malformed result response")
+	}
+}
+
+func TestFormatErrorMessage(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    error
+		expected string
+	}{
+		{
+			name:     "error without Error prefix",
+			input:    fmt.Errorf("network timeout"),
+			expected: "Error: network timeout",
+		},
+		{
+			name:     "error with Error prefix",
+			input:    fmt.Errorf("Error: invalid resource"),
+			expected: "Error: invalid resource",
+		},
+		{
+			name:     "error with lowercase error prefix",
+			input:    fmt.Errorf("error: something went wrong"),
+			expected: "Error: error: something went wrong",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := formatErrorMessage(tc.input)
+			if result != tc.expected {
+				t.Errorf("Expected '%s', got '%s'", tc.expected, result)
+			}
+		})
 	}
 }

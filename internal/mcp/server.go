@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
@@ -27,6 +28,16 @@ const (
 	ErrLODParameterInvalid  = "Error: lod parameter must be 0 or 1"
 	ErrLookBackLimitInvalid = "Error: look_back_limit parameter must be a valid integer"
 )
+
+// formatErrorMessage formats an error for tool results, avoiding duplicate "Error:" prefixes.
+func formatErrorMessage(err error) string {
+	errStr := err.Error()
+	// If the error already starts with "Error:", don't add another prefix
+	if strings.HasPrefix(errStr, "Error:") {
+		return errStr
+	}
+	return fmt.Sprintf("Error: %v", err)
+}
 
 // Server represents an MCP server.
 type Server struct {
@@ -247,7 +258,7 @@ func (s *Server) callNetworkInfo(ctx context.Context, args map[string]interface{
 
 	result, err := networkinfo.GetNetworkInfo(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -261,7 +272,7 @@ func (s *Server) callASOverview(ctx context.Context, args map[string]interface{}
 
 	result, err := asoverview.GetASOverview(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -275,7 +286,7 @@ func (s *Server) callAnnouncedPrefixes(ctx context.Context, args map[string]inte
 
 	result, err := announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -289,7 +300,7 @@ func (s *Server) callRoutingStatus(ctx context.Context, args map[string]interfac
 
 	result, err := routingstatus.GetRoutingStatus(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -303,7 +314,7 @@ func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interfa
 
 	result, err := routinghistory.GetRoutingHistory(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -317,7 +328,7 @@ func (s *Server) callWhois(ctx context.Context, args map[string]interface{}) (*T
 
 	result, err := whois.GetWhois(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -331,7 +342,7 @@ func (s *Server) callAbuseContactFinder(ctx context.Context, args map[string]int
 
 	result, err := abusecontactfinder.GetAbuseContactFinder(ctx, resource)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -350,7 +361,7 @@ func (s *Server) callRPKIValidation(ctx context.Context, args map[string]interfa
 
 	result, err := rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -378,7 +389,7 @@ func (s *Server) callASNNeighbours(ctx context.Context, args map[string]interfac
 
 	result, err := asnneighbours.GetASNNeighbours(ctx, resource, lod, queryTime)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -401,7 +412,7 @@ func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface
 
 	result, err := lookingglass.GetLookingGlass(ctx, resource, lookBackLimit)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
@@ -410,7 +421,7 @@ func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
 	result, err := whatsmyip.GetWhatsMyIP(ctx)
 	if err != nil {
-		return CreateToolResult(fmt.Sprintf("Error: %v", err), true), nil
+		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
 
 	return CreateToolResultFromJSON(result), nil
