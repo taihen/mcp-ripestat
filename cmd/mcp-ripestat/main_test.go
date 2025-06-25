@@ -1255,14 +1255,16 @@ func TestWarmupHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Create handler similar to main.go
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"server":    "mcp-ripestat",
-		})
+		}); err != nil {
+			t.Errorf("failed to encode response: %v", err)
+		}
 	}
 
 	handler(w, req)
@@ -1311,17 +1313,19 @@ func TestStatusHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Create handler similar to main.go
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"server":    "mcp-ripestat",
 			"version":   "1.0.0",
 			"mcp_ready": true,
 			"uptime":    time.Since(time.Now()).String(),
-		})
+		}); err != nil {
+			t.Errorf("failed to encode response: %v", err)
+		}
 	}
 
 	handler(w, req)
@@ -1504,6 +1508,7 @@ func TestMCPHandler_ServerError(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			// Expected panic due to nil server
+			t.Log("Expected panic due to nil server:", r)
 		}
 	}()
 
@@ -1519,7 +1524,7 @@ func TestMCPHandler_ServerError(t *testing.T) {
 	}
 }
 
-// Test error paths for handlers to increase coverage
+// Test error paths for handlers to increase coverage.
 func TestHandlerErrorPaths(t *testing.T) {
 	t.Run("rpki_validation_error_path", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/rpki-validation?resource=AS13335&prefix=1.1.1.0/24", nil)
@@ -1579,7 +1584,7 @@ func TestHandlerErrorPaths(t *testing.T) {
 	})
 }
 
-// Test MCP endpoint with direct HTTP requests to exercise the actual handlers
+// Test MCP endpoint with direct HTTP requests to exercise the actual handlers.
 func TestMCPEndpointIntegration(t *testing.T) {
 	// Test the warmup and status endpoints through HTTP
 	endpoints := []struct {
@@ -1596,29 +1601,34 @@ func TestMCPEndpointIntegration(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			// Simulate the mux routing by calling the handler directly
-			if ep.path == "/warmup" {
-				handler := func(w http.ResponseWriter, r *http.Request) {
+			switch ep.path {
+			case "/warmup":
+				handler := func(w http.ResponseWriter, _ *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(map[string]interface{}{
+					if err := json.NewEncoder(w).Encode(map[string]interface{}{
 						"status":    "ready",
 						"timestamp": time.Now().UTC().Format(time.RFC3339),
 						"server":    "mcp-ripestat",
-					})
+					}); err != nil {
+						t.Errorf("failed to encode response: %v", err)
+					}
 				}
 				handler(w, req)
-			} else if ep.path == "/status" {
-				handler := func(w http.ResponseWriter, r *http.Request) {
+			case "/status":
+				handler := func(w http.ResponseWriter, _ *http.Request) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(map[string]interface{}{
+					if err := json.NewEncoder(w).Encode(map[string]interface{}{
 						"status":    "ready",
 						"timestamp": time.Now().UTC().Format(time.RFC3339),
 						"server":    "mcp-ripestat",
 						"version":   "1.0.0",
 						"mcp_ready": true,
 						"uptime":    time.Since(time.Now()).String(),
-					})
+					}); err != nil {
+						t.Errorf("failed to encode response: %v", err)
+					}
 				}
 				handler(w, req)
 			}

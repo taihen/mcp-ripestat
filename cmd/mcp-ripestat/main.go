@@ -97,28 +97,32 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 	})
 
 	// Warmup endpoint to prevent cold starts
-	mux.HandleFunc("/warmup", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/warmup", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"server":    "mcp-ripestat",
-		})
+		}); err != nil {
+			slog.Error("failed to encode warmup response", "err", err)
+		}
 	})
 
 	// Status endpoint for debugging cold starts
-	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/status", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ready",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"server":    "mcp-ripestat",
 			"version":   "1.0.0",
 			"mcp_ready": true,
 			"uptime":    time.Since(time.Now()).String(),
-		})
+		}); err != nil {
+			slog.Error("failed to encode status response", "err", err)
+		}
 	})
 
 	addr := ":" + port
