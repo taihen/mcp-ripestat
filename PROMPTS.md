@@ -4,6 +4,7 @@ Here’s a grab-bag of “next-level” questions you can throw at the
 `mcp-ripestat` server. Feel free to contribute your own with a PR.
 
 > [!HINT]
+>
 > Those prompts are also input into the development of the `mcp-ripestat`
 > to prioritize the next required feature based on prompt usecase.
 

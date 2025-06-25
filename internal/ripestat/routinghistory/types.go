@@ -24,13 +24,13 @@ type OriginData struct {
 
 // PrefixData represents routing history for a specific prefix.
 type PrefixData struct {
-	Prefix   string          `json:"prefix"`
-	Timeline []TimelineEntry `json:"timeline"`
+	Prefix    string          `json:"prefix"`
+	Timelines []TimelineEntry `json:"timelines"`
 }
 
 // TimelineEntry represents a single point in the routing history timeline.
 type TimelineEntry struct {
-	StartTime       string `json:"starttime"`
-	EndTime         string `json:"endtime"`
-	FullPeersSeeing int    `json:"full_peers_seeing"`
+	StartTime       types.CustomTime `json:"starttime"`
+	EndTime         types.CustomTime `json:"endtime"`
+	FullPeersSeeing float64          `json:"full_peers_seeing"`
 }

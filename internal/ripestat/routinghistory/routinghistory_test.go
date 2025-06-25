@@ -36,11 +36,11 @@ func TestClient_Get(t *testing.T) {
 							"prefixes": [
 								{
 									"prefix": "193.0.0.0/21",
-									"timeline": [
+									"timelines": [
 										{
 											"starttime": "2000-01-01T00:00:00",
 											"endtime": "2023-12-31T23:59:59",
-											"full_peers_seeing": 50
+											"full_peers_seeing": 50.0
 										}
 									]
 								}
@@ -70,11 +70,11 @@ func TestClient_Get(t *testing.T) {
 							"prefixes": [
 								{
 									"prefix": "193.0.0.0/21",
-									"timeline": [
+									"timelines": [
 										{
 											"starttime": "2000-01-01T00:00:00",
 											"endtime": "2023-12-31T23:59:59",
-											"full_peers_seeing": 50
+											"full_peers_seeing": 50.0
 										}
 									]
 								}
