@@ -103,7 +103,7 @@ func (s *Server) handleNotification(_ context.Context, notif *Notification) (int
 
 // handleInitialize handles the initialize request.
 func (s *Server) handleInitialize(req *Request) (interface{}, error) {
-	slog.Debug("handling initialize request")
+	slog.Info("handling initialize request - server ready for MCP client")
 
 	var params InitializeParams
 	if req.Params != nil {
@@ -120,6 +120,12 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 	if params.ProtocolVersion != ProtocolVersion {
 		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
 	}
+
+	// Log server readiness for debugging cold starts
+	slog.Info("MCP server responding to initialize request", 
+		"server_name", s.serverName, 
+		"version", s.serverVersion,
+		"client_protocol", params.ProtocolVersion)
 
 	result := CreateInitializeResult(s.serverName, s.serverVersion)
 	return NewResponse(result, req.ID), nil

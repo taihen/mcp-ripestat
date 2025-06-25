@@ -96,6 +96,31 @@ func run(ctx context.Context, port string, disableWhatsMyIP bool) error {
 		manifestHandler(w, r, disableWhatsMyIP)
 	})
 
+	// Warmup endpoint to prevent cold starts
+	mux.HandleFunc("/warmup", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "ready",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"server": "mcp-ripestat",
+		})
+	})
+
+	// Status endpoint for debugging cold starts
+	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":     "ready",
+			"timestamp":  time.Now().UTC().Format(time.RFC3339),
+			"server":     "mcp-ripestat",
+			"version":    "1.0.0",
+			"mcp_ready":  true,
+			"uptime":     time.Since(time.Now()).String(),
+		})
+	})
+
 	addr := ":" + port
 
 	server := &http.Server{
@@ -564,7 +589,8 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	}
 	defer r.Body.Close()
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	// Extended timeout for cold start scenarios
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
 	response, err := server.ProcessMessage(ctx, body)
