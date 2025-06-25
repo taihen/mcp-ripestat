@@ -1,15 +1,15 @@
 # Binaries for programs and plugins
 bin/
 
-# Test binary, built with `go test -c`
+# Test binary
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Output of the go coverage tool
 *.out
 *.html
 
 
-# IDE specific files and local development environment
+# IDE specific files
 .idea/
 .vscode/
 .claude/
@@ -27,5 +27,5 @@ Thumbs.db
 # Environment variables
 .env
 
-# Top-level binary
+# Top-level application
 /mcp-ripestat
