@@ -18,6 +18,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkihistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
@@ -298,6 +299,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callAbuseContactFinder(ctx, args)
 	case "getRPKIValidation":
 		return s.callRPKIValidation(ctx, args)
+	case "getRPKIHistory":
+		return s.callRPKIHistory(ctx, args)
 	case "getASNNeighbours":
 		return s.callASNNeighbours(ctx, args)
 	case "getLookingGlass":
@@ -426,6 +429,20 @@ func (s *Server) callRPKIValidation(ctx context.Context, args map[string]interfa
 	}
 
 	result, err := rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callRPKIHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := rpkihistory.GetRPKIHistory(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}

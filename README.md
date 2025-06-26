@@ -145,13 +145,18 @@ JSON-RPC 2.0 transport. It provides two interfaces:
 > [!FAIL]
 > **BREAKING CHANGE**: All legacy REST API endpoints have been removed in v2.0.0. Use the MCP JSON-RPC endpoint instead.
 
-This is a major breaking change. Legacy REST endpoints have been completely removed to keep the codebase compact and focused on the MCP protocol. All functionality previously available through REST endpoints is now accessible through the `/mcp` endpoint using the MCP protocol.
+This is a major breaking change. Legacy REST endpoints have been completely
+removed to keep the codebase compact and focused on the MCP protocol. All
+functionality previously available through REST endpoints is now accessible
+through the `/mcp` endpoint using the MCP protocol.
 
 ## MCP Client Configuration
 
 To use this MCP server locally, simply copy and paste the
-[MCP client configuration](./mcp.json) into your MCP client (e.g. for Cursor,
-place it in `~/.cursor/mcp.json` on macOS/Linux).
+[MCP client configuration](./mcp.json) into your MCP client
+
+- **Cursor**: macOS/Linux: `~/.cursor/mcp.json`
+- **Claude Code**: `claude mcp add --transport http ripestat https://localhost:8080/mcp`
 
 ### Demo Server
 
