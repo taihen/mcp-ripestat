@@ -124,6 +124,13 @@ jobs:
         uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      - name: Get version
+        id: version
+        run: |
+          # Get version from git tag or commit hash
+          VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
+          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building with version: ${VERSION}"
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
@@ -132,7 +139,7 @@ jobs:
           tags: mcp-ripestat:latest
           platforms: linux/amd64,linux/arm64
           build-args: |
-            VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
+            VERSION=${{ steps.version.outputs.VERSION }}
   release:
     name: Release
     runs-on: ubuntu-latest
