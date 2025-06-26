@@ -60,6 +60,7 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 
 **Utility:**
 
+- What's My IP detection with proxy header support for accurate client IP identification behind load balancers, proxies, and CDNs
 - Health check and warmup endpoints for monitoring and deployment
 
 ## Architectural Rationale

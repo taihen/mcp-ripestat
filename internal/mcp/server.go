@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,23 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
+
+// contextKey is a custom type for context keys to avoid collisions.
+type contextKey string
+
+// httpRequestKey is the context key for storing HTTP request information.
+const httpRequestKey contextKey = "http_request"
+
+// WithHTTPRequest stores an HTTP request in the context.
+func WithHTTPRequest(ctx context.Context, r *http.Request) context.Context {
+	return context.WithValue(ctx, httpRequestKey, r)
+}
+
+// HTTPRequestFromContext retrieves an HTTP request from the context.
+func HTTPRequestFromContext(ctx context.Context) (*http.Request, bool) {
+	r, ok := ctx.Value(httpRequestKey).(*http.Request)
+	return r, ok
+}
 
 // Error message constants for parameter validation.
 const (
@@ -453,6 +471,21 @@ func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface
 }
 
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
+	// Check if we have HTTP request context for client IP extraction
+	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
+		// Extract client IP from HTTP headers for proxy scenarios
+		clientIP := whatsmyip.ExtractClientIP(httpReq)
+		slog.Debug("extracted client IP from HTTP request", "client_ip", clientIP, "remote_addr", httpReq.RemoteAddr)
+
+		// Use the extracted client IP for whats-my-ip query
+		result, err := whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+	}
+
+	// Fallback to standard behavior if no HTTP context available
 	result, err := whatsmyip.GetWhatsMyIP(ctx)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
