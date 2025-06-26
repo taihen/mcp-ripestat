@@ -185,6 +185,9 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
+	// Store HTTP request in context for tools that need access to headers
+	ctx = mcp.WithHTTPRequest(ctx, r)
+
 	response, err := server.ProcessMessage(ctx, body)
 	if err != nil {
 		slog.Error("failed to process MCP message", "err", err)

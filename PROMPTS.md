@@ -32,7 +32,7 @@ The current implementation provides these RIPEstat API endpoints:
 
 **Utility:**
 
-- `getWhatsMyIP` - Caller's public IP address
+- `getWhatsMyIP` - Caller's public IP address (supports proxy headers for accurate client IP detection)
 
 ---
 
@@ -83,6 +83,7 @@ The current implementation provides these RIPEstat API endpoints:
 "What's my public IP address?"
 "Detect my current IP and show its network information"
 "Show me my IP and find its abuse contact"
+"Get my real client IP address (bypassing proxies/load balancers)"
 ```
 
 ---
