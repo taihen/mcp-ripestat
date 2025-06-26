@@ -30,6 +30,10 @@ The current implementation provides these RIPEstat API endpoints:
 - `getRPKIValidation` - RPKI validation status for ASN/prefix pairs
 - `getAbuseContactFinder` - Abuse contact information for resources
 
+**Geographic & Regional Analysis:**
+
+- `getCountryASNs` - Autonomous System Numbers for a given country code
+
 **Utility:**
 
 - `getWhatsMyIP` - Caller's public IP address (supports proxy headers for accurate client IP detection)
@@ -75,6 +79,16 @@ The current implementation provides these RIPEstat API endpoints:
 "Check if AS15169 is authorized for 8.8.8.0/24"
 "Verify RPKI status of AS13335 and 104.16.0.0/13"
 "Is AS64496 valid for announcing 203.0.113.0/24?"
+```
+
+### Country & Geographic Queries
+
+```shell
+"Show me all ASNs registered in the Netherlands"
+"Get ASN statistics for Germany with detailed lists"
+"How many ASNs does France have?"
+"List all routed and non-routed ASNs for the United States"
+"Compare ASN counts between Switzerland and Austria"
 ```
 
 ### Utility Queries
