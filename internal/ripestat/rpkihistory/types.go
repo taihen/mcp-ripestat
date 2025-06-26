@@ -1,6 +1,8 @@
 package rpkihistory
 
 import (
+	"time"
+
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
@@ -17,10 +19,10 @@ type Data struct {
 
 // TimeseriesEntry represents a single entry in the RPKI History timeseries.
 type TimeseriesEntry struct {
-	Prefix    string `json:"prefix"`
-	Time      string `json:"time"`
-	VRPCount  int    `json:"vrp_count"`
-	Count     int    `json:"count"`
-	Family    int    `json:"family"`
-	MaxLength int    `json:"max_length"`
+	Prefix    string    `json:"prefix"`
+	Time      time.Time `json:"time"`
+	VRPCount  int       `json:"vrp_count"`
+	Count     int       `json:"count"`
+	Family    int       `json:"family"`
+	MaxLength int       `json:"max_length"`
 }

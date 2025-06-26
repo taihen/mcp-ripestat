@@ -80,8 +80,8 @@ func TestGetRPKIHistory_Integration(t *testing.T) {
 				if entry.Prefix == "" {
 					t.Error("GetRPKIHistory() first entry has empty prefix")
 				}
-				if entry.Time == "" {
-					t.Error("GetRPKIHistory() first entry has empty time")
+				if entry.Time.IsZero() {
+					t.Error("GetRPKIHistory() first entry has zero time")
 				}
 				if entry.Family == 0 {
 					t.Error("GetRPKIHistory() first entry has zero family")

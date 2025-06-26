@@ -74,8 +74,8 @@ func TestRPKIHistoryE2E(t *testing.T) {
 				if entry.Prefix == "" {
 					t.Error("Get() first entry has empty prefix")
 				}
-				if entry.Time == "" {
-					t.Error("Get() first entry has empty time")
+				if entry.Time.IsZero() {
+					t.Error("Get() first entry has zero time")
 				}
 				if entry.Family == 0 {
 					t.Error("Get() first entry has zero family")
