@@ -5,7 +5,7 @@ COPY go.mod ./
 # RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/mcp-ripestat ./cmd/mcp-ripestat
-FROM ghcr.io/taihen/base-image:v2025.06.24
+FROM ghcr.io/taihen/base-image:v2025.06.26
 WORKDIR /app
 COPY --from=builder /app/bin/mcp-ripestat /app/mcp-ripestat
 EXPOSE 8080
