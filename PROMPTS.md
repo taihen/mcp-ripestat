@@ -195,6 +195,14 @@ check routing legitimacy, and find appropriate abuse contacts."
 
 ## 💡 Tips and Hints
 
+### Tool selection
+
+- If your client supports explicit tool selection, prefix the prompt.
+
+```shell
+@ripestat announced_prefixes AS61138 starttime=2025-06-24T00:00Z
+```
+
 ### Query Optimization
 
 - **Be specific with timeframes**: Use "last 24 hours", "past week", or specific dates for historical queries
