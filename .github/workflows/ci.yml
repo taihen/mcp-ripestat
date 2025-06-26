@@ -131,6 +131,8 @@ jobs:
           push: false
           tags: mcp-ripestat:latest
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
   release:
     name: Release
     runs-on: ubuntu-latest
@@ -185,6 +187,8 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ steps.semantic.outputs.new_release_version }}
           tags: |-
             ghcr.io/taihen/mcp-ripestat:latest
             ghcr.io/taihen/mcp-ripestat:${{ steps.semantic.outputs.new_release_version }}

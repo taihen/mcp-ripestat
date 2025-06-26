@@ -4,7 +4,8 @@ COPY go.mod ./
 # There are no dependencies in go.mod, so we don't need to run `go mod download` here.
 # RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/mcp-ripestat ./cmd/mcp-ripestat
+ARG VERSION=dev
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${VERSION}" -o /app/bin/mcp-ripestat ./cmd/mcp-ripestat
 FROM ghcr.io/taihen/base-image:v2025.06.26
 WORKDIR /app
 COPY --from=builder /app/bin/mcp-ripestat /app/mcp-ripestat
