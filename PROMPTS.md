@@ -28,6 +28,7 @@ The current implementation provides these RIPEstat API endpoints:
 **Security & Compliance:**
 
 - `getRPKIValidation` - RPKI validation status for ASN/prefix pairs
+- `getRPKIHistory` - Historical RPKI validation status for IP prefixes
 - `getAbuseContactFinder` - Abuse contact information for resources
 
 **Geographic & Regional Analysis:**
@@ -79,6 +80,9 @@ The current implementation provides these RIPEstat API endpoints:
 "Check if AS15169 is authorized for 8.8.8.0/24"
 "Verify RPKI status of AS13335 and 104.16.0.0/13"
 "Is AS64496 valid for announcing 203.0.113.0/24?"
+"Show me the RPKI history for prefix 193.0.22.0/23"
+"When did 8.8.8.0/24 first appear in RPKI validation records?"
+"Track RPKI validation changes for 2001:7fb:ff00::/48 over time"
 ```
 
 ### Country & Geographic Queries
