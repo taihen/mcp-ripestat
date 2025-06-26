@@ -1,6 +1,8 @@
 package bgplay
 
 import (
+	"encoding/json"
+
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
@@ -12,16 +14,16 @@ type Response struct {
 
 // Data represents the 'data' field in the response.
 type Data struct {
-	Resource       string        `json:"resource"`
-	QueryStartTime string        `json:"query_starttime"`
-	QueryEndTime   string        `json:"query_endtime"`
-	InitialState   []RouteRecord `json:"initial_state"`
-	Events         []Event       `json:"events"`
-	TargetPrefix   string        `json:"target_prefix,omitempty"`
-	RRCs           []int         `json:"rrcs,omitempty"`
-	Nodes          []interface{} `json:"nodes,omitempty"`
-	Sources        []interface{} `json:"sources,omitempty"`
-	Targets        []interface{} `json:"targets,omitempty"`
+	Resource       string          `json:"resource"`
+	QueryStartTime string          `json:"query_starttime"`
+	QueryEndTime   string          `json:"query_endtime"`
+	InitialState   []RouteRecord   `json:"initial_state"`
+	Events         []Event         `json:"events"`
+	TargetPrefix   string          `json:"target_prefix,omitempty"`
+	RRCs           []int           `json:"rrcs,omitempty"`
+	Nodes          json.RawMessage `json:"nodes,omitempty"`
+	Sources        json.RawMessage `json:"sources,omitempty"`
+	Targets        json.RawMessage `json:"targets,omitempty"`
 }
 
 // RouteRecord represents a BGP route record.
