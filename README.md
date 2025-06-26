@@ -138,12 +138,12 @@ JSON-RPC 2.0 transport. It provides two interfaces:
 - **Usage**: Compatible with Cursor IDE and other MCP clients
 - **Features**: Full MCP handshake, capability negotiation, tool calling
 
-### Legacy REST API (Removed in v2)
+### Legacy REST API (Removed in v2.0.0)
 
-> [!FAIL]
-> This API has been removed in v2. Use the MCP JSON-RPC endpoint instead.
+> [!FAIL] 
+> **BREAKING CHANGE**: All legacy REST API endpoints have been removed in v2.0.0. Use the MCP JSON-RPC endpoint instead.
 
-Legacy REST endpoints have been removed to keep the codebase compact and focused on the MCP protocol. All functionality previously available through REST endpoints is now accessible through the `/mcp` endpoint using the MCP protocol.
+This is a major breaking change. Legacy REST endpoints have been completely removed to keep the codebase compact and focused on the MCP protocol. All functionality previously available through REST endpoints is now accessible through the `/mcp` endpoint using the MCP protocol.
 
 ## MCP Client Configuration
 
