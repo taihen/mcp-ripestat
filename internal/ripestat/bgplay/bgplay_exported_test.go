@@ -37,7 +37,7 @@ func TestBGPlay_Integration(t *testing.T) {
 					},
 					{
 						"target_prefix": "193.0.6.0/24",
-						"source_id": "rrc01-2",  
+						"source_id": "rrc01-2",
 						"path": [1299, 3333],
 						"community": ["1299:3000"]
 					}
