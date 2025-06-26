@@ -277,6 +277,24 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getCountryASNs",
+			Description: "Get Autonomous System Numbers (ASNs) for a given country code.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "Two-letter ISO country code (e.g., 'nl', 'us', 'de').",
+					},
+					"lod": map[string]interface{}{
+						"type":        "string",
+						"description": "Level of detail: 0 (basic stats) or 1 (includes lists of routed/non-routed ASNs). Default is 0.",
+					},
+				},
+				"required": []string{"resource"},
+			},
+		},
+		{
 			Name:        "getWhatsMyIP",
 			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
 			InputSchema: map[string]interface{}{
