@@ -85,7 +85,7 @@ func TestClient_Get(t *testing.T) {
 					t.Errorf("Get() error = nil, wantErr %v", tt.wantErr)
 					return
 				}
-				if tt.errContains != "" && !containsString(err.Error(), tt.errContains) {
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("Get() error = %v, want error containing %s", err, tt.errContains)
 				}
 				return
@@ -268,10 +268,4 @@ func TestDefaultClient(t *testing.T) {
 	if c.client == nil {
 		t.Error("DefaultClient() client is nil")
 	}
-}
-
-func containsString(s, substr string) bool {
-	return len(substr) == 0 || (len(s) >= len(substr) && s[len(s)-len(substr):] == substr) ||
-		(len(s) > len(substr) && s[:len(substr)] == substr) ||
-		(len(s) > len(substr) && strings.Contains(s, substr))
 }
