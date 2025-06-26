@@ -38,4 +38,4 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 21     | `sprint-21` | TBD     | BGP Updates                   | `bgp-updates`                | Planned   |
 | 22     | `sprint-22` | TBD     | Prefix Routing Consistency    | `prefix-routing-consistency` | Planned   |
 | 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
-| 24     | `sprint-24` | TBD     | Support proxy headers         | N/A                          | Completed |
+| 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |
