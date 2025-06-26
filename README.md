@@ -85,6 +85,7 @@ private mode - not exposed to the internet.
 - Make
 
 > [!INFO]
+>
 > No External Dependencies: This project uses only Go standard library.
 
 ```bash

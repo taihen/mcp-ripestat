@@ -32,7 +32,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 15     | `sprint-15` | TBD     | MCP Streaming Protocol        | N/A                          | Planned   |
 | 16     | `sprint-16` | TBD     | BGPlay                        | `bgplay`                     | Planned   |
 | 17     | `sprint-17` | v1.16.0 | Routing History               | `routing-history`            | Completed |
-| 18     | `sprint-18` | TBD     | Country ASNs                  | `country-asns-history`       | Planned   |
+| 18     | `sprint-18` | TBD     | Country ASNs                  | `country-asns`               | Completed |
 | 19     | `sprint-19` | TBD     | Prefix Overview               | `prefix-overview`            | Planned   |
 | 20     | `sprint-20` | TBD     | RPKI History                  | `rpki-history`               | Planned   |
 | 21     | `sprint-21` | TBD     | BGP Updates                   | `bgp-updates`                | Planned   |
