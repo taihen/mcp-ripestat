@@ -24,6 +24,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getRoutingHistory` - Historical routing changes and announcements
 - `getASNNeighbours` - Upstream/downstream AS relationships
 - `getLookingGlass` - Real-time BGP data from RIPE RRCs
+- `getBGPlay` - BGP routing events and timeline for IP addresses/prefixes
 
 **Security & Compliance:**
 
@@ -50,6 +51,7 @@ The current implementation provides these RIPEstat API endpoints:
 "Show me WHOIS data for 192.0.2.1"
 "Find abuse contacts for IP 203.0.113.50"
 "Get routing history for 1.1.1.1"
+"Show BGP play data for 8.8.8.8"
 "What's the network ownership of 2001:db8::1?"
 ```
 
@@ -59,6 +61,7 @@ The current implementation provides these RIPEstat API endpoints:
 "Analyze the prefix 193.0.0.0/21"
 "What's the routing status for 8.8.8.0/24?"
 "Show BGP data for 2001:7fb::/32 from RIPE looking glass"
+"Get BGP play timeline for 193.0.6.0/24"
 "Get historical routing changes for 104.16.0.0/13"
 "Find the network owner of 198.51.100.0/24"
 ```

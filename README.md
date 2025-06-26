@@ -52,11 +52,17 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 - Routing history for IP addresses, prefixes, and ASNs (historical BGP visibility data)
 - ASN neighbours for Autonomous Systems (upstream/downstream relationships)
 - Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
+- BGP play data for IP addresses and prefixes (BGP routing events and timeline)
 
 **Security & Compliance:**
 
 - RPKI validation status for ASN and prefix combinations
+- RPKI history for IP prefixes (historical RPKI validation status)
 - Abuse contact finder for IP addresses and prefixes
+
+**Geographic & Regional Analysis:**
+
+- Country ASNs for given country codes (Autonomous System Numbers by country)
 
 **Utility:**
 

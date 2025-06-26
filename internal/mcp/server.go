@@ -13,6 +13,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/bgplay"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
@@ -307,6 +308,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callLookingGlass(ctx, args)
 	case "getCountryASNs":
 		return s.callCountryASNs(ctx, args)
+	case "getBGPlay":
+		return s.callBGPlay(ctx, args)
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
@@ -503,6 +506,20 @@ func (s *Server) callCountryASNs(ctx context.Context, args map[string]interface{
 
 	opts := &countryasns.GetOptions{LOD: lod}
 	result, err := countryasns.GetCountryASNs(ctx, resource, opts)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callBGPlay(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := bgplay.GetBGPlay(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
