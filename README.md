@@ -60,7 +60,7 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 
 **Utility:**
 
-- What's My IP functionality with proxy header support for IP detection
+- Health check and warmup endpoints for monitoring and deployment
 
 ## Architectural Rationale
 
@@ -110,33 +110,21 @@ make build
 # Enable debug logging
 ./bin/mcp-ripestat --debug
 
-# Disable What's My IP endpoint (for shared environments this is undesirable)
-./bin/mcp-ripestat --disable-whats-my-ip
+# Run the server
+./bin/mcp-ripestat
 
 # Show help
 ./bin/mcp-ripestat --help
 ```
 
-### Proxy Support
+### Health Check Endpoints
 
-The What's My IP endpoint (`/whats-my-ip`) automatically detects the real client
-IP address when the server is behind a proxy or load balancer. It supports the
-following proxy headers:
+The server provides essential monitoring endpoints:
 
-- `X-Forwarded-For` - Standard proxy header and extended (GCP CloudRun)
-- `X-Real-IP` - Alternative proxy header
-- `CF-Connecting-IP` - Cloudflare-specific header
+- `/status` - Server status with uptime, version, and health information
+- `/warmup` - Warmup endpoint to prevent cold starts in containerized deployments
 
-When running behind a proxy or Cloudflare tunnel, the endpoint will
-automatically use these headers to determine the actual client IP address
-instead of the proxy's IP.
-
-### Shared Environment Configuration
-
-For shared environments, you might consider disabling the `What's My IP` endpoint
-using the `--disable-whats-my-ip` flag. If instance is behind a proxy or load
-balancer, you might see proxy IP address instead of the actual client IP. Check
-supported proxy headers above.
+These endpoints are essential for load balancers, monitoring systems, and deployment orchestration.
 
 ## MCP Protocol Support
 
@@ -150,14 +138,12 @@ JSON-RPC 2.0 transport. It provides two interfaces:
 - **Usage**: Compatible with Cursor IDE and other MCP clients
 - **Features**: Full MCP handshake, capability negotiation, tool calling
 
-### Legacy REST API (Deprecated)
+### Legacy REST API (Removed in v2)
 
 > [!FAIL]
-> This API is deprecated and will be removed in v2.
+> This API has been removed in v2. Use the MCP JSON-RPC endpoint instead.
 
-- **Endpoints**: Individual REST endpoints (e.g., `/network-info`)
-- **Protocol**: HTTP REST with query parameters
-- **Usage**: Direct API access and backward compatibility
+Legacy REST endpoints have been removed to keep the codebase compact and focused on the MCP protocol. All functionality previously available through REST endpoints is now accessible through the `/mcp` endpoint using the MCP protocol.
 
 ## MCP Client Configuration
 
