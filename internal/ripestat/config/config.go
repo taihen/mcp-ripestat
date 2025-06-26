@@ -11,7 +11,7 @@ const (
 	DefaultBaseURL = "https://stat.ripe.net"
 
 	// DefaultTimeout is the default timeout for HTTP requests.
-	DefaultTimeout = 10 * time.Second
+	DefaultTimeout = 30 * time.Second
 
 	// DefaultRetryCount is the default number of retries for failed requests.
 	DefaultRetryCount = 3

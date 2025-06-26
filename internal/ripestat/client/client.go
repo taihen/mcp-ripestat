@@ -115,13 +115,22 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 
+	// Track request timing for slow request warnings.
+	start := time.Now()
 	resp, err := c.HTTPClient.Do(req)
+	duration := time.Since(start)
+
 	if err != nil {
-		c.Logger.Error("Request failed: %v", err)
+		c.Logger.Error("Request failed after %v: %v", duration, err)
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("request failed: %w", err))
 	}
 
-	c.Logger.Debug("Received response with status code: %d", resp.StatusCode)
+	// Log warning for requests taking more than 10 seconds.
+	if duration > 10*time.Second {
+		c.Logger.Warning("Slow request to %s took %v", u.String(), duration)
+	}
+
+	c.Logger.Debug("Request to %s completed in %v with status: %d", u.String(), duration, resp.StatusCode)
 
 	return resp, nil
 }

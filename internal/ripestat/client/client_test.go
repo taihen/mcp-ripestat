@@ -534,3 +534,47 @@ func TestClient_Get_RequestCreationWithContext(t *testing.T) {
 		t.Fatal("Expected error for cancelled context, got nil")
 	}
 }
+
+func TestClient_Get_SlowRequestWarning(t *testing.T) {
+	// Setup test server with delay
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(11 * time.Second) // Simulate slow response
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := io.WriteString(w, `{"data": "test"}`)
+		if err != nil {
+			t.Fatalf("Failed to write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	// Create client with custom logger to capture warning
+	var logOutput strings.Builder
+	c := New(server.URL, nil)
+	c.Logger = logging.NewLogger(logging.LogLevelWarning, &logOutput)
+
+	// Make request
+	ctx := context.Background()
+	params := url.Values{}
+	params.Set("resource", "test")
+
+	resp, err := c.Get(ctx, "/test", params)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if resp == nil {
+		t.Fatal("Expected non-nil response")
+	}
+
+	defer resp.Body.Close()
+
+	// Check that warning was logged
+	logContent := logOutput.String()
+	if !strings.Contains(logContent, "Slow request") {
+		t.Errorf("Expected warning about slow request, got log: %s", logContent)
+	}
+	if !strings.Contains(logContent, "took") {
+		t.Errorf("Expected warning to include timing, got log: %s", logContent)
+	}
+}
