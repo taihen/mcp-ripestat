@@ -37,4 +37,4 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 20     | `sprint-20` | TBD     | RPKI History                  | `rpki-history`               | Planned   |
 | 21     | `sprint-21` | TBD     | BGP Updates                   | `bgp-updates`                | Planned   |
 | 22     | `sprint-22` | TBD     | Prefix Routing Consistency    | `prefix-routing-consistency` | Planned   |
-| 23     | `sprint-23` | TBD     | Removal of REST API Endpoints | N/A                          | Planned   |
+| 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
