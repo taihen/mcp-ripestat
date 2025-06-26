@@ -129,8 +129,8 @@ jobs:
         run: |
           # Get version from git tag or commit hash
           VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Building with version: $VERSION"
+          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building with version: ${VERSION}"
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
