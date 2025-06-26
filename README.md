@@ -140,7 +140,7 @@ JSON-RPC 2.0 transport. It provides two interfaces:
 
 ### Legacy REST API (Removed in v2.0.0)
 
-> [!FAIL] 
+> [!FAIL]
 > **BREAKING CHANGE**: All legacy REST API endpoints have been removed in v2.0.0. Use the MCP JSON-RPC endpoint instead.
 
 This is a major breaking change. Legacy REST endpoints have been completely removed to keep the codebase compact and focused on the MCP protocol. All functionality previously available through REST endpoints is now accessible through the `/mcp` endpoint using the MCP protocol.
