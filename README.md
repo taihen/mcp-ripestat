@@ -85,7 +85,6 @@ private mode - not exposed to the internet.
 - Make
 
 > [!INFO]
->
 > No External Dependencies: This project uses only Go standard library.
 
 ```bash
@@ -111,9 +110,6 @@ make build
 
 # Enable debug logging
 ./bin/mcp-ripestat --debug
-
-# Run the server
-./bin/mcp-ripestat
 
 # Show help
 ./bin/mcp-ripestat --help
