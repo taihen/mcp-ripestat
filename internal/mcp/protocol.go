@@ -309,6 +309,20 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getBGPlay",
+			Description: "Get BGP play data for an IP address or prefix, showing BGP routing events and timeline.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "The IP address or prefix to query for BGP play data.",
+					},
+				},
+				"required": []string{"resource"},
+			},
+		},
+		{
 			Name:        "getWhatsMyIP",
 			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
 			InputSchema: map[string]interface{}{
