@@ -1,23 +1,23 @@
 version: 2
 updates:
-  - package-ecosystem: "gomod"
-    directory: "/"
+  - package-ecosystem: gomod
+    directory: /
     schedule:
-      interval: "daily"
+      interval: daily
     commit-message:
-      prefix: "fix(deps)"
+      prefix: fix(deps)
       include: scope
-  - package-ecosystem: "github-actions"
-    directory: "/.github"
+  - package-ecosystem: github-actions
+    directory: /.github
     schedule:
-      interval: "daily"
+      interval: daily
     commit-message:
-      prefix: "fix(deps)"
+      prefix: fix(deps)
       include: scope
-  - package-ecosystem: "docker"
-    directory: "/"
+  - package-ecosystem: docker
+    directory: /
     schedule:
-      interval: "daily"
+      interval: daily
     commit-message:
-      prefix: "fix(deps)"
+      prefix: fix
       include: scope
