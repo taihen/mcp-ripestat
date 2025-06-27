@@ -122,10 +122,10 @@ func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) 
 
 // Server represents an MCP server.
 type Server struct {
-	serverName         string
-	serverVersion      string
-	initialized        bool
-	disableWhatsMyIP   bool
+	serverName          string
+	serverVersion       string
+	initialized         bool
+	disableWhatsMyIP    bool
 	globallyInitialized bool // For compatibility with older protocol versions
 }
 
@@ -231,7 +231,7 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		s.initialized = true
 		s.globallyInitialized = true // Global initialization for compatibility
 		slog.Info("auto-initialized server for legacy protocol version", "version", params.ProtocolVersion)
-		
+
 		result := CreateLegacyInitializeResult(s.serverName, s.serverVersion)
 		return NewResponse(result, req.ID), nil
 	}

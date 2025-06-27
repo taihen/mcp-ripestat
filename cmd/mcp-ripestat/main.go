@@ -174,12 +174,12 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	if protocolVersion == "" {
 		protocolVersion = "2025-06-18" // Default to latest
 	}
-	
+
 	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "protocol_version", protocolVersion)
 
 	// Determine client capabilities based on protocol version
 	supportsStreamableHTTP := isProtocolVersionAtLeast(protocolVersion, "2025-06-18")
-	
+
 	// For older protocol versions (< 2025-06-18), use simplified handling
 	if !supportsStreamableHTTP {
 		slog.Debug("using simplified handling for older protocol version", "version", protocolVersion)
@@ -503,26 +503,26 @@ func isProtocolVersionAtLeast(version, minVersion string) bool {
 // handleLegacyMCPClient handles requests from clients using protocol versions < 2025-06-18.
 func handleLegacyMCPClient(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	origin := r.Header.Get("Origin")
-	
+
 	// Simple CORS handling for legacy clients
 	if origin != "" && isValidOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Protocol-Version")
 	}
-	
+
 	// Handle OPTIONS (CORS preflight)
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	
+
 	// Only allow POST for legacy clients
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	// Handle as simple POST request without session management
 	handleSimpleMCPRequest(w, r, server)
 }
