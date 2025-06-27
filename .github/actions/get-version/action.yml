@@ -1,0 +1,16 @@
+name: 'Get Version'
+description: 'Extract version from git tag or commit hash'
+outputs:
+  version:
+    description: 'The extracted version'
+    value: ${{ steps.version.outputs.version }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract version
+      id: version
+      shell: bash
+      run: |
+        VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "Version: ${VERSION}"
