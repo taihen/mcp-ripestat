@@ -20,6 +20,33 @@ func TestCreateInitializeResult(t *testing.T) {
 	if result.Capabilities == nil {
 		t.Error("Expected Capabilities to be non-nil")
 	}
+
+	// Test new transport capabilities
+	caps, ok := result.Capabilities.(*Capabilities)
+	if !ok {
+		t.Fatal("Expected Capabilities to be *Capabilities type")
+	}
+
+	if caps.Transport == nil {
+		t.Error("Expected Transport capability to be non-nil")
+	} else {
+		if caps.Transport.HTTP == nil {
+			t.Error("Expected HTTP transport capability to be non-nil")
+		} else {
+			if !caps.Transport.HTTP.Streamable {
+				t.Error("Expected HTTP transport to be streamable")
+			}
+			expectedMethods := []string{"POST", "GET"}
+			if len(caps.Transport.HTTP.Methods) != len(expectedMethods) {
+				t.Errorf("Expected %d HTTP methods, got %d", len(expectedMethods), len(caps.Transport.HTTP.Methods))
+			}
+			for i, method := range caps.Transport.HTTP.Methods {
+				if method != expectedMethods[i] {
+					t.Errorf("Expected method %s at index %d, got %s", expectedMethods[i], i, method)
+				}
+			}
+		}
+	}
 }
 
 func TestCreateToolsList(t *testing.T) {
@@ -184,8 +211,8 @@ func TestCreateToolResultFromJSON(t *testing.T) {
 }
 
 func TestProtocolVersion(t *testing.T) {
-	if ProtocolVersion != "2025-03-26" {
-		t.Errorf("ProtocolVersion = %s, want '2025-03-26'", ProtocolVersion)
+	if ProtocolVersion != "2025-06-18" {
+		t.Errorf("ProtocolVersion = %s, want '2025-06-18'", ProtocolVersion)
 	}
 }
 

@@ -18,7 +18,7 @@ func TestMCPProtocol(t *testing.T) {
 
 	t.Run("Initialize", func(t *testing.T) {
 		req := mcp.NewRequest("initialize", map[string]interface{}{
-			"protocolVersion": "2025-03-26",
+			"protocolVersion": "2025-06-18",
 			"capabilities":    map[string]interface{}{},
 			"clientInfo": map[string]interface{}{
 				"name":    "test-client",
@@ -38,8 +38,8 @@ func TestMCPProtocol(t *testing.T) {
 			t.Fatal("Initialize result is not an object")
 		}
 
-		if result["protocolVersion"] != "2025-03-26" {
-			t.Errorf("Expected protocolVersion '2025-03-26', got %v", result["protocolVersion"])
+		if result["protocolVersion"] != "2025-06-18" {
+			t.Errorf("Expected protocolVersion '2025-06-18', got %v", result["protocolVersion"])
 		}
 
 		if _, ok := result["capabilities"]; !ok {

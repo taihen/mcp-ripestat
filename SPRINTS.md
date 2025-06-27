@@ -29,7 +29,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 12     | `sprint-12` | v1.13.0 | User Experience               | N/A                          | Completed |
 | 13     | `sprint-13` | v1.14.0 | MCP JSON-RPC 2025 Protocol    | N/A                          | Completed |
 | 14     | `sprint-14` | TBD     | MCP Authorization             | N/A                          | Planned   |
-| 15     | `sprint-15` | TBD     | MCP Streaming Protocol        | N/A                          | Planned   |
+| 15     | `sprint-15` | v2.6.0  | MCP Streamable HTTP           | N/A                          | Completed |
 | 16     | `sprint-16` | v2.5.0  | BGPlay                        | `bgplay`                     | Completed |
 | 17     | `sprint-17` | v1.16.0 | Routing History               | `routing-history`            | Completed |
 | 18     | `sprint-18` | v2.3.0  | Country ASNs                  | `country-asns`               | Completed |

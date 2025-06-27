@@ -6,7 +6,7 @@ import (
 )
 
 // MCP Protocol Version.
-const ProtocolVersion = "2025-03-26"
+const ProtocolVersion = "2025-06-18"
 
 // Initialize request parameters.
 type InitializeParams struct {
@@ -41,6 +41,7 @@ type Capabilities struct {
 	Prompts   *PromptsCapability   `json:"prompts,omitempty"`
 	Logging   *LoggingCapability   `json:"logging,omitempty"`
 	Roots     *RootsCapability     `json:"roots,omitempty"`
+	Transport *TransportCapability `json:"transport,omitempty"`
 }
 
 // ToolsCapability represents tools capability.
@@ -65,6 +66,17 @@ type LoggingCapability struct{}
 // RootsCapability represents roots capability.
 type RootsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
+}
+
+// TransportCapability represents transport capability.
+type TransportCapability struct {
+	HTTP *HTTPTransportCapability `json:"http,omitempty"`
+}
+
+// HTTPTransportCapability represents HTTP transport capability.
+type HTTPTransportCapability struct {
+	Streamable bool     `json:"streamable"`
+	Methods    []string `json:"methods"`
 }
 
 // Tool represents a tool that can be called.
@@ -108,6 +120,12 @@ func CreateInitializeResult(serverName, serverVersion string) *InitializeResult 
 			Prompts:   &PromptsCapability{ListChanged: false},
 			Logging:   &LoggingCapability{},
 			Roots:     &RootsCapability{ListChanged: false},
+			Transport: &TransportCapability{
+				HTTP: &HTTPTransportCapability{
+					Streamable: true,
+					Methods:    []string{"POST", "GET"},
+				},
+			},
 		},
 		ServerInfo: ServerInfo{
 			Name:    serverName,
