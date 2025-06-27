@@ -9,14 +9,39 @@ permissions:
   packages: write
   pull-requests: write
   security-events: write
+env:
+  GO_VERSION: '1.24'
+  BINARY_NAME: 'mcp-ripestat'
 jobs:
-  lint:
-    name: Linting
+  check-commit:
+    name: Check Commit Type
     runs-on: ubuntu-latest
+    outputs:
+      is-chore: ${{ steps.check.outputs.is-chore }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check if commit is chore
+        id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=format:'%s')
+          echo "Commit message: $COMMIT_MSG"
+          if [[ "$COMMIT_MSG" =~ ^chore(\(.*\))?!?:.* ]]; then
+            echo "is-chore=true" >> "$GITHUB_OUTPUT"
+            echo "🔧 Detected chore commit - will skip build/test/release"
+          else
+            echo "is-chore=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Regular commit - will run full pipeline"
+          fi
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    needs: [check-commit]
+    steps:
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go
         with:
+          go-version: ${{ env.GO_VERSION }}
           fetch-depth: 0
       - name: Super-Linter
         uses: super-linter/super-linter@v7
@@ -31,10 +56,6 @@ jobs:
           VALIDATE_DOCKERFILE: true
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_GITATTRIBUTES: true
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
@@ -58,32 +79,21 @@ jobs:
     name: Testing
     runs-on: ubuntu-latest
     needs: [lint]
+    if: needs.check-commit.outputs.is-chore != 'true'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go
         with:
-          go-version: '1.24'
-      - name: Install dependencies
-        run: go mod download
-      - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-      - name: Generate coverage report
-        run: go tool cover -html=coverage.txt -o coverage.html
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run tests
+        run: make test
       - name: Check coverage threshold
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.txt | grep total | \
-          awk '{print $3}' | sed 's/%//')
-          echo "Total coverage: $COVERAGE%"
-          if (( $(echo "$COVERAGE < 90" | bc -l) )); then
-            echo "Error: Test coverage is below 90%"
-            exit 1
-          fi
+        run: make check-coverage
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: [test]
+    if: needs.check-commit.outputs.is-chore != 'true'
     strategy:
       matrix:
         goos: [linux, windows, darwin]
@@ -92,63 +102,69 @@ jobs:
           - goos: windows
             goarch: arm64
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go
         with:
-          go-version: '1.24'
+          go-version: ${{ env.GO_VERSION }}
+      - name: Get Version
+        id: version
+        uses: ./.github/actions/get-version
       - name: Build binaries
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: |
-          # Get version from git tag or commit hash
-          VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
-          BINARY_NAME="mcp-ripestat-${{ matrix.goos }}-${{ matrix.goarch }}"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
-          go build -v -ldflags="-s -w -X main.version=${VERSION}" -o "${BINARY_NAME}" ./cmd/mcp-ripestat
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make build-cross
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mcp-ripestat-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: mcp-ripestat-*
-  docker-build:
-    name: Docker Build
+          name: ${{ env.BINARY_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ env.BINARY_NAME }}-*
+  docker:
+    name: Docker Build and Push
     runs-on: ubuntu-latest
     needs: [build]
+    if: needs.check-commit.outputs.is-chore != 'true'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Get Version
+        id: version
+        uses: ./.github/actions/get-version
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Get version
-        id: version
-        run: |
-          # Get version from git tag or commit hash
-          VERSION=$(git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
-          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Building with version: ${VERSION}"
-      - name: Build Docker image
+      - name: Login to GitHub Container Registry
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and conditionally push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
-          tags: mcp-ripestat:latest
+          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           platforms: linux/amd64,linux/arm64
           build-args: |
-            VERSION=${{ steps.version.outputs.VERSION }}
+            VERSION=${{ steps.version.outputs.version }}
+          tags: |
+            ghcr.io/taihen/${{ env.BINARY_NAME }}:latest
+            ghcr.io/taihen/${{ env.BINARY_NAME }}:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [build, docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [build, docker]
+    if: needs.check-commit.outputs.is-chore != 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Setup Go Environment
+        uses: ./.github/actions/setup-go
         with:
+          go-version: ${{ env.GO_VERSION }}
           fetch-depth: 0
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -171,31 +187,9 @@ jobs:
           ## Docker Images
           Pull the Docker image:
           \`\`\`bash
-          docker pull ghcr.io/taihen/mcp-ripestat:${{ steps.semantic.outputs.new_release_version }}
-          docker pull ghcr.io/taihen/mcp-ripestat:latest
+          docker pull ghcr.io/taihen/${{ env.BINARY_NAME }}:${{ steps.semantic.outputs.new_release_version }}
+          docker pull ghcr.io/taihen/${{ env.BINARY_NAME }}:latest
           \`\`\`"
           gh release edit "$RELEASE_TAG" --notes "$NEW_BODY"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Log in to GitHub Container Registry
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set up Docker Buildx
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: docker/setup-buildx-action@v3
-      - name: Build and push Docker image
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            VERSION=${{ steps.semantic.outputs.new_release_version }}
-          tags: |-
-            ghcr.io/taihen/mcp-ripestat:latest
-            ghcr.io/taihen/mcp-ripestat:${{ steps.semantic.outputs.new_release_version }}
