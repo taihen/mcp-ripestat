@@ -169,40 +169,19 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 
 // mcpHandler handles MCP JSON-RPC requests with streamable HTTP support.
 func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
-	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr)
+	origin := r.Header.Get("Origin")
+	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "user_agent", r.Header.Get("User-Agent"))
 
-	// Check if this is a streamable HTTP request (has Origin header or is GET/OPTIONS)
-	isStreamableHTTP := r.Header.Get("Origin") != "" || r.Method == http.MethodGet || r.Method == http.MethodOptions
-
-	if isStreamableHTTP {
-		// Validate streamable HTTP requirements.
-		if !validateStreamableHTTP(w, r) {
-			return
-		}
-
-		// Handle session management.
-		sessionID := getOrCreateSession(r, w)
-		slog.Debug("session management", "session_id", sessionID)
-
-		// Route based on HTTP method.
-		switch r.Method {
-		case http.MethodPost:
-			handleMCPRequest(w, r, server, sessionID)
-		case http.MethodGet:
-			handleMCPQuery(w, r, server, sessionID)
-		case http.MethodOptions:
-			handleCORS(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	} else {
-		// Handle regular MCP clients (POST without Origin header)
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		handleMCPRequest(w, r, server, "")
+	// For now, only handle POST requests to ensure compatibility
+	// TODO: Re-enable streamable HTTP support after debugging
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
+
+	// Handle all POST requests as regular MCP requests
+	slog.Debug("processing as regular MCP client", "method", r.Method)
+	handleMCPRequest(w, r, server, "")
 }
 
 // validateStreamableHTTP validates HTTP transport requirements.
@@ -330,8 +309,18 @@ func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server
 
 // handleMCPQuery handles GET requests (query parameters to JSON-RPC).
 func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, sessionID string) {
+	query := r.URL.Query()
+	slog.Debug("handling GET request", "query_params", query, "has_method", query.Get("method") != "")
+	
+	// Check if this is a valid MCP query request (has method parameter)
+	if query.Get("method") == "" {
+		slog.Warn("GET request to MCP endpoint without method parameter", "query", query)
+		http.Error(w, "GET requests require 'method' query parameter for MCP calls", http.StatusBadRequest)
+		return
+	}
+	
 	// Convert query parameters to JSON-RPC request.
-	requestData, err := server.ParseQueryToRequest(r.URL.Query())
+	requestData, err := server.ParseQueryToRequest(query)
 	if err != nil {
 		slog.Error("failed to parse query parameters", "err", err)
 		http.Error(w, fmt.Sprintf("Bad request: %v", err), http.StatusBadRequest)

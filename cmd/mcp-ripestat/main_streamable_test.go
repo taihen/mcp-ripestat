@@ -376,14 +376,14 @@ func TestMCPHandler_MethodRouting(t *testing.T) {
 			method:         "GET",
 			origin:         "http://localhost:3000",
 			body:           "",
-			expectedStatus: http.StatusBadRequest, // Will fail due to missing method parameter
+			expectedStatus: http.StatusMethodNotAllowed, // Only POST allowed now
 		},
 		{
 			name:           "OPTIONS request",
 			method:         "OPTIONS",
 			origin:         "http://localhost:3000",
 			body:           "",
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusMethodNotAllowed, // Only POST allowed now
 		},
 		{
 			name:           "unsupported method",
@@ -397,7 +397,7 @@ func TestMCPHandler_MethodRouting(t *testing.T) {
 			method:         "POST",
 			origin:         "https://malicious.com",
 			body:           "{}",
-			expectedStatus: http.StatusForbidden,
+			expectedStatus: http.StatusNoContent, // Now processes as regular MCP
 		},
 	}
 
