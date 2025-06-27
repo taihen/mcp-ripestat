@@ -122,10 +122,11 @@ func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) 
 
 // Server represents an MCP server.
 type Server struct {
-	serverName       string
-	serverVersion    string
-	initialized      bool
-	disableWhatsMyIP bool
+	serverName         string
+	serverVersion      string
+	initialized        bool
+	disableWhatsMyIP   bool
+	globallyInitialized bool // For compatibility with older protocol versions
 }
 
 // NewServer creates a new MCP server.
@@ -169,12 +170,12 @@ func (s *Server) handleRequest(ctx context.Context, req *Request) (interface{}, 
 	case "initialize":
 		return s.handleInitialize(req)
 	case "tools/list":
-		if !s.initialized {
+		if !s.initialized && !s.globallyInitialized {
 			return NewErrorResponse(InitializationError, "Server not initialized", "Initialize first", req.ID), nil
 		}
 		return s.handleToolsList(req)
 	case "tools/call":
-		if !s.initialized {
+		if !s.initialized && !s.globallyInitialized {
 			return NewErrorResponse(InitializationError, "Server not initialized", "Initialize first", req.ID), nil
 		}
 		return s.handleToolsCall(ctx, req)
@@ -215,16 +216,30 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		}
 	}
 
-	// Validate protocol version
-	if params.ProtocolVersion != ProtocolVersion {
-		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
-	}
+	// Determine if this is a legacy client based on protocol version
+	isLegacyClient := params.ProtocolVersion != "" && params.ProtocolVersion < "2025-06-18"
 
 	// Log server readiness for debugging cold starts
 	slog.Info("MCP server responding to initialize request",
 		"server_name", s.serverName,
 		"version", s.serverVersion,
-		"client_protocol", params.ProtocolVersion)
+		"client_protocol", params.ProtocolVersion,
+		"is_legacy", isLegacyClient)
+
+	// For legacy protocol versions (< 2025-06-18), use simplified initialization
+	if isLegacyClient {
+		s.initialized = true
+		s.globallyInitialized = true // Global initialization for compatibility
+		slog.Info("auto-initialized server for legacy protocol version", "version", params.ProtocolVersion)
+		
+		result := CreateLegacyInitializeResult(s.serverName, s.serverVersion)
+		return NewResponse(result, req.ID), nil
+	}
+
+	// For current protocol versions, validate and use full capabilities
+	if params.ProtocolVersion != ProtocolVersion {
+		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
+	}
 
 	result := CreateInitializeResult(s.serverName, s.serverVersion)
 	return NewResponse(result, req.ID), nil

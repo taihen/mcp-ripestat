@@ -134,6 +134,25 @@ func CreateInitializeResult(serverName, serverVersion string) *InitializeResult 
 	}
 }
 
+// CreateLegacyInitializeResult creates a simplified initialize result for older protocol versions.
+func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeResult {
+	return &InitializeResult{
+		ProtocolVersion: "2025-03-26", // Use older protocol version
+		Capabilities: &Capabilities{
+			Tools:     &ToolsCapability{ListChanged: false},
+			Resources: &ResourcesCapability{Subscribe: false, ListChanged: false},
+			Prompts:   &PromptsCapability{ListChanged: false},
+			Logging:   &LoggingCapability{},
+			Roots:     &RootsCapability{ListChanged: false},
+			// No transport capabilities for legacy clients to avoid confusion
+		},
+		ServerInfo: ServerInfo{
+			Name:    serverName,
+			Version: serverVersion,
+		},
+	}
+}
+
 // CreateToolsList creates a list of available tools.
 func CreateToolsList() *ToolsListResult {
 	tools := []Tool{

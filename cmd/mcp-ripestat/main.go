@@ -167,17 +167,27 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, manifest, http.StatusOK)
 }
 
-// mcpHandler handles MCP JSON-RPC requests with streamable HTTP support.
+// mcpHandler handles MCP JSON-RPC requests with protocol version-based capabilities.
 func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	origin := r.Header.Get("Origin")
 	protocolVersion := r.Header.Get("MCP-Protocol-Version")
+	if protocolVersion == "" {
+		protocolVersion = "2025-06-18" // Default to latest
+	}
+	
 	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "protocol_version", protocolVersion)
 
-	// Determine if this is a streamable HTTP request
-	// Only treat as streamable if:
-	// 1. It's a GET request (explicit streamable call)
-	// 2. It's an OPTIONS request (CORS preflight)
-	// 3. It's a POST request with MCP-Protocol-Version >= 2025-06-18 and Origin header
+	// Determine client capabilities based on protocol version
+	supportsStreamableHTTP := isProtocolVersionAtLeast(protocolVersion, "2025-06-18")
+	
+	// For older protocol versions (< 2025-06-18), use simplified handling
+	if !supportsStreamableHTTP {
+		slog.Debug("using simplified handling for older protocol version", "version", protocolVersion)
+		handleLegacyMCPClient(w, r, server)
+		return
+	}
+
+	// For 2025-06-18+, determine if this is a streamable HTTP request
 	isStreamableHTTP := false
 
 	switch r.Method {
@@ -188,13 +198,10 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 		// OPTIONS requests are for CORS
 		isStreamableHTTP = true
 	case http.MethodPost:
-		// POST with Origin header and new protocol version (2025-06-18+)
+		// POST with Origin header indicates streamable HTTP client
 		if origin != "" {
-			// Check if protocol version supports streamable HTTP
-			// Be strict: only 2025-06-18+ or empty (default to latest) should get streamable HTTP
-			supportsStreamableHTTP := protocolVersion == "" || protocolVersion == "2025-06-18"
-			isStreamableHTTP = supportsStreamableHTTP
-			slog.Debug("protocol version check", "version", protocolVersion, "supports_streamable", supportsStreamableHTTP)
+			isStreamableHTTP = true
+			slog.Debug("POST with origin detected as streamable HTTP", "origin", origin)
 		}
 	}
 
@@ -226,7 +233,7 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	} else {
-		slog.Debug("processing as regular MCP client")
+		slog.Debug("processing as regular MCP client (POST-only)")
 		// Handle regular MCP clients (POST without streamable support)
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -484,5 +491,76 @@ func statusHandler(w http.ResponseWriter, _ *http.Request, startTime time.Time) 
 		"uptime":    time.Since(startTime).String(),
 	}); err != nil {
 		slog.Error("failed to encode status response", "err", err)
+	}
+}
+
+// isProtocolVersionAtLeast checks if the given version is at least the minimum version.
+func isProtocolVersionAtLeast(version, minVersion string) bool {
+	// Simple string comparison works for our YYYY-MM-DD format
+	return version >= minVersion
+}
+
+// handleLegacyMCPClient handles requests from clients using protocol versions < 2025-06-18.
+func handleLegacyMCPClient(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
+	origin := r.Header.Get("Origin")
+	
+	// Simple CORS handling for legacy clients
+	if origin != "" && isValidOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Protocol-Version")
+	}
+	
+	// Handle OPTIONS (CORS preflight)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	
+	// Only allow POST for legacy clients
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	
+	// Handle as simple POST request without session management
+	handleSimpleMCPRequest(w, r, server)
+}
+
+// handleSimpleMCPRequest handles MCP requests without session management for legacy clients.
+func handleSimpleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error("failed to read request body", "err", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Extended timeout for cold start scenarios
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	// Store HTTP request in context (without session management)
+	ctx = mcp.WithHTTPRequest(ctx, r)
+
+	response, err := server.ProcessMessage(ctx, body)
+	if err != nil {
+		slog.Error("failed to process MCP message", "err", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// If no response (notification), return 204 No Content
+	if response == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to write MCP response", "err", err)
 	}
 }
