@@ -131,25 +131,27 @@ These endpoints are essential for load balancers, monitoring systems, and deploy
 
 ## MCP Protocol Support
 
-This server implements the Model Context Protocol (MCP) 2025 specification with
-JSON-RPC 2.0 transport. It provides two interfaces:
+### Streamable HTTP Transport
+• Endpoint: /mcp (streaming occurs over the same request/response channel)
+• Protocol: Stream-framed HTTP (per MCP spec 2025-06-18)
+• Status: Default transport for all MCP clients implementing the 2025-06-18 spec
+• Features: Bidirectional streaming, incremental responses, zero-copy frames
 
-### JSON-RPC 2.0 Endpoint (Recommended)
+### JSON-RPC 2.0 Endpoint
+• Endpoint: /mcp
+• Protocol: JSON-RPC 2.0
+• Status: Recommended production endpoint (replaces REST)
+• Features: Full MCP handshake, capability negotiation, tool invocation, compatible with Cursor IDE and other MCP-compliant clients
 
-- **Endpoint**: `/mcp`
-- **Protocol**: MCP 2025 JSON-RPC 2.0
-- **Usage**: Compatible with Cursor IDE and other MCP clients
-- **Features**: Full MCP handshake, capability negotiation, tool calling
-
-### Legacy REST API (Removed in v2.0.0)
+### Legacy REST API
+• Endpoint: All previous /\* REST paths
+• Protocol: Traditional REST over HTTP
+• Status: Removed as of v2.0.0 — breaking change
+• Features: Deprecated. All functionality has been migrated to the /mcp JSON-RPC 2.0 endpoint.
 
 > [!FAIL]
-> **BREAKING CHANGE**: All legacy REST API endpoints have been removed in v2.0.0. Use the MCP JSON-RPC endpoint instead.
-
-This is a major breaking change. Legacy REST endpoints have been completely
-removed to keep the codebase compact and focused on the MCP protocol. All
-functionality previously available through REST endpoints is now accessible
-through the `/mcp` endpoint using the MCP protocol.
+> **BREAKING CHANGE**: All legacy REST API endpoints have been removed in
+> v2.0.0. Use the MCP JSON-RPC endpoint instead.
 
 ## MCP Client Configuration
 
