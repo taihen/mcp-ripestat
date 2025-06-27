@@ -170,18 +170,69 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 // mcpHandler handles MCP JSON-RPC requests with streamable HTTP support.
 func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	origin := r.Header.Get("Origin")
-	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "user_agent", r.Header.Get("User-Agent"))
+	protocolVersion := r.Header.Get("MCP-Protocol-Version")
+	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "protocol_version", protocolVersion)
 
-	// For now, only handle POST requests to ensure compatibility
-	// TODO: Re-enable streamable HTTP support after debugging
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+	// Determine if this is a streamable HTTP request
+	// Only treat as streamable if:
+	// 1. It's a GET request (explicit streamable call)
+	// 2. It's an OPTIONS request (CORS preflight)
+	// 3. It's a POST request with MCP-Protocol-Version >= 2025-06-18 and Origin header
+	isStreamableHTTP := false
+
+	switch r.Method {
+	case http.MethodGet:
+		// GET requests are always streamable HTTP
+		isStreamableHTTP = true
+	case http.MethodOptions:
+		// OPTIONS requests are for CORS
+		isStreamableHTTP = true
+	case http.MethodPost:
+		// POST with Origin header and new protocol version (2025-06-18+)
+		if origin != "" {
+			// Check if protocol version supports streamable HTTP
+			supportsStreamableHTTP := protocolVersion == "" || protocolVersion >= "2025-06-18"
+			isStreamableHTTP = supportsStreamableHTTP
+			slog.Debug("protocol version check", "version", protocolVersion, "supports_streamable", supportsStreamableHTTP)
+		}
 	}
 
-	// Handle all POST requests as regular MCP requests
-	slog.Debug("processing as regular MCP client", "method", r.Method)
-	handleMCPRequest(w, r, server, "")
+	slog.Debug("request classification", "is_streamable", isStreamableHTTP, "method", r.Method, "has_origin", origin != "", "protocol_version", protocolVersion)
+
+	if isStreamableHTTP {
+		slog.Debug("processing as streamable HTTP request")
+		// Validate streamable HTTP requirements
+		if !validateStreamableHTTP(w, r) {
+			return
+		}
+
+		// Handle session management
+		sessionID := getOrCreateSession(r, w)
+		slog.Debug("session management", "session_id", sessionID)
+
+		// Route based on HTTP method
+		switch r.Method {
+		case http.MethodPost:
+			slog.Debug("routing to handleMCPRequest for streamable POST")
+			handleMCPRequest(w, r, server, sessionID)
+		case http.MethodGet:
+			slog.Debug("routing to handleMCPQuery for GET")
+			handleMCPQuery(w, r, server, sessionID)
+		case http.MethodOptions:
+			slog.Debug("routing to handleCORS for OPTIONS")
+			handleCORS(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		slog.Debug("processing as regular MCP client")
+		// Handle regular MCP clients (POST without streamable support)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleMCPRequest(w, r, server, "")
+	}
 }
 
 // validateStreamableHTTP validates HTTP transport requirements.
@@ -311,14 +362,14 @@ func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server
 func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, sessionID string) {
 	query := r.URL.Query()
 	slog.Debug("handling GET request", "query_params", query, "has_method", query.Get("method") != "")
-	
+
 	// Check if this is a valid MCP query request (has method parameter)
 	if query.Get("method") == "" {
 		slog.Warn("GET request to MCP endpoint without method parameter", "query", query)
 		http.Error(w, "GET requests require 'method' query parameter for MCP calls", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Convert query parameters to JSON-RPC request.
 	requestData, err := server.ParseQueryToRequest(query)
 	if err != nil {

@@ -358,46 +358,68 @@ func TestMCPHandler_MethodRouting(t *testing.T) {
 	server := mcp.NewServer("test-server", "1.0.0", false)
 
 	testCases := []struct {
-		name           string
-		method         string
-		origin         string
-		body           string
-		expectedStatus int
+		name            string
+		method          string
+		origin          string
+		protocolVersion string
+		body            string
+		expectedStatus  int
 	}{
 		{
-			name:           "POST request",
-			method:         "POST",
-			origin:         "http://localhost:3000",
-			body:           "{}",
-			expectedStatus: http.StatusNoContent, // Empty JSON returns no content
+			name:            "POST request from old MCP client",
+			method:          "POST",
+			origin:          "",
+			protocolVersion: "2025-03-26",
+			body:            "{}",
+			expectedStatus:  http.StatusNoContent, // Regular MCP
 		},
 		{
-			name:           "GET request",
-			method:         "GET",
-			origin:         "http://localhost:3000",
-			body:           "",
-			expectedStatus: http.StatusMethodNotAllowed, // Only POST allowed now
+			name:            "POST request with origin and new protocol",
+			method:          "POST",
+			origin:          "http://localhost:3000",
+			protocolVersion: "2025-06-18",
+			body:            "{}",
+			expectedStatus:  http.StatusNoContent, // Streamable HTTP
 		},
 		{
-			name:           "OPTIONS request",
-			method:         "OPTIONS",
-			origin:         "http://localhost:3000",
-			body:           "",
-			expectedStatus: http.StatusMethodNotAllowed, // Only POST allowed now
+			name:            "POST request with origin but old protocol",
+			method:          "POST",
+			origin:          "http://localhost:3000",
+			protocolVersion: "2025-03-26",
+			body:            "{}",
+			expectedStatus:  http.StatusNoContent, // Regular MCP (fallback)
 		},
 		{
-			name:           "unsupported method",
-			method:         "PUT",
-			origin:         "http://localhost:3000",
-			body:           "",
-			expectedStatus: http.StatusMethodNotAllowed,
+			name:            "POST request with origin and no protocol version",
+			method:          "POST",
+			origin:          "http://localhost:3000",
+			protocolVersion: "",
+			body:            "{}",
+			expectedStatus:  http.StatusNoContent, // Streamable HTTP (default to new)
 		},
 		{
-			name:           "invalid origin",
-			method:         "POST",
-			origin:         "https://malicious.com",
-			body:           "{}",
-			expectedStatus: http.StatusNoContent, // Now processes as regular MCP
+			name:            "GET request",
+			method:          "GET",
+			origin:          "http://localhost:3000",
+			protocolVersion: "2025-06-18",
+			body:            "",
+			expectedStatus:  http.StatusBadRequest, // Will fail due to missing method parameter
+		},
+		{
+			name:            "OPTIONS request",
+			method:          "OPTIONS",
+			origin:          "http://localhost:3000",
+			protocolVersion: "2025-06-18",
+			body:            "",
+			expectedStatus:  http.StatusOK,
+		},
+		{
+			name:            "unsupported method",
+			method:          "PUT",
+			origin:          "http://localhost:3000",
+			protocolVersion: "2025-06-18",
+			body:            "",
+			expectedStatus:  http.StatusMethodNotAllowed,
 		},
 	}
 
@@ -412,6 +434,9 @@ func TestMCPHandler_MethodRouting(t *testing.T) {
 
 			if tc.origin != "" {
 				req.Header.Set("Origin", tc.origin)
+			}
+			if tc.protocolVersion != "" {
+				req.Header.Set("MCP-Protocol-Version", tc.protocolVersion)
 			}
 
 			recorder := httptest.NewRecorder()
