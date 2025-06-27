@@ -366,20 +366,31 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 
 	// Check if this is a valid MCP query request (has method parameter)
 	if query.Get("method") == "" {
-		slog.Debug("GET request to MCP endpoint without method parameter", "query", query)
-		// Return error indicating this endpoint expects POST requests for MCP communication
-		// or GET requests with method parameter for streamable HTTP
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		errorResponse := map[string]interface{}{
-			"error": map[string]interface{}{
-				"code":    -32600,
-				"message": "Invalid Request",
-				"data":    "MCP server expects POST requests or GET requests with 'method' parameter",
+		slog.Debug("GET request to MCP endpoint without method parameter, returning endpoint info", "query", query, "user_agent", r.Header.Get("User-Agent"))
+		// Return basic endpoint information for health checks and discovery
+		// This helps MCP clients and tooling understand the endpoint capabilities
+		response := map[string]interface{}{
+			"service":     "mcp-ripestat",
+			"protocol":    "MCP",
+			"version":     "2025-06-18",
+			"methods":     []string{"POST", "GET"},
+			"description": "RIPEstat Data API MCP Server",
+			"endpoints": map[string]interface{}{
+				"mcp": map[string]interface{}{
+					"url":         "/mcp",
+					"methods":     []string{"POST", "GET"},
+					"description": "Main MCP JSON-RPC endpoint",
+					"usage": map[string]string{
+						"POST": "Send JSON-RPC 2.0 requests",
+						"GET":  "Use query parameters: ?method=<method>&params=<json>",
+					},
+				},
 			},
 		}
-		if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
-			slog.Error("failed to write error response", "err", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			slog.Error("failed to write endpoint info response", "err", err)
 		}
 		return
 	}
