@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -1989,4 +1990,316 @@ func TestCallWhatsMyIP_WithoutHTTPContext(t *testing.T) {
 	if result == nil && err == nil {
 		t.Error("Expected either result or error")
 	}
+}
+
+func TestWithSessionID(t *testing.T) {
+	ctx := context.Background()
+	sessionID := "test-session-123"
+
+	// Test storing session ID in context
+	ctxWithSession := WithSessionID(ctx, sessionID)
+
+	// Test retrieving session ID from context
+	retrievedSessionID, ok := SessionIDFromContext(ctxWithSession)
+	if !ok {
+		t.Fatal("Expected to retrieve session ID from context")
+	}
+	if retrievedSessionID != sessionID {
+		t.Errorf("Expected session ID '%s', got '%s'", sessionID, retrievedSessionID)
+	}
+}
+
+func TestSessionIDFromContext_NotPresent(t *testing.T) {
+	ctx := context.Background()
+
+	// Test retrieving from context without session ID
+	_, ok := SessionIDFromContext(ctx)
+	if ok {
+		t.Error("Expected no session ID in context")
+	}
+}
+
+func TestParseQueryToRequest(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+
+	t.Run("valid queries", func(t *testing.T) {
+		testParseQueryToRequestValid(t, server)
+	})
+
+	t.Run("error cases", func(t *testing.T) {
+		testParseQueryToRequestErrors(t, server)
+	})
+}
+
+func testParseQueryToRequestValid(t *testing.T, server *Server) {
+	testCases := []struct {
+		name      string
+		query     url.Values
+		checkFunc func(*testing.T, []byte)
+	}{
+		{
+			name: "valid query with method and resource",
+			query: url.Values{
+				"method":   []string{"tools/call"},
+				"resource": []string{"8.8.8.8"},
+				"id":       []string{"123"},
+			},
+			checkFunc: func(t *testing.T, data []byte) {
+				var request Request
+				if err := json.Unmarshal(data, &request); err != nil {
+					t.Fatalf("Failed to unmarshal request: %v", err)
+				}
+				if request.Method != "tools/call" {
+					t.Errorf("Expected method 'tools/call', got '%s'", request.Method)
+				}
+				if request.ID != "123" {
+					t.Errorf("Expected ID '123', got '%v'", request.ID)
+				}
+				if params, ok := request.Params.(map[string]interface{}); ok {
+					if resource, exists := params["resource"]; !exists || resource != "8.8.8.8" {
+						t.Errorf("Expected resource '8.8.8.8', got '%v'", resource)
+					}
+				} else {
+					t.Error("Expected params to be map[string]interface{}")
+				}
+			},
+		},
+		{
+			name: "valid query without ID (should default to 1)",
+			query: url.Values{
+				"method":   []string{"ping"},
+				"resource": []string{"test"},
+			},
+			checkFunc: func(t *testing.T, data []byte) {
+				var request Request
+				if err := json.Unmarshal(data, &request); err != nil {
+					t.Fatalf("Failed to unmarshal request: %v", err)
+				}
+				if request.ID != "1" {
+					t.Errorf("Expected default ID '1', got '%v'", request.ID)
+				}
+			},
+		},
+		{
+			name: "query with JSON params parameter",
+			query: url.Values{
+				"method": []string{"tools/call"},
+				"params": []string{`{"resource": "test", "lod": "1"}`},
+				"id":     []string{"456"},
+			},
+			checkFunc: func(t *testing.T, data []byte) {
+				var request Request
+				if err := json.Unmarshal(data, &request); err != nil {
+					t.Fatalf("Failed to unmarshal request: %v", err)
+				}
+				if params, ok := request.Params.(map[string]interface{}); ok {
+					if resource, exists := params["resource"]; !exists || resource != "test" {
+						t.Errorf("Expected resource 'test', got '%v'", resource)
+					}
+					if lod, exists := params["lod"]; !exists || lod != "1" {
+						t.Errorf("Expected lod '1', got '%v'", lod)
+					}
+				} else {
+					t.Error("Expected params to be map[string]interface{}")
+				}
+			},
+		},
+		{
+			name: "query with multiple values (should use first)",
+			query: url.Values{
+				"method":   []string{"tools/call"},
+				"resource": []string{"first", "second"},
+			},
+			checkFunc: func(t *testing.T, data []byte) {
+				var request Request
+				if err := json.Unmarshal(data, &request); err != nil {
+					t.Fatalf("Failed to unmarshal request: %v", err)
+				}
+				if params, ok := request.Params.(map[string]interface{}); ok {
+					if resource, exists := params["resource"]; !exists || resource != "first" {
+						t.Errorf("Expected resource 'first', got '%v'", resource)
+					}
+				} else {
+					t.Error("Expected params to be map[string]interface{}")
+				}
+			},
+		},
+		{
+			name: "query with reserved parameter names (should be filtered)",
+			query: url.Values{
+				"method":   []string{"tools/call"},
+				"id":       []string{"789"},
+				"params":   []string{`{"test": "value"}`},
+				"resource": []string{"8.8.8.8"},
+			},
+			checkFunc: func(t *testing.T, data []byte) {
+				var request Request
+				if err := json.Unmarshal(data, &request); err != nil {
+					t.Fatalf("Failed to unmarshal request: %v", err)
+				}
+				if request.Method != "tools/call" {
+					t.Errorf("Expected method 'tools/call', got '%s'", request.Method)
+				}
+				if request.ID != "789" {
+					t.Errorf("Expected ID '789', got '%v'", request.ID)
+				}
+				// Should use params JSON, not individual resource parameter
+				if params, ok := request.Params.(map[string]interface{}); ok {
+					if test, exists := params["test"]; !exists || test != "value" {
+						t.Errorf("Expected test 'value', got '%v'", test)
+					}
+					if _, exists := params["resource"]; exists {
+						t.Error("Resource parameter should not exist when params JSON is provided")
+					}
+				} else {
+					t.Error("Expected params to be map[string]interface{}")
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := server.ParseQueryToRequest(tc.query)
+			if err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if tc.checkFunc != nil {
+				tc.checkFunc(t, data)
+			}
+		})
+	}
+}
+
+func testParseQueryToRequestErrors(t *testing.T, server *Server) {
+	testCases := []struct {
+		name     string
+		query    url.Values
+		errorMsg string
+	}{
+		{
+			name: "missing method parameter",
+			query: url.Values{
+				"resource": []string{"8.8.8.8"},
+			},
+			errorMsg: "method parameter is required",
+		},
+		{
+			name: "query with invalid JSON params",
+			query: url.Values{
+				"method": []string{"tools/call"},
+				"params": []string{`{invalid json`},
+			},
+			errorMsg: "invalid params JSON",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := server.ParseQueryToRequest(tc.query)
+			if err == nil {
+				t.Error("Expected error but got none")
+			} else if !strings.Contains(err.Error(), tc.errorMsg) {
+				t.Errorf("Expected error containing '%s', got '%v'", tc.errorMsg, err)
+			}
+		})
+	}
+}
+
+// Test for uncovered tool functions to achieve 100% coverage.
+func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	ctx := context.Background()
+
+	// Helper function to test tools with basic resource requirement
+	testBasicResourceTool := func(t *testing.T, toolName, resourceValue string) {
+		// Test success case
+		params := &CallToolParams{
+			Name:      toolName,
+			Arguments: map[string]interface{}{"resource": resourceValue},
+		}
+
+		result, err := server.executeToolCall(ctx, params)
+		if err != nil {
+			t.Logf("Network call failed (expected in test environment): %v", err)
+		} else if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Test missing resource case
+		params = &CallToolParams{
+			Name:      toolName,
+			Arguments: map[string]interface{}{},
+		}
+
+		result, err = server.executeToolCall(ctx, params)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if result == nil {
+			t.Error("Expected ToolResult, got nil")
+			return
+		}
+		if !result.IsError {
+			t.Error("Expected error ToolResult")
+		}
+		if !strings.Contains(result.Content[0].Text, "resource parameter is required") {
+			t.Errorf("Expected error message about missing resource, got %s", result.Content[0].Text)
+		}
+	}
+
+	// Test callRPKIHistory
+	t.Run("callRPKIHistory", func(t *testing.T) {
+		testBasicResourceTool(t, "getRPKIHistory", "8.8.8.0/24")
+	})
+
+	// Test callCountryASNs
+	t.Run("callCountryASNs", func(t *testing.T) {
+		testBasicResourceTool(t, "getCountryASNs", "NL")
+
+		// Test with LOD parameter
+		params := &CallToolParams{
+			Name: "getCountryASNs",
+			Arguments: map[string]interface{}{
+				"resource": "NL",
+				"lod":      "1",
+			},
+		}
+
+		result, err := server.executeToolCall(ctx, params)
+		if err != nil {
+			t.Logf("Network call failed (expected in test environment): %v", err)
+		} else if result == nil {
+			t.Error("Expected non-nil result")
+		}
+
+		// Test invalid LOD
+		params = &CallToolParams{
+			Name: "getCountryASNs",
+			Arguments: map[string]interface{}{
+				"resource": "NL",
+				"lod":      "invalid",
+			},
+		}
+
+		result, err = server.executeToolCall(ctx, params)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if result == nil {
+			t.Error("Expected ToolResult, got nil")
+			return
+		}
+		if !result.IsError {
+			t.Error("Expected error ToolResult")
+		}
+		if !strings.Contains(result.Content[0].Text, "lod parameter must be 0 or 1") {
+			t.Errorf("Expected error message about invalid LOD, got %s", result.Content[0].Text)
+		}
+	})
+
+	// Test callBGPlay
+	t.Run("callBGPlay", func(t *testing.T) {
+		testBasicResourceTool(t, "getBGPlay", "8.8.8.8")
+	})
 }

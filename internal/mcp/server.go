@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -31,6 +32,9 @@ type contextKey string
 // httpRequestKey is the context key for storing HTTP request information.
 const httpRequestKey contextKey = "http_request"
 
+// sessionIDKey is the context key for storing session ID information.
+const sessionIDKey contextKey = "session_id"
+
 // WithHTTPRequest stores an HTTP request in the context.
 func WithHTTPRequest(ctx context.Context, r *http.Request) context.Context {
 	return context.WithValue(ctx, httpRequestKey, r)
@@ -40,6 +44,17 @@ func WithHTTPRequest(ctx context.Context, r *http.Request) context.Context {
 func HTTPRequestFromContext(ctx context.Context) (*http.Request, bool) {
 	r, ok := ctx.Value(httpRequestKey).(*http.Request)
 	return r, ok
+}
+
+// WithSessionID stores a session ID in the context.
+func WithSessionID(ctx context.Context, sessionID string) context.Context {
+	return context.WithValue(ctx, sessionIDKey, sessionID)
+}
+
+// SessionIDFromContext retrieves a session ID from the context.
+func SessionIDFromContext(ctx context.Context) (string, bool) {
+	sessionID, ok := ctx.Value(sessionIDKey).(string)
+	return sessionID, ok
 }
 
 // Error message constants for parameter validation.
@@ -549,4 +564,47 @@ func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*
 	}
 
 	return CreateToolResultFromJSON(result), nil
+}
+
+// ParseQueryToRequest converts URL query parameters to JSON-RPC request.
+func (s *Server) ParseQueryToRequest(query url.Values) ([]byte, error) {
+	method := query.Get("method")
+	if method == "" {
+		return nil, fmt.Errorf("method parameter is required")
+	}
+
+	request := &Request{
+		JSONRPC: "2.0",
+		Method:  method,
+		ID:      query.Get("id"),
+	}
+
+	if request.ID == "" {
+		request.ID = "1"
+	}
+
+	// Parse parameters if provided.
+	if paramsStr := query.Get("params"); paramsStr != "" {
+		var params interface{}
+		if err := json.Unmarshal([]byte(paramsStr), &params); err != nil {
+			return nil, fmt.Errorf("invalid params JSON: %w", err)
+		}
+		request.Params = params
+	} else {
+		// Convert individual query parameters to params object.
+		params := make(map[string]interface{})
+		for key, values := range query {
+			if key == "method" || key == "id" || key == "params" {
+				continue
+			}
+			if len(values) > 0 {
+				params[key] = values[0]
+			}
+		}
+		if len(params) > 0 {
+			request.Params = params
+		}
+	}
+
+	return json.Marshal(request)
 }

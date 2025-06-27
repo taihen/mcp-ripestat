@@ -71,9 +71,8 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 
 ## Architectural Rationale
 
-`mcp-ripestat` is implemented as an MCP HTTP (MCP 2025 compatible) server rather
-than a command-line interface (stdio) tool to facilitate centralized deployment
-and access control.
+`mcp-ripestat` is an HTTP server that supports streamable HTTP transport to
+facilitate centralized deployment and access control.
 
 This architecture allows the service to be installed on a single instance and
 be accessed by many users and other MCP clients across a network in
