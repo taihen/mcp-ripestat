@@ -365,8 +365,13 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 
 	// Check if this is a valid MCP query request (has method parameter)
 	if query.Get("method") == "" {
-		slog.Warn("GET request to MCP endpoint without method parameter", "query", query)
-		http.Error(w, "GET requests require 'method' query parameter for MCP calls", http.StatusBadRequest)
+		slog.Debug("GET request to MCP endpoint without method parameter, likely probe/health check", "query", query)
+		// Return simple OK response for probes/health checks
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+			slog.Error("failed to write probe response", "err", err)
+		}
 		return
 	}
 
