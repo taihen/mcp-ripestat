@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -11,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -164,15 +167,130 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, manifest, http.StatusOK)
 }
 
-// mcpHandler handles MCP JSON-RPC requests.
+// mcpHandler handles MCP JSON-RPC requests with streamable HTTP support.
 func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr)
 
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+	// Check if this is a streamable HTTP request (has Origin header or is GET/OPTIONS)
+	isStreamableHTTP := r.Header.Get("Origin") != "" || r.Method == http.MethodGet || r.Method == http.MethodOptions
+
+	if isStreamableHTTP {
+		// Validate streamable HTTP requirements.
+		if !validateStreamableHTTP(w, r) {
+			return
+		}
+
+		// Handle session management.
+		sessionID := getOrCreateSession(r, w)
+		slog.Debug("session management", "session_id", sessionID)
+
+		// Route based on HTTP method.
+		switch r.Method {
+		case http.MethodPost:
+			handleMCPRequest(w, r, server, sessionID)
+		case http.MethodGet:
+			handleMCPQuery(w, r, server, sessionID)
+		case http.MethodOptions:
+			handleCORS(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		// Handle regular MCP clients (POST without Origin header)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleMCPRequest(w, r, server, "")
+	}
+}
+
+// validateStreamableHTTP validates HTTP transport requirements.
+func validateStreamableHTTP(w http.ResponseWriter, r *http.Request) bool {
+	// Origin validation (required by MCP spec).
+	if origin := r.Header.Get("Origin"); origin != "" {
+		if !isValidOrigin(origin) {
+			slog.Warn("invalid origin rejected", "origin", origin)
+			http.Error(w, "Invalid origin", http.StatusForbidden)
+			return false
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
+	// Protocol version handling.
+	protocolVersion := r.Header.Get("MCP-Protocol-Version")
+	if protocolVersion == "" {
+		protocolVersion = "2025-06-18"
+	}
+	if !isSupportedProtocolVersion(protocolVersion) {
+		slog.Warn("unsupported protocol version", "version", protocolVersion)
+		http.Error(w, "Unsupported protocol version", http.StatusBadRequest)
+		return false
+	}
+	w.Header().Set("MCP-Protocol-Version", protocolVersion)
+
+	return true
+}
+
+// isValidOrigin validates the origin header.
+func isValidOrigin(origin string) bool {
+	// Allow common development origins.
+	allowedOrigins := []string{
+		"http://localhost",
+		"https://localhost",
+		"http://127.0.0.1",
+		"https://127.0.0.1",
+		"https://cursor.sh",
+		"https://claude.ai",
+	}
+
+	for _, allowed := range allowedOrigins {
+		if strings.HasPrefix(origin, allowed) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isSupportedProtocolVersion checks if protocol version is supported.
+func isSupportedProtocolVersion(version string) bool {
+	supportedVersions := []string{
+		"2025-06-18",
+		"2025-03-26", // Backward compatibility.
+	}
+
+	for _, supported := range supportedVersions {
+		if version == supported {
+			return true
+		}
+	}
+
+	return false
+}
+
+// getOrCreateSession manages session IDs.
+func getOrCreateSession(r *http.Request, w http.ResponseWriter) string {
+	sessionID := r.Header.Get("MCP-Session-ID")
+	if sessionID == "" {
+		sessionID = generateSessionID()
+		w.Header().Set("MCP-Session-ID", sessionID)
+	}
+	return sessionID
+}
+
+// generateSessionID creates a new session ID.
+func generateSessionID() string {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to timestamp-based ID.
+		return fmt.Sprintf("session_%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(bytes)
+}
+
+// handleMCPRequest handles POST requests (standard JSON-RPC).
+func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server, sessionID string) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("failed to read request body", "err", err)
@@ -181,12 +299,13 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	}
 	defer r.Body.Close()
 
-	// Extended timeout for cold start scenarios
+	// Extended timeout for cold start scenarios.
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
-	// Store HTTP request in context for tools that need access to headers
+	// Store HTTP request and session in context.
 	ctx = mcp.WithHTTPRequest(ctx, r)
+	ctx = mcp.WithSessionID(ctx, sessionID)
 
 	response, err := server.ProcessMessage(ctx, body)
 	if err != nil {
@@ -195,7 +314,7 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 		return
 	}
 
-	// If no response (notification), return 204 No Content
+	// If no response (notification), return 204 No Content.
 	if response == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -207,6 +326,59 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		slog.Error("failed to write MCP response", "err", err)
 	}
+}
+
+// handleMCPQuery handles GET requests (query parameters to JSON-RPC).
+func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, sessionID string) {
+	// Convert query parameters to JSON-RPC request.
+	requestData, err := server.ParseQueryToRequest(r.URL.Query())
+	if err != nil {
+		slog.Error("failed to parse query parameters", "err", err)
+		http.Error(w, fmt.Sprintf("Bad request: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Extended timeout for cold start scenarios.
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	// Store HTTP request and session in context.
+	ctx = mcp.WithHTTPRequest(ctx, r)
+	ctx = mcp.WithSessionID(ctx, sessionID)
+
+	response, err := server.ProcessMessage(ctx, requestData)
+	if err != nil {
+		slog.Error("failed to process MCP query", "err", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// If no response (notification), return 204 No Content.
+	if response == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to write MCP query response", "err", err)
+	}
+}
+
+// handleCORS handles CORS preflight requests.
+func handleCORS(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if origin != "" && isValidOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Protocol-Version, MCP-Session-ID")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {

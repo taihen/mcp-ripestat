@@ -440,7 +440,8 @@ func TestMCPHandler_InvalidJSON(t *testing.T) {
 func TestMCPHandler_MethodNotAllowed(t *testing.T) {
 	server := mcp.NewServer("test-server", version, false)
 
-	req := httptest.NewRequest("GET", "/mcp", nil)
+	// Use PUT method which is not supported
+	req := httptest.NewRequest("PUT", "/mcp", nil)
 	w := httptest.NewRecorder()
 
 	mcpHandler(w, req, server)

@@ -197,6 +197,43 @@ func TestClient_Get_Error(t *testing.T) {
 	}
 }
 
+// TestClient_Get_URLParseError tests the URL parsing error path.
+func TestClient_Get_URLParseError(t *testing.T) {
+	// Create client with invalid base URL
+	c := New("http://[::1", nil) // Invalid URL format
+
+	// Make request that should fail URL parsing
+	ctx := context.Background()
+	params := url.Values{}
+	params.Set("resource", "test")
+
+	resp, err := c.Get(ctx, "/test", params)
+	if err == nil {
+		defer resp.Body.Close()
+		t.Fatal("Expected URL parsing error, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to parse URL") {
+		t.Errorf("Expected error to mention URL parsing, got %q", err.Error())
+	}
+}
+
+// TestClient_Get_RequestCreationError tests the request creation error path.
+func TestClient_Get_RequestCreationError(t *testing.T) {
+	// Create client
+	c := New("https://example.com", nil)
+
+	// Create a context that's already cancelled to trigger request creation error
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	// Make request with cancelled context and invalid method
+	resp, err := c.Get(ctx, "test\x00invalid", nil) // Invalid URL character
+	if err == nil {
+		defer resp.Body.Close()
+		t.Fatal("Expected request creation error, got nil")
+	}
+}
+
 func TestClient_Get_ContextCanceled(t *testing.T) {
 	// Setup test server with delay
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -438,24 +475,6 @@ func TestClient_GetJSON_SuccessfulDecode(t *testing.T) {
 	}
 	if result["status"] != "ok" {
 		t.Errorf("Expected result.status to be 'ok', got %v", result["status"])
-	}
-}
-
-func TestClient_Get_RequestCreationError(t *testing.T) {
-	// Create client
-	c := New("https://example.com", nil)
-
-	// Create a context that's already cancelled to trigger request creation error
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
-
-	params := url.Values{}
-	params.Set("resource", "test")
-
-	resp, err := c.Get(ctx, "/test", params)
-	if err == nil {
-		defer resp.Body.Close()
-		t.Fatal("Expected error for cancelled context, got nil")
 	}
 }
 
