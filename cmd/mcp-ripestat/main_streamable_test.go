@@ -403,7 +403,7 @@ func TestMCPHandler_MethodRouting(t *testing.T) {
 			origin:          "http://localhost:3000",
 			protocolVersion: "2025-06-18",
 			body:            "",
-			expectedStatus:  http.StatusOK, // Returns probe response for GET without params
+			expectedStatus:  http.StatusBadRequest, // Returns error for GET without method param
 		},
 		{
 			name:            "OPTIONS request",

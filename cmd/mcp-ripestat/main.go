@@ -191,7 +191,8 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 		// POST with Origin header and new protocol version (2025-06-18+)
 		if origin != "" {
 			// Check if protocol version supports streamable HTTP
-			supportsStreamableHTTP := protocolVersion == "" || protocolVersion >= "2025-06-18"
+			// Be strict: only 2025-06-18+ or empty (default to latest) should get streamable HTTP
+			supportsStreamableHTTP := protocolVersion == "" || protocolVersion == "2025-06-18"
 			isStreamableHTTP = supportsStreamableHTTP
 			slog.Debug("protocol version check", "version", protocolVersion, "supports_streamable", supportsStreamableHTTP)
 		}
@@ -365,12 +366,20 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 
 	// Check if this is a valid MCP query request (has method parameter)
 	if query.Get("method") == "" {
-		slog.Debug("GET request to MCP endpoint without method parameter, likely probe/health check", "query", query)
-		// Return simple OK response for probes/health checks
+		slog.Debug("GET request to MCP endpoint without method parameter", "query", query)
+		// Return error indicating this endpoint expects POST requests for MCP communication
+		// or GET requests with method parameter for streamable HTTP
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
-			slog.Error("failed to write probe response", "err", err)
+		w.WriteHeader(http.StatusBadRequest)
+		errorResponse := map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    -32600,
+				"message": "Invalid Request",
+				"data":    "MCP server expects POST requests or GET requests with 'method' parameter",
+			},
+		}
+		if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
+			slog.Error("failed to write error response", "err", err)
 		}
 		return
 	}
