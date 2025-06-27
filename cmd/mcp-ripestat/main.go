@@ -171,25 +171,37 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr)
 
-	// Validate streamable HTTP requirements.
-	if !validateStreamableHTTP(w, r) {
-		return
-	}
+	// Check if this is a streamable HTTP request (has Origin header or is GET/OPTIONS)
+	isStreamableHTTP := r.Header.Get("Origin") != "" || r.Method == http.MethodGet || r.Method == http.MethodOptions
 
-	// Handle session management.
-	sessionID := getOrCreateSession(r, w)
-	slog.Debug("session management", "session_id", sessionID)
+	if isStreamableHTTP {
+		// Validate streamable HTTP requirements.
+		if !validateStreamableHTTP(w, r) {
+			return
+		}
 
-	// Route based on HTTP method.
-	switch r.Method {
-	case http.MethodPost:
-		handleMCPRequest(w, r, server, sessionID)
-	case http.MethodGet:
-		handleMCPQuery(w, r, server, sessionID)
-	case http.MethodOptions:
-		handleCORS(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		// Handle session management.
+		sessionID := getOrCreateSession(r, w)
+		slog.Debug("session management", "session_id", sessionID)
+
+		// Route based on HTTP method.
+		switch r.Method {
+		case http.MethodPost:
+			handleMCPRequest(w, r, server, sessionID)
+		case http.MethodGet:
+			handleMCPQuery(w, r, server, sessionID)
+		case http.MethodOptions:
+			handleCORS(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		// Handle regular MCP clients (POST without Origin header)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		handleMCPRequest(w, r, server, "")
 	}
 }
 
