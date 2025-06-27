@@ -81,7 +81,7 @@ jobs:
   test:
     name: Testing
     runs-on: ubuntu-latest
-    needs: [lint]
+    needs: [check-commit, lint]
     if: needs.check-commit.outputs.is-chore != 'true'
     steps:
       - name: Checkout
@@ -97,7 +97,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [check-commit, test]
     if: needs.check-commit.outputs.is-chore != 'true'
     strategy:
       matrix:
@@ -126,7 +126,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [check-commit, build]
     if: needs.check-commit.outputs.is-chore != 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout
