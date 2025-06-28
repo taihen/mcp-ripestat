@@ -1120,10 +1120,8 @@ func TestExecuteToolCall_RoutingHistory_WithPagination(t *testing.T) {
 				if !strings.Contains(result.Content[0].Text, tc.errorMsg) {
 					t.Errorf("Expected error message containing '%s', got %s", tc.errorMsg, result.Content[0].Text)
 				}
-			} else {
-				if result.IsError {
-					t.Errorf("Expected success ToolResult, got error: %s", result.Content[0].Text)
-				}
+			} else if result.IsError {
+				t.Errorf("Expected success ToolResult, got error: %s", result.Content[0].Text)
 			}
 		})
 	}
