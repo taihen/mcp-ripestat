@@ -223,6 +223,18 @@ func CreateToolsList() *ToolsListResult {
 						"type":        "string",
 						"description": "The IP address, prefix, or ASN to query for routing history.",
 					},
+					"start_time": map[string]interface{}{
+						"type":        "string",
+						"description": "Start time for the query in ISO8601 format (e.g., '2024-01-01T00:00:00Z'). If omitted, uses default historical range.",
+					},
+					"end_time": map[string]interface{}{
+						"type":        "string",
+						"description": "End time for the query in ISO8601 format (e.g., '2024-12-31T23:59:59Z'). If omitted, uses current time.",
+					},
+					"max_results": map[string]interface{}{
+						"type":        "string",
+						"description": "Maximum number of routing events to return. Helps limit response size for large datasets.",
+					},
 				},
 				"required": []string{"resource"},
 			},

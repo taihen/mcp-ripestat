@@ -414,6 +414,32 @@ func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interfa
 		return errResult, nil
 	}
 
+	// Get optional pagination parameters
+	startTime := getOptionalStringParam(args, "start_time")
+	endTime := getOptionalStringParam(args, "end_time")
+	
+	var maxResults int
+	if maxResultsStr := getOptionalStringParam(args, "max_results"); maxResultsStr != "" {
+		var err error
+		maxResults, err = strconv.Atoi(maxResultsStr)
+		if err != nil {
+			return CreateToolResult("Error: max_results parameter must be a valid integer", true), nil
+		}
+		if maxResults < 0 {
+			return CreateToolResult("Error: max_results parameter must be non-negative", true), nil
+		}
+	}
+
+	// Use paginated version if any optional parameters are provided
+	if startTime != "" || endTime != "" || maxResults > 0 {
+		result, err := routinghistory.GetRoutingHistoryWithOptions(ctx, resource, startTime, endTime, maxResults)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+	}
+
+	// Default behavior - use original function for backward compatibility
 	result, err := routinghistory.GetRoutingHistory(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
