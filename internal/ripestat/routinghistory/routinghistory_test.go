@@ -264,3 +264,189 @@ func TestGetRoutingHistory(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_GetWithOptions(t *testing.T) {
+	tests := []struct {
+		name         string
+		resource     string
+		startTime    string
+		endTime      string
+		maxResults   int
+		mockResponse string
+		mockStatus   int
+		wantErr      bool
+		errType      *ripestaterrors.Error
+	}{
+		{
+			name:       "valid ASN with all options",
+			resource:   "AS3333",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-12-31T23:59:59Z",
+			maxResults: 100,
+			mockResponse: `{
+				"status": "ok",
+				"status_code": 200,
+				"version": "1.0",
+				"data_call_name": "routing-history",
+				"data_call_status": "supported",
+				"cached": false,
+				"data": {
+					"by_origin": [
+						{
+							"origin": "3333",
+							"prefixes": [
+								{
+									"prefix": "193.0.0.0/21",
+									"timelines": [
+										{
+											"starttime": "2024-01-01T00:00:00",
+											"endtime": "2024-12-31T23:59:59",
+											"full_peers_seeing": 50.0
+										}
+									]
+								}
+							]
+						}
+					],
+					"resource": "AS3333"
+				}
+			}`,
+			mockStatus: 200,
+			wantErr:    false,
+		},
+		{
+			name:       "valid ASN with partial options",
+			resource:   "AS3333",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "",
+			maxResults: 0,
+			mockResponse: `{
+				"status": "ok",
+				"status_code": 200,
+				"data": {
+					"by_origin": [],
+					"resource": "AS3333"
+				}
+			}`,
+			mockStatus: 200,
+			wantErr:    false,
+		},
+		{
+			name:       "empty resource",
+			resource:   "",
+			startTime:  "",
+			endTime:    "",
+			maxResults: 0,
+			wantErr:    true,
+			errType:    ripestaterrors.ErrInvalidParameter,
+		},
+		{
+			name:       "server error",
+			resource:   "AS3333",
+			startTime:  "",
+			endTime:    "",
+			maxResults: 0,
+			mockStatus: 500,
+			wantErr:    true,
+			errType:    ripestaterrors.ErrServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var mockClient *MockHTTPClient
+			if !tt.wantErr || tt.errType == ripestaterrors.ErrServerError {
+				mockClient = &MockHTTPClient{
+					response: tt.mockResponse,
+					status:   tt.mockStatus,
+				}
+			}
+
+			c := client.New("https://stat.ripe.net", mockClient)
+			routingHistoryClient := New(c)
+			result, err := routingHistoryClient.GetWithOptions(context.Background(), tt.resource, tt.startTime, tt.endTime, tt.maxResults)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetWithOptions() error = nil, wantErr %v", tt.wantErr)
+					return
+				}
+				if tt.errType != nil {
+					var targetErr *ripestaterrors.Error
+					if !errors.As(err, &targetErr) {
+						t.Errorf("GetWithOptions() error type = %T, want *ripestaterrors.Error", err)
+						return
+					}
+					if targetErr.Message != tt.errType.Message {
+						t.Errorf("GetWithOptions() error message = %v, want %v", targetErr.Message, tt.errType.Message)
+					}
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("GetWithOptions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if result == nil {
+				t.Error("GetWithOptions() result is nil, want non-nil")
+				return
+			}
+
+			if result.Data.Resource != tt.resource {
+				t.Errorf("GetWithOptions() resource = %v, want %v", result.Data.Resource, tt.resource)
+			}
+		})
+	}
+}
+
+func TestGetRoutingHistoryWithOptions(t *testing.T) {
+	tests := []struct {
+		name       string
+		resource   string
+		startTime  string
+		endTime    string
+		maxResults int
+		wantErr    bool
+	}{
+		{
+			name:       "valid ASN with options",
+			resource:   "AS3333",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-12-31T23:59:59Z",
+			maxResults: 50,
+			wantErr:    false,
+		},
+		{
+			name:       "valid ASN without options",
+			resource:   "AS3333",
+			startTime:  "",
+			endTime:    "",
+			maxResults: 0,
+			wantErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := GetRoutingHistoryWithOptions(context.Background(), tt.resource, tt.startTime, tt.endTime, tt.maxResults)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetRoutingHistoryWithOptions() error = nil, wantErr %v", tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("GetRoutingHistoryWithOptions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if result == nil {
+				t.Error("GetRoutingHistoryWithOptions() result is nil, want non-nil")
+			}
+		})
+	}
+}

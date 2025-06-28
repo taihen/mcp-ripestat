@@ -1038,6 +1038,97 @@ func TestExecuteToolCall_RoutingHistory(t *testing.T) {
 	}
 }
 
+func TestExecuteToolCall_RoutingHistory_WithPagination(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	ctx := context.Background()
+
+	testCases := []struct {
+		name      string
+		arguments map[string]interface{}
+		wantError bool
+		errorMsg  string
+	}{
+		{
+			name: "valid pagination parameters",
+			arguments: map[string]interface{}{
+				"resource":    "AS3333",
+				"start_time":  "2024-01-01T00:00:00Z",
+				"end_time":    "2024-12-31T23:59:59Z",
+				"max_results": "100",
+			},
+			wantError: false,
+		},
+		{
+			name: "partial pagination parameters",
+			arguments: map[string]interface{}{
+				"resource":   "AS3333",
+				"start_time": "2024-01-01T00:00:00Z",
+			},
+			wantError: false,
+		},
+		{
+			name: "only max_results",
+			arguments: map[string]interface{}{
+				"resource":    "AS3333",
+				"max_results": "50",
+			},
+			wantError: false,
+		},
+		{
+			name: "invalid max_results - non-numeric",
+			arguments: map[string]interface{}{
+				"resource":    "AS3333",
+				"max_results": "invalid",
+			},
+			wantError: true,
+			errorMsg:  "max_results parameter must be a valid integer",
+		},
+		{
+			name: "invalid max_results - negative",
+			arguments: map[string]interface{}{
+				"resource":    "AS3333",
+				"max_results": "-10",
+			},
+			wantError: true,
+			errorMsg:  "max_results parameter must be non-negative",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			params := &CallToolParams{
+				Name:      "getRoutingHistory",
+				Arguments: tc.arguments,
+			}
+
+			result, err := server.executeToolCall(ctx, params)
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+				return
+			}
+
+			if result == nil {
+				t.Error("Expected ToolResult, got nil")
+				return
+			}
+
+			if tc.wantError {
+				if !result.IsError {
+					t.Error("Expected error ToolResult")
+					return
+				}
+				if !strings.Contains(result.Content[0].Text, tc.errorMsg) {
+					t.Errorf("Expected error message containing '%s', got %s", tc.errorMsg, result.Content[0].Text)
+				}
+			} else {
+				if result.IsError {
+					t.Errorf("Expected success ToolResult, got error: %s", result.Content[0].Text)
+				}
+			}
+		})
+	}
+}
+
 func TestProcessMessage_EdgeCases(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
