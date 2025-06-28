@@ -417,7 +417,7 @@ func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interfa
 	// Get optional pagination parameters
 	startTime := getOptionalStringParam(args, "start_time")
 	endTime := getOptionalStringParam(args, "end_time")
-	
+
 	var maxResults int
 	if maxResultsStr := getOptionalStringParam(args, "max_results"); maxResultsStr != "" {
 		var err error

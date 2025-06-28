@@ -47,15 +47,15 @@ func (c *Client) GetWithOptions(ctx context.Context, resource, startTime, endTim
 
 	params := url.Values{}
 	params.Set("resource", resource)
-	
+
 	if startTime != "" {
 		params.Set("starttime", startTime)
 	}
-	
+
 	if endTime != "" {
 		params.Set("endtime", endTime)
 	}
-	
+
 	if maxResults > 0 {
 		params.Set("max_results", fmt.Sprintf("%d", maxResults))
 	}
