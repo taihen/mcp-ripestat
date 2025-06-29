@@ -29,3 +29,9 @@ Thumbs.db
 
 # Top-level application
 /mcp-ripestat
+
+# Workspace directory
+/workspace
+
+# Serena directory
+.serena/
