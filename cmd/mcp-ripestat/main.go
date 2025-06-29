@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"expvar"
 	"flag"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/taihen/mcp-ripestat/internal/mcp"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/metrics"
 )
 
 // version is set via -ldflags during build time.
@@ -85,6 +87,10 @@ func run(ctx context.Context, port string) error {
 	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		statusHandler(w, r, startTime)
 	})
+
+	// Metrics endpoint for operational monitoring
+	mux.Handle("/debug/vars", expvar.Handler())
+	mux.HandleFunc("/metrics", metricsHandler)
 
 	addr := ":" + port
 
@@ -562,5 +568,15 @@ func handleSimpleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		slog.Error("failed to write MCP response", "err", err)
+	}
+}
+
+func metricsHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	summary := metrics.Summary()
+	if err := json.NewEncoder(w).Encode(summary); err != nil {
+		slog.Error("failed to encode metrics response", "err", err)
 	}
 }

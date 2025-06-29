@@ -3,11 +3,14 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -83,8 +86,8 @@ func TestClient_Get(t *testing.T) {
 		if r.URL.Path != "/test" {
 			t.Errorf("Expected request to '/test', got %q", r.URL.Path)
 		}
-		if r.URL.RawQuery != "param1=value1&resource=test" {
-			t.Errorf("Expected query params 'param1=value1&resource=test', got %q", r.URL.RawQuery)
+		if r.URL.RawQuery != "param1=value1&resource=test&sourceapp=mcp-ripestat" {
+			t.Errorf("Expected query params 'param1=value1&resource=test&sourceapp=mcp-ripestat', got %q", r.URL.RawQuery)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -595,5 +598,183 @@ func TestClient_Get_SlowRequestWarning(t *testing.T) {
 	}
 	if !strings.Contains(logContent, "took") {
 		t.Errorf("Expected warning to include timing, got log: %s", logContent)
+	}
+}
+
+func TestClient_RateLimiting_ConcurrentRequests(t *testing.T) {
+	var inFlightCount int64
+	var maxInFlightCount int64
+
+	// Setup test server that tracks concurrent requests
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Increment in-flight counter
+		current := atomic.AddInt64(&inFlightCount, 1)
+
+		// Track maximum concurrent requests
+		for {
+			maxVal := atomic.LoadInt64(&maxInFlightCount)
+			if current <= maxVal {
+				break
+			}
+			if atomic.CompareAndSwapInt64(&maxInFlightCount, maxVal, current) {
+				break
+			}
+		}
+
+		// Hold the request for a short time
+		time.Sleep(100 * time.Millisecond)
+
+		// Decrement in-flight counter
+		atomic.AddInt64(&inFlightCount, -1)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := io.WriteString(w, `{"data": "test"}`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	// Create client
+	c := New(server.URL, nil)
+
+	// Make 10 concurrent requests (more than the limit of 7)
+	const numRequests = 10
+	var wg sync.WaitGroup
+	ctx := context.Background()
+
+	for i := 0; i < numRequests; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			params := url.Values{}
+			params.Set("resource", "test")
+
+			var result map[string]interface{}
+			err := c.GetJSON(ctx, "/test", params, &result)
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Check that we never exceeded the rate limit
+	maxConcurrent := atomic.LoadInt64(&maxInFlightCount)
+	if maxConcurrent > 7 {
+		t.Errorf("Rate limiting failed: had %d concurrent requests, expected <= 7", maxConcurrent)
+	}
+}
+
+func TestClient_RateLimiting_ContextCancellation(t *testing.T) {
+	// Setup test server with delay
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(500 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := io.WriteString(w, `{"data": "test"}`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	// Create client
+	c := New(server.URL, nil)
+
+	// Create context that will be cancelled
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	params := url.Values{}
+	params.Set("resource", "test")
+
+	var result map[string]interface{}
+	err := c.GetJSON(ctx, "/test", params, &result)
+
+	// Should get context cancellation error
+	if err == nil {
+		t.Fatal("Expected context cancellation error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "context") {
+		t.Errorf("Expected context error, got %q", err.Error())
+	}
+}
+
+func TestClient_CacheHit(t *testing.T) {
+	var requestCount int
+
+	// Setup test server that counts requests
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err := io.WriteString(w, `{"data": "test", "request_count": `+fmt.Sprintf("%d", requestCount)+`}`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	// Create client
+	c := New(server.URL, nil)
+
+	ctx := context.Background()
+	endpoint := "/data/whois"
+	params := url.Values{}
+	params.Set("resource", "test")
+
+	// First request should hit the server
+	var result1 map[string]interface{}
+	err := c.GetJSON(ctx, endpoint, params, &result1)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if requestCount != 1 {
+		t.Errorf("Expected 1 request to server, got %d", requestCount)
+	}
+
+	// Second request should hit cache
+	var result2 map[string]interface{}
+	err = c.GetJSON(ctx, endpoint, params, &result2)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if requestCount != 1 {
+		t.Errorf("Expected still 1 request to server (cache hit), got %d", requestCount)
+	}
+
+	// Results should be the same
+	if result1["data"] != result2["data"] {
+		t.Errorf("Expected cached data to match original, got %v vs %v", result1["data"], result2["data"])
+	}
+}
+
+func TestCopyInterface(t *testing.T) {
+	source := map[string]interface{}{
+		"key1": "value1",
+		"key2": 42,
+		"key3": []string{"a", "b", "c"},
+	}
+
+	var target map[string]interface{}
+	err := copyInterface(source, &target)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if target["key1"] != "value1" {
+		t.Errorf("Expected key1 to be 'value1', got %v", target["key1"])
+	}
+
+	// Note: JSON unmarshaling converts numbers to float64
+	if target["key2"] != float64(42) {
+		t.Errorf("Expected key2 to be 42.0, got %v", target["key2"])
 	}
 }
