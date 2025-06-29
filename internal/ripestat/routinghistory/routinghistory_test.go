@@ -175,7 +175,7 @@ func TestClient_Get_ParameterValidation(t *testing.T) {
 		t.Errorf("Get() error = %v, want nil", err)
 	}
 
-	expectedURL := "https://stat.ripe.net/data/routing-history/data.json?resource=AS3333"
+	expectedURL := "https://stat.ripe.net/data/routing-history/data.json?resource=AS3333&sourceapp=mcp-ripestat"
 	if mockClient.lastURL != expectedURL {
 		t.Errorf("Get() called URL = %s, want %s", mockClient.lastURL, expectedURL)
 	}

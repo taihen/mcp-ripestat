@@ -9,12 +9,15 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/taihen/mcp-ripestat/internal/ripestat/cache"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/config"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/logging"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/metrics"
 )
 
-// Using constants from config package
+// ripeLimiter enforces RIPE's 8 concurrent request limit with a safety margin.
+var ripeLimiter = make(chan struct{}, 7)
 
 // HTTPDoer is an interface for making HTTP requests.
 type HTTPDoer interface {
@@ -26,8 +29,10 @@ type Client struct {
 	BaseURL     string
 	HTTPClient  HTTPDoer
 	UserAgent   string
+	SourceApp   string
 	RetryConfig *RetryConfig
 	Logger      *logging.Logger
+	Cache       *cache.Cache
 }
 
 // RetryConfig holds retry-related configuration.
@@ -53,12 +58,14 @@ func New(baseURL string, httpClient HTTPDoer) *Client {
 		BaseURL:    baseURL,
 		HTTPClient: httpClient,
 		UserAgent:  config.DefaultUserAgent,
+		SourceApp:  config.DefaultSourceApp,
 		RetryConfig: &RetryConfig{
 			RetryCount:       config.DefaultRetryCount,
 			RetryWaitTime:    config.DefaultRetryWaitTime,
 			MaxRetryWaitTime: config.DefaultMaxRetryWaitTime,
 		},
 		Logger: logging.DefaultLogger,
+		Cache:  cache.New(),
 	}
 }
 
@@ -76,12 +83,14 @@ func NewWithConfig(cfg *config.Config, httpClient HTTPDoer) *Client {
 		BaseURL:    cfg.BaseURL,
 		HTTPClient: httpClient,
 		UserAgent:  cfg.UserAgent,
+		SourceApp:  cfg.SourceApp,
 		RetryConfig: &RetryConfig{
 			RetryCount:       cfg.RetryCount,
 			RetryWaitTime:    cfg.RetryWaitTime,
 			MaxRetryWaitTime: cfg.MaxRetryWaitTime,
 		},
 		Logger: logging.DefaultLogger,
+		Cache:  cache.New(),
 	}
 }
 
@@ -98,9 +107,16 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("failed to parse URL: %w", err))
 	}
 
-	if params != nil {
-		u.RawQuery = params.Encode()
+	if params == nil {
+		params = url.Values{}
 	}
+
+	// Add sourceapp parameter for compliance
+	if c.SourceApp != "" {
+		params.Set("sourceapp", c.SourceApp)
+	}
+
+	u.RawQuery = params.Encode()
 
 	c.Logger.Debug("Making request to %s", u.String())
 
@@ -137,14 +153,58 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 
 // GetJSON performs a GET request and decodes the JSON response into the provided target.
 func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values, target interface{}) error {
+	start := time.Now()
+	endpointType := extractEndpointType(endpoint)
+
+	// Check cache first
+	if c.Cache != nil {
+		if cached, found := c.Cache.Get(ctx, endpoint, params); found {
+			c.Logger.Debug("Cache hit for endpoint %s", endpoint)
+			metrics.RecordCacheHit()
+
+			// Copy cached data to target
+			if err := copyInterface(cached, target); err != nil {
+				c.Logger.Warning("Failed to copy cached data: %v", err)
+				// Continue with API request on cache error
+			} else {
+				metrics.EndRequest(endpointType, time.Since(start))
+				return nil
+			}
+		}
+	}
+
+	metrics.RecordCacheMiss()
+
+	// Acquire rate limiter semaphore
+	select {
+	case ripeLimiter <- struct{}{}:
+		metrics.RecordRateLimitWait()
+		defer func() { <-ripeLimiter }()
+	case <-ctx.Done():
+		metrics.RecordRateLimitTimeout()
+		return ctx.Err()
+	}
+
+	c.Logger.Debug("Cache miss for endpoint %s, making API request", endpoint)
+
+	// Start request tracking
+	metrics.StartRequest()
+	defer func() {
+		metrics.EndRequest(endpointType, time.Since(start))
+	}()
+
 	resp, err := c.Get(ctx, endpoint, params)
 	if err != nil {
+		metrics.RecordRequest(endpointType, "error")
 		return err
 	}
 
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	status := fmt.Sprintf("%d", resp.StatusCode)
+	metrics.RecordRequest(endpointType, status)
 
 	if resp.StatusCode != http.StatusOK {
 		c.Logger.Warning("Received non-OK status code: %d", resp.StatusCode)
@@ -156,7 +216,38 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 		return errors.ErrServerError.WithError(fmt.Errorf("failed to decode response: %w", err))
 	}
 
+	// Cache the successful response
+	if c.Cache != nil {
+		c.Cache.Set(ctx, endpoint, params, target)
+		c.Logger.Debug("Cached response for endpoint %s", endpoint)
+	}
+
 	c.Logger.Debug("Successfully decoded response")
+
+	return nil
+}
+
+// extractEndpointType extracts the endpoint type from the full endpoint path.
+func extractEndpointType(endpoint string) string {
+	// Extract the main endpoint type from paths like "/data/network-info"
+	if len(endpoint) > 6 && endpoint[:6] == "/data/" {
+		return endpoint[6:]
+	}
+
+	// For other patterns, use the full endpoint
+	return endpoint
+}
+
+// copyInterface copies data from source to target using JSON marshaling/unmarshaling.
+func copyInterface(source, target interface{}) error {
+	data, err := json.Marshal(source)
+	if err != nil {
+		return fmt.Errorf("failed to marshal source: %w", err)
+	}
+
+	if err := json.Unmarshal(data, target); err != nil {
+		return fmt.Errorf("failed to unmarshal to target: %w", err)
+	}
 
 	return nil
 }

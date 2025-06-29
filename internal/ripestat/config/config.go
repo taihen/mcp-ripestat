@@ -2,6 +2,7 @@
 package config
 
 import (
+	"os"
 	"time"
 )
 
@@ -24,6 +25,9 @@ const (
 
 	// DefaultUserAgent is the default User-Agent header value for HTTP requests.
 	DefaultUserAgent = "mcp-ripestat/1.0"
+
+	// DefaultSourceApp is the default sourceapp parameter for RIPE API compliance.
+	DefaultSourceApp = "mcp-ripestat"
 )
 
 // Config represents the configuration for the RIPEstat API client.
@@ -45,10 +49,18 @@ type Config struct {
 
 	// UserAgent is the User-Agent header value for HTTP requests.
 	UserAgent string
+
+	// SourceApp is the sourceapp parameter for RIPE API compliance.
+	SourceApp string
 }
 
 // DefaultConfig returns a new Config with default settings.
 func DefaultConfig() *Config {
+	sourceApp := os.Getenv("RIPE_SOURCE_APP")
+	if sourceApp == "" {
+		sourceApp = DefaultSourceApp
+	}
+
 	return &Config{
 		BaseURL:          DefaultBaseURL,
 		Timeout:          DefaultTimeout,
@@ -56,6 +68,7 @@ func DefaultConfig() *Config {
 		RetryWaitTime:    DefaultRetryWaitTime,
 		MaxRetryWaitTime: DefaultMaxRetryWaitTime,
 		UserAgent:        DefaultUserAgent,
+		SourceApp:        sourceApp,
 	}
 }
 
@@ -127,6 +140,18 @@ func (c *Config) WithUserAgent(userAgent string) *Config {
 
 	newConfig := *c
 	newConfig.UserAgent = userAgent
+
+	return &newConfig
+}
+
+// WithSourceApp returns a new Config with the specified SourceApp.
+func (c *Config) WithSourceApp(sourceApp string) *Config {
+	if sourceApp == "" {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.SourceApp = sourceApp
 
 	return &newConfig
 }
