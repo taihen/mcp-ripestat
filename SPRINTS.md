@@ -36,6 +36,6 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 19     | `sprint-19` | TBD     | Prefix Overview               | `prefix-overview`            | Planned   |
 | 20     | `sprint-20` | v2.4.0  | RPKI History                  | `rpki-history`               | Completed |
 | 21     | `sprint-21` | TBD     | BGP Updates                   | `bgp-updates`                | Planned   |
-| 22     | `sprint-22` | TBD     | Prefix Routing Consistency    | `prefix-routing-consistency` | Planned   |
+| 22     | `sprint-22` | TBD     | Prefix Routing Consistency    | `prefix-routing-consistency` | Completed |
 | 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
 | 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |

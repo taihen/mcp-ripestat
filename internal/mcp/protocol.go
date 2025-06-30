@@ -372,6 +372,20 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getPrefixRoutingConsistency",
+			Description: "Get prefix routing consistency information for an IP prefix, showing BGP routing consistency data.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "The IP prefix to query for routing consistency.",
+					},
+				},
+				"required": []string{"resource"},
+			},
+		},
+		{
 			Name:        "getWhatsMyIP",
 			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
 			InputSchema: map[string]interface{}{

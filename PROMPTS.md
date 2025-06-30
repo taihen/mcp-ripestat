@@ -22,6 +22,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getAnnouncedPrefixes` - Prefixes currently announced by an AS
 - `getRoutingStatus` - Current routing visibility for a prefix
 - `getRoutingHistory` - Historical routing changes and announcements
+- `getPrefixRoutingConsistency` - BGP routing consistency analysis for IP prefixes
 - `getASNNeighbours` - Upstream/downstream AS relationships
 - `getLookingGlass` - Real-time BGP data from RIPE RRCs
 - `getBGPlay` - BGP routing events and timeline for IP addresses/prefixes
@@ -86,6 +87,16 @@ The current implementation provides these RIPEstat API endpoints:
 "Show me the RPKI history for prefix 193.0.22.0/23"
 "When did 8.8.8.0/24 first appear in RPKI validation records?"
 "Track RPKI validation changes for 2001:7fb:ff00::/48 over time"
+```
+
+### Prefix Routing Consistency Queries
+
+```shell
+"Check routing consistency for prefix 193.0.0.0/21"
+"Analyze BGP and WHOIS consistency for 8.8.8.0/24"
+"Show routing consistency analysis for 104.16.0.0/13"
+"Compare BGP announcements with IRR records for 1.1.1.0/24"
+"Get prefix routing consistency report for 203.0.113.0/24"
 ```
 
 ### Country & Geographic Queries
