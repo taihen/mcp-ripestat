@@ -18,6 +18,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/prefixoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/prefixroutingconsistency"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
@@ -343,6 +344,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callBGPlay(ctx, args)
 	case "getPrefixRoutingConsistency":
 		return s.callPrefixRoutingConsistency(ctx, args)
+	case "getPrefixOverview":
+		return s.callPrefixOverview(ctx, args)
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
@@ -593,6 +596,20 @@ func (s *Server) callPrefixRoutingConsistency(ctx context.Context, args map[stri
 	}
 
 	result, err := prefixroutingconsistency.GetPrefixRoutingConsistency(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callPrefixOverview(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := prefixoverview.GetPrefixOverview(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}

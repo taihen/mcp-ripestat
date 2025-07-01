@@ -2,6 +2,7 @@
 
 [![CI/CD](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/taihen/mcp-ripestat)](https://goreportcard.com/report/github.com/taihen/mcp-ripestat)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/taihen/mcp-ripestat/badge)](https://scorecard.dev/viewer/?uri=github.com/taihen/mcp-ripestat)
 
 A Model Context Protocol (MCP) server for the RIPEstat Data API, providing
 network information for IP addresses and prefixes.
@@ -39,44 +40,23 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 
 ## Features
 
-**Core Network Analysis:**
-
-- Network information for IP addresses and prefixes
-- AS overview for Autonomous System numbers
-- Whois information for IP addresses, prefixes, and ASNs
-
-**Routing Intelligence:**
-
-- Announced prefixes for Autonomous Systems
-- Routing status for IP prefixes
-- Routing history for IP addresses, prefixes, and ASNs (historical BGP visibility data)
-- ASN neighbours for Autonomous Systems (upstream/downstream relationships)
-- Looking Glass data for IP prefixes (BGP routing information from RIPE RIS)
-- BGP play data for IP addresses and prefixes (BGP routing events and timeline)
-
-**Security & Compliance:**
-
-- RPKI validation status for ASN and prefix combinations
-- RPKI history for IP prefixes (historical RPKI validation status)
-- Abuse contact finder for IP addresses and prefixes
-
-**Geographic & Regional Analysis:**
-
-- Country ASNs for given country codes (Autonomous System Numbers by country)
-
-**Utility:**
-
-- What's My IP detection with proxy header support for accurate client IP identification behind load balancers, proxies, and CDNs
-- Health check and warmup endpoints for monitoring and deployment
+This MCP server offers a subset of RIPEstat Data API.
+See [ENDPOINT_PARITY](ENDPOINT_PARITY.md) for a detailed list of all endpoints
+and their implementation status.
 
 ## Architectural Rationale
 
-`mcp-ripestat` is an HTTP server that supports streamable HTTP transport to
-facilitate centralized deployment and access control.
+**HTTP Transport Choice**: This server implements MCP over **Streamable HTTP**
+rather than stdio transport, enabling deployment as a standalone network
+service that multiple MCP clients can access concurrently without process
+spawning overhead.
 
-This architecture allows the service to be installed on a single instance and
-be accessed by many users and other MCP clients across a network in
-private mode - not exposed to the internet.
+**Legacy Protocol Fallback**: The server maintains backwards compatibility with
+the deprecated transports.
+
+**Concurrent Request Management**: Semaphore-based rate limiting operates
+per-server instance rather than per-client-connection, managing RIPE API quotas
+across multiple concurrent sessions.
 
 > [!WARNING]
 > At current stage this MCP server does not provide authentication.
@@ -132,18 +112,21 @@ These endpoints are essential for load balancers, monitoring systems, and deploy
 ## MCP Protocol Support
 
 ### Streamable HTTP Transport
+
 • Endpoint: /mcp (streaming occurs over the same request/response channel)
 • Protocol: Stream-framed HTTP (per MCP spec 2025-06-18)
 • Status: Default transport for all MCP clients implementing the 2025-06-18 spec
 • Features: Bidirectional streaming, incremental responses, zero-copy frames
 
 ### JSON-RPC 2.0 Endpoint
+
 • Endpoint: /mcp
 • Protocol: JSON-RPC 2.0
 • Status: Recommended production endpoint (replaces REST)
 • Features: Full MCP handshake, capability negotiation, tool invocation, compatible with Cursor IDE and other MCP-compliant clients
 
 ### Legacy REST API
+
 • Endpoint: All previous /\* REST paths
 • Protocol: Traditional REST over HTTP
 • Status: Removed as of v2.0.0 — breaking change
@@ -163,7 +146,8 @@ To use this MCP server locally, simply copy and paste the
 
 ### Demo Server
 
-A demo MCP server is running at `https://mcp-ripestat.taihen.org/mcp`. Feel free to try it out, but there are no uptime promises.
+A demo MCP server is running at `https://mcp-ripestat.taihen.org/mcp`. Feel
+free to try it out, but there are no uptime promises.
 
 ## Testing
 
