@@ -78,21 +78,21 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
 **Critical (Tier 1)** - Daily ISP Operations:
 
-- 9 endpoints total, 8 implemented (88.9% coverage)
+- 12 endpoints total, 8 implemented
 - Remaining: address-space-hierarchy, allocation-history, bgp-updates, related-prefixes
 
 **High (Tier 2)** - Advanced Analysis:
 
-- 8 endpoints total, 4 implemented (50% coverage)
-- Remaining: as-path-length, as-routing-consistency, ris-prefixes, visibility
+- 9 endpoints total, 6 implemented
+- Remaining: as-path-length, as-routing-consistency, ris-prefixes
 
 **Medium (Tier 3)** - Specialized Use:
 
-- 19 endpoints total, 2 implemented (10.5% coverage)
+- 27 endpoints total, 2 implemented
 
 **Low (Tier 4)** - Niche Applications:
 
-- 28 endpoints total, 2 implemented (7.1% coverage)
+- 16 endpoints total, 0 implemented
 
 ## Next Sprint Priorities
 
@@ -105,6 +105,9 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
 ## Coverage Goals
 
-**Short-term (Critical Tier 1)**: Achieve 100% coverage of critical endpoints (4 remaining)
-**Medium-term (High Tier 2)**: Achieve 100% coverage of high-priority endpoints (4 remaining)
-**Long-term**: Selective implementation of medium/low priority endpoints based on user demand
+**Short-term**: Achieve 100% coverage of critical endpoints.
+
+**Medium-term**: Achieve 100% coverage of high-priority endpoints.
+
+**Long-term**: Selective implementation of medium/low priority endpoints based
+on user demand
