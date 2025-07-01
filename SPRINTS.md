@@ -12,6 +12,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 > usually related to bug fixes or documentation updates, but could be also
 > related to a specific life improvement in development.
 
+
 | Sprint | Branch      | Version | Feature                       | RIPEstat Endpoint(s)         | Status    |
 | ------ | ----------- | ------- | ----------------------------- | ---------------------------- | --------- |
 | 0      | `sprint-0`  | v1.0.0  | Project Bootstrap             | N/A                          | Completed |
@@ -33,9 +34,15 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 16     | `sprint-16` | v2.5.0  | BGPlay                        | `bgplay`                     | Completed |
 | 17     | `sprint-17` | v1.16.0 | Routing History               | `routing-history`            | Completed |
 | 18     | `sprint-18` | v2.3.0  | Country ASNs                  | `country-asns`               | Completed |
-| 19     | `sprint-19` | TBD     | Prefix Overview               | `prefix-overview`            | Planned   |
+| 19     | `sprint-19` | TBD     | Prefix Overview               | `prefix-overview`            | Completed |
 | 20     | `sprint-20` | v2.4.0  | RPKI History                  | `rpki-history`               | Completed |
 | 21     | `sprint-21` | TBD     | BGP Updates                   | `bgp-updates`                | Planned   |
-| 22     | `sprint-22` | TBD     | Prefix Routing Consistency    | `prefix-routing-consistency` | Completed |
+| 22     | `sprint-22` | v2.8.0  | Prefix Routing Consistency    | `prefix-routing-consistency` | Completed |
 | 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
 | 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |
+| 25     | `sprint-25` | v2.7.0  | Architectural Improvements    | N/A                          | Completed |
+| 26     | `sprint-26` | TBD     | Address Space Hierarchy       | `address-space-hierarchy`    | Planned   |
+| 27     | `sprint-27` | TBD     | Related Prefixes              | `related-prefixes`           | Planned   |
+| 28     | `sprint-28` | TBD     | Allocation History            | `allocation-history`         | Planned   |
+| 29     | `sprint-29` | TBD     | AS Path Length                | `as-path-length`             | Planned   |
+| 30     | `sprint-30` | TBD     | AS Routing Consistency        | `as-routing-consistency`     | Planned   |
