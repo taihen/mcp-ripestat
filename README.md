@@ -2,6 +2,7 @@
 
 [![CI/CD](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml/badge.svg)](https://github.com/taihen/mcp-ripestat/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/taihen/mcp-ripestat)](https://goreportcard.com/report/github.com/taihen/mcp-ripestat)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/taihen/mcp-ripestat/badge)](https://scorecard.dev/viewer/?uri=github.com/taihen/mcp-ripestat)
 
 A Model Context Protocol (MCP) server for the RIPEstat Data API, providing
 network information for IP addresses and prefixes.
