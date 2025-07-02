@@ -16,6 +16,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getNetworkInfo` - IP/prefix ownership and registration details
 - `getASOverview` - Autonomous System information and statistics
 - `getPrefixOverview` - IP prefix overview with delegation and assignment information
+- `getAddressSpaceHierarchy` - Hierarchical address space information showing parent/child relationships
 - `getWhois` - Registry information for IPs, prefixes, or ASNs
 
 **Routing Intelligence:**

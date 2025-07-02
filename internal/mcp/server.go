@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/addressspacehierarchy"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
@@ -346,6 +347,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callPrefixRoutingConsistency(ctx, args)
 	case "getPrefixOverview":
 		return s.callPrefixOverview(ctx, args)
+	case "getAddressSpaceHierarchy":
+		return s.callAddressSpaceHierarchy(ctx, args)
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
@@ -610,6 +613,20 @@ func (s *Server) callPrefixOverview(ctx context.Context, args map[string]interfa
 	}
 
 	result, err := prefixoverview.GetPrefixOverview(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callAddressSpaceHierarchy(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := addressspacehierarchy.GetAddressSpaceHierarchy(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}

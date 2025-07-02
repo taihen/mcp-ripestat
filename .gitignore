@@ -8,6 +8,9 @@ bin/
 *.out
 *.html
 
+# General txt files should not be checked in
+*.txt
+
 
 # IDE specific files
 .idea/
