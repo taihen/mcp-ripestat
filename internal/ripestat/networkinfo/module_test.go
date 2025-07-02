@@ -2,8 +2,11 @@ package networkinfo
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/module"
 )
 
@@ -107,6 +110,68 @@ func TestHandleGetNetworkInfo_MissingResource(t *testing.T) {
 	result, err = m.handleGetNetworkInfo(ctx, params)
 	if err == nil {
 		t.Error("Expected error for empty resource")
+	}
+	if result != nil {
+		t.Errorf("Expected nil result on error, got %v", result)
+	}
+}
+
+func TestHandleGetNetworkInfo_Success(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"prefix": "193.0.0.0/21",
+				"resource": "193.0.0.0/21"
+			},
+			"status": "ok"
+		}`))
+	}))
+	defer ts.Close()
+
+	c := client.New(ts.URL, ts.Client())
+	m := NewModule(c, nil)
+	ctx := context.Background()
+
+	params := map[string]interface{}{
+		"resource": "193.0.0.0/21",
+	}
+
+	result, err := m.handleGetNetworkInfo(ctx, params)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if result == nil {
+		t.Fatal("Expected result to be non-nil")
+	}
+
+	response, ok := result.(*Response)
+	if !ok {
+		t.Fatalf("Expected result to be *Response, got %T", result)
+	}
+	if response.Data.Prefix != "193.0.0.0/21" {
+		t.Errorf("Expected prefix 193.0.0.0/21, got %s", response.Data.Prefix)
+	}
+}
+
+func TestHandleGetNetworkInfo_HTTPError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer ts.Close()
+
+	c := client.New(ts.URL, ts.Client())
+	m := NewModule(c, nil)
+	ctx := context.Background()
+
+	params := map[string]interface{}{
+		"resource": "193.0.0.0/21",
+	}
+
+	result, err := m.handleGetNetworkInfo(ctx, params)
+	if err == nil {
+		t.Fatal("Expected error for HTTP error")
 	}
 	if result != nil {
 		t.Errorf("Expected nil result on error, got %v", result)

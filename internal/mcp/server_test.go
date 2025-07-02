@@ -746,6 +746,42 @@ func TestExecuteToolCall_AllToolFunctions(t *testing.T) {
 			toolName: "getWhatsMyIP",
 			args:     map[string]interface{}{},
 		},
+		{
+			name:     "callAddressSpaceHierarchy success",
+			toolName: "getAddressSpaceHierarchy",
+			args:     map[string]interface{}{"resource": "193.0.0.0/21"},
+		},
+		{
+			name:         "callAddressSpaceHierarchy missing resource",
+			toolName:     "getAddressSpaceHierarchy",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callPrefixOverview success",
+			toolName: "getPrefixOverview",
+			args:     map[string]interface{}{"resource": "193.0.0.0/21"},
+		},
+		{
+			name:         "callPrefixOverview missing resource",
+			toolName:     "getPrefixOverview",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
+		{
+			name:     "callPrefixRoutingConsistency success",
+			toolName: "getPrefixRoutingConsistency",
+			args:     map[string]interface{}{"resource": "193.0.0.0/21"},
+		},
+		{
+			name:         "callPrefixRoutingConsistency missing resource",
+			toolName:     "getPrefixRoutingConsistency",
+			args:         map[string]interface{}{},
+			expectError:  true,
+			errorMessage: "resource parameter is required",
+		},
 	}
 
 	for _, tc := range testCases {

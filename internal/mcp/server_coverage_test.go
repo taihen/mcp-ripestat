@@ -97,6 +97,11 @@ func TestCoverageCompletionForAPIErrors(t *testing.T) {
 			toolName: "getBGPlay",
 			args:     map[string]interface{}{"resource": "999.999.999.999"},
 		},
+		{
+			name:     "callAddressSpaceHierarchy_error",
+			toolName: "getAddressSpaceHierarchy",
+			args:     map[string]interface{}{"resource": "invalid.example.com"},
+		},
 	}
 
 	for _, tc := range testCases {
