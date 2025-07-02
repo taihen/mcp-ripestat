@@ -25,14 +25,19 @@ When reporting a vulnerability, please include:
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 2.x.x   | :white_check_mark: |
-| < 2.0   | :x:                |
+We support the following versions of mcp-ripestat (three last minor releases):
+
+| Version | Supported |
+| ------- | --------- |
+| 2.10.x  | ✅        |
+| 2.9.x   | ✅        |
+| 2.8.x   | ✅        |
+| < 2.8   | ❌        |
 
 ## Security Considerations
 
-**Important:** At current stage this MCP server does not provide authentication. Use firewall or other L3 networking to restrict access to the server.
+**Important:** At current stage this MCP server does not provide authentication.
+Use firewall or other L3 networking to restrict access to the server.
 
 ### Network Security
 
