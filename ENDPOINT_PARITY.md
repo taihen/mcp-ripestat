@@ -2,12 +2,12 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
-**Current Status**: 16/64 endpoints implemented (25.0% coverage)
+**Current Status**: 17/64 endpoints implemented (26.6% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |
 | --- | ----------------------------------- | ----------- | ------ | -------- | ------------------------------------ |
 | 1   | abuse-contact-finder                | ✅          | 7      | Critical | Find abuse contacts for IP addresses |
-| 2   | address-space-hierarchy             | ❌          | 26     | Critical | IP allocation structure analysis     |
+| 2   | address-space-hierarchy             | ✅          | 26     | Critical | IP allocation structure analysis     |
 | 3   | address-space-usage                 | ❌          | -      | Medium   | Address space utilization metrics    |
 | 4   | allocation-history                  | ❌          | 28     | Critical | IP allocation change tracking        |
 | 5   | announced-prefixes                  | ✅          | 4      | Critical | Prefixes announced by AS             |
@@ -78,8 +78,8 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
 **Critical (Tier 1)** - Daily ISP Operations:
 
-- 12 endpoints total, 8 implemented
-- Remaining: address-space-hierarchy, allocation-history, bgp-updates, related-prefixes
+- 12 endpoints total, 9 implemented
+- Remaining: allocation-history, bgp-updates, related-prefixes
 
 **High (Tier 2)** - Advanced Analysis:
 
@@ -97,11 +97,10 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 ## Next Sprint Priorities
 
 1. **Sprint 21**: bgp-updates (Critical)
-2. **Sprint 26**: address-space-hierarchy (Critical)
-3. **Sprint 27**: related-prefixes (Critical)
-4. **Sprint 28**: allocation-history (Critical)
-5. **Sprint 29**: as-path-length (High)
-6. **Sprint 30**: as-routing-consistency (High)
+2. **Sprint 27**: related-prefixes (Critical)
+3. **Sprint 28**: allocation-history (Critical)
+4. **Sprint 29**: as-path-length (High)
+5. **Sprint 30**: as-routing-consistency (High)
 
 ## Coverage Goals
 
