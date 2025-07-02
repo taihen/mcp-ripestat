@@ -40,7 +40,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
 | 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |
 | 25     | `sprint-25` | v2.7.0  | Architectural Improvements    | N/A                          | Completed |
-| 26     | `sprint-26` | TBD     | Address Space Hierarchy       | `address-space-hierarchy`    | Planned   |
+| 26     | `sprint-26` | TBD     | Address Space Hierarchy       | `address-space-hierarchy`    | Completed |
 | 27     | `sprint-27` | TBD     | Related Prefixes              | `related-prefixes`           | Planned   |
 | 28     | `sprint-28` | TBD     | Allocation History            | `allocation-history`         | Planned   |
 | 29     | `sprint-29` | TBD     | AS Path Length                | `as-path-length`             | Planned   |

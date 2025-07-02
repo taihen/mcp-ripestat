@@ -400,6 +400,20 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getAddressSpaceHierarchy",
+			Description: "Get address space hierarchy information for an IP address or prefix.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "The IP address or prefix to query.",
+					},
+				},
+				"required": []string{"resource"},
+			},
+		},
+		{
 			Name:        "getWhatsMyIP",
 			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
 			InputSchema: map[string]interface{}{
