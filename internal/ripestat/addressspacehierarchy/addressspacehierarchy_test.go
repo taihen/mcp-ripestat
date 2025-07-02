@@ -179,3 +179,14 @@ func TestDefaultClient(t *testing.T) {
 		t.Fatal("expected client, got nil")
 	}
 }
+
+func TestGetAddressSpaceHierarchy_EmptyResource(t *testing.T) {
+	ctx := context.Background()
+	_, err := GetAddressSpaceHierarchy(ctx, "")
+	if err == nil {
+		t.Fatal("expected error for empty resource, got nil")
+	}
+	if !strings.Contains(err.Error(), "resource parameter is required") {
+		t.Errorf("expected resource validation error, got %v", err)
+	}
+}

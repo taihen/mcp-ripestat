@@ -15,7 +15,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | Sprint | Branch      | Version | Feature                       | RIPEstat Endpoint(s)         | Status    |
 | ------ | ----------- | ------- | ----------------------------- | ---------------------------- | --------- |
 | 0      | `sprint-0`  | v1.0.0  | Project Bootstrap             | N/A                          | Completed |
-| 1      | `sprint-1`  | v1.0.0  | Research                      | N/A                          | Completed |
+| 1      | `sprint-1`  | v1.0.0  | Research and code scafolding  | N/A                          | Completed |
 | 2      | `sprint-2`  | v1.1.0  | Network Information           | `network-info`               | Completed |
 | 3      | `sprint-3`  | v1.3.0  | AS Overview                   | `as-overview`                | Completed |
 | 4      | `sprint-4`  | v1.4.0  | Announced Prefixes            | `announced-prefixes`         | Completed |
@@ -40,7 +40,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
 | 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |
 | 25     | `sprint-25` | v2.7.0  | Architectural Improvements    | N/A                          | Completed |
-| 26     | `sprint-26` | TBD     | Address Space Hierarchy       | `address-space-hierarchy`    | Completed |
+| 26     | `sprint-26` | v2.10.0 | Address Space Hierarchy       | `address-space-hierarchy`    | Completed |
 | 27     | `sprint-27` | TBD     | Related Prefixes              | `related-prefixes`           | Planned   |
 | 28     | `sprint-28` | TBD     | Allocation History            | `allocation-history`         | Planned   |
 | 29     | `sprint-29` | TBD     | AS Path Length                | `as-path-length`             | Planned   |
