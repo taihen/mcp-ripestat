@@ -41,7 +41,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |
 | 25     | `sprint-25` | v2.7.0  | Architectural Improvements    | N/A                          | Completed |
 | 26     | `sprint-26` | v2.10.0 | Address Space Hierarchy       | `address-space-hierarchy`    | Completed |
-| 27     | `sprint-27` | TBD     | Related Prefixes              | `related-prefixes`           | Completed |
+| 27     | `sprint-27` | v2.11.0 | Related Prefixes              | `related-prefixes`           | Completed |
 | 28     | `sprint-28` | TBD     | Allocation History            | `allocation-history`         | Planned   |
 | 29     | `sprint-29` | TBD     | AS Path Length                | `as-path-length`             | Planned   |
 | 30     | `sprint-30` | TBD     | AS Routing Consistency        | `as-routing-consistency`     | Planned   |
