@@ -17,6 +17,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getASOverview` - Autonomous System information and statistics
 - `getPrefixOverview` - IP prefix overview with delegation and assignment information
 - `getAddressSpaceHierarchy` - Hierarchical address space information showing parent/child relationships
+- `getAllocationHistory` - Historical allocation and assignment data for IP address ranges
 - `getWhois` - Registry information for IPs, prefixes, or ASNs
 
 **Routing Intelligence:**
@@ -55,6 +56,7 @@ The current implementation provides these RIPEstat API endpoints:
 "Show me WHOIS data for 192.0.2.1"
 "Find abuse contacts for IP 203.0.113.50"
 "Get routing history for 1.1.1.1"
+"Show allocation history for 8.8.8.8"
 "Show BGP play data for 8.8.8.8"
 "What's the network ownership of 2001:db8::1?"
 ```
@@ -67,6 +69,7 @@ The current implementation provides these RIPEstat API endpoints:
 "Show BGP data for 2001:7fb::/32 from RIPE looking glass"
 "Get BGP play timeline for 193.0.6.0/24"
 "Get historical routing changes for 104.16.0.0/13"
+"Show allocation history for 193.0.0.0/21"
 "Find related prefixes connected to 193.0.0.0/21"
 "Find the network owner of 198.51.100.0/24"
 ```

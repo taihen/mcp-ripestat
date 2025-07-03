@@ -12,6 +12,7 @@ import (
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/addressspacehierarchy"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/allocationhistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
@@ -352,6 +353,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callPrefixOverview(ctx, args)
 	case "getAddressSpaceHierarchy":
 		return s.callAddressSpaceHierarchy(ctx, args)
+	case "getAllocationHistory":
+		return s.callAllocationHistory(ctx, args)
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
@@ -644,6 +647,20 @@ func (s *Server) callAddressSpaceHierarchy(ctx context.Context, args map[string]
 	}
 
 	result, err := addressspacehierarchy.GetAddressSpaceHierarchy(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callAllocationHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := allocationhistory.GetAllocationHistory(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
