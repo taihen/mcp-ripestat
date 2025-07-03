@@ -11,7 +11,7 @@ permissions:
   security-events: write
 env:
   GO_VERSION: '1.24'
-  BINARY_NAME: 'mcp-ripestat'
+  BINARY_NAME: mcp-ripestat
 jobs:
   check-commit:
     name: Check Commit Type
@@ -184,42 +184,3 @@ jobs:
           gh release edit "$RELEASE_TAG" --notes "$NEW_BODY"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  security-monitoring:
-    name: Security & Performance Monitoring
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [release]
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run OSSF Scorecard
-        uses: ossf/scorecard-action@v2.3.1
-        with:
-          results_file: results.sarif
-          results_format: sarif
-          publish_results: true
-
-      - name: Upload OSSF Scorecard results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'

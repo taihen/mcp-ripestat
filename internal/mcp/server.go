@@ -21,6 +21,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/prefixoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/prefixroutingconsistency"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/relatedprefixes"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkihistory"
@@ -323,6 +324,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callASOverview(ctx, args)
 	case "getAnnouncedPrefixes":
 		return s.callAnnouncedPrefixes(ctx, args)
+	case "getRelatedPrefixes":
+		return s.callRelatedPrefixes(ctx, args)
 	case "getRoutingStatus":
 		return s.callRoutingStatus(ctx, args)
 	case "getRoutingHistory":
@@ -396,6 +399,20 @@ func (s *Server) callAnnouncedPrefixes(ctx context.Context, args map[string]inte
 	}
 
 	result, err := announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callRelatedPrefixes(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := relatedprefixes.GetRelatedPrefixes(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
