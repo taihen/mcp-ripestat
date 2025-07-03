@@ -2,14 +2,14 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
-**Current Status**: 18/64 endpoints implemented (28.1% coverage)
+**Current Status**: 19/64 endpoints implemented (29.7% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |
 | --- | ----------------------------------- | ----------- | ------ | -------- | ------------------------------------ |
 | 1   | abuse-contact-finder                | ✅          | 7      | Critical | Find abuse contacts for IP addresses |
 | 2   | address-space-hierarchy             | ✅          | 26     | Critical | IP allocation structure analysis     |
 | 3   | address-space-usage                 | ❌          | -      | Medium   | Address space utilization metrics    |
-| 4   | allocation-history                  | ❌          | 28     | Critical | IP allocation change tracking        |
+| 4   | allocation-history                  | ✅          | 28     | Critical | IP allocation change tracking        |
 | 5   | announced-prefixes                  | ✅          | 4      | Critical | Prefixes announced by AS             |
 | 6   | as-overview                         | ✅          | 3      | Critical | Autonomous System information        |
 | 7   | as-path-length                      | ❌          | 29     | High     | BGP path optimization analysis       |
