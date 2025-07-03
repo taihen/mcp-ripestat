@@ -200,6 +200,20 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getRelatedPrefixes",
+			Description: "Get related prefixes that are connected or associated with the given prefix.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "The IP prefix in CIDR notation to query.",
+					},
+				},
+				"required": []string{"resource"},
+			},
+		},
+		{
 			Name:        "getRoutingStatus",
 			Description: "Get the routing status for an IP prefix.",
 			InputSchema: map[string]interface{}{

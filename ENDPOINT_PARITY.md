@@ -2,7 +2,7 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
-**Current Status**: 17/64 endpoints implemented (26.6% coverage)
+**Current Status**: 18/64 endpoints implemented (28.1% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |
 | --- | ----------------------------------- | ----------- | ------ | -------- | ------------------------------------ |
@@ -43,7 +43,7 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 | 35  | prefix-overview                     | ✅          | 19     | Critical | Prefix management analysis           |
 | 36  | prefix-routing-consistency          | ✅          | 22     | High     | Prefix routing validation            |
 | 37  | prefix-size-distribution            | ❌          | -      | Medium   | Network planning metrics             |
-| 38  | related-prefixes                    | ❌          | 27     | Critical | Connected network discovery          |
+| 38  | related-prefixes                    | ✅          | 27     | Critical | Connected network discovery          |
 | 39  | reverse-dns                         | ❌          | -      | Medium   | Reverse DNS lookup                   |
 | 40  | reverse-dns-consistency             | ❌          | -      | Medium   | DNS infrastructure validation        |
 | 41  | reverse-dns-ip                      | ❌          | -      | Medium   | IP reverse DNS validation            |
