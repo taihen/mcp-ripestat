@@ -43,6 +43,6 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 26     | `sprint-26` | v2.10.0 | Address Space Hierarchy       | `address-space-hierarchy`    | Completed |
 | 27     | `sprint-27` | v2.11.0 | Related Prefixes              | `related-prefixes`           | Completed |
 | 28     | `sprint-28` | TBD     | Allocation History            | `allocation-history`         | Completed |
-| 29     | `sprint-29` | TBD     | AS Path Length                | `as-path-length`             | Planned   |
+| 29     | `sprint-29` | TBD     | AS Path Length                | `as-path-length`             | Completed |
 | 30     | `sprint-30` | TBD     | AS Routing Consistency        | `as-routing-consistency`     | Planned   |
 | 31     | `sprint-31` | TBD     | Sign packages                 | N/A                          | Planned   |

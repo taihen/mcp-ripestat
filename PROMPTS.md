@@ -30,6 +30,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getASNNeighbours` - Upstream/downstream AS relationships
 - `getLookingGlass` - Real-time BGP data from RIPE RRCs
 - `getBGPlay` - BGP routing events and timeline for IP addresses/prefixes
+- `getASPathLength` - AS path length statistics and distribution data for route optimization analysis
 
 **Security & Compliance:**
 
@@ -82,6 +83,9 @@ The current implementation provides these RIPEstat API endpoints:
 "Show me the neighbors of AS1205"
 "Get routing history for AS64512"
 "What's the WHOIS information for AS13335?"
+"Analyze AS path length statistics for AS3333"
+"Show BGP path efficiency metrics for AS13335"
+"Get path length distribution data for AS15169"
 ```
 
 ### RPKI Validation Queries
