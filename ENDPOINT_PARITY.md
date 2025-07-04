@@ -2,7 +2,7 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
-**Current Status**: 19/64 endpoints implemented (29.7% coverage)
+**Current Status**: 20/64 endpoints implemented (31.3% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |
 | --- | ----------------------------------- | ----------- | ------ | -------- | ------------------------------------ |
@@ -12,7 +12,7 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 | 4   | allocation-history                  | ✅          | 28     | Critical | IP allocation change tracking        |
 | 5   | announced-prefixes                  | ✅          | 4      | Critical | Prefixes announced by AS             |
 | 6   | as-overview                         | ✅          | 3      | Critical | Autonomous System information        |
-| 7   | as-path-length                      | ❌          | 29     | High     | BGP path optimization analysis       |
+| 7   | as-path-length                      | ✅          | 29     | High     | BGP path optimization analysis       |
 | 8   | as-routing-consistency              | ❌          | 30     | High     | Routing anomaly detection            |
 | 9   | asn-neighbours                      | ✅          | 9      | High     | AS peering relationships             |
 | 10  | asn-neighbours-history              | ❌          | -      | Medium   | Historical AS neighbor data          |
@@ -78,13 +78,13 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
 **Critical (Tier 1)** - Daily ISP Operations:
 
-- 12 endpoints total, 9 implemented
-- Remaining: allocation-history, bgp-updates, related-prefixes
+- 12 endpoints total, 10 implemented
+- Remaining: bgp-updates, related-prefixes
 
 **High (Tier 2)** - Advanced Analysis:
 
-- 9 endpoints total, 6 implemented
-- Remaining: as-path-length, as-routing-consistency, ris-prefixes
+- 9 endpoints total, 7 implemented
+- Remaining: as-routing-consistency, ris-prefixes
 
 **Medium (Tier 3)** - Specialized Use:
 
