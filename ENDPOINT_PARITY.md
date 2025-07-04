@@ -78,8 +78,8 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
 **Critical (Tier 1)** - Daily ISP Operations:
 
-- 12 endpoints total, 9 implemented
-- Remaining: allocation-history, bgp-updates, related-prefixes
+- 12 endpoints total, 10 implemented
+- Remaining: bgp-updates, related-prefixes
 
 **High (Tier 2)** - Advanced Analysis:
 
