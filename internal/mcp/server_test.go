@@ -1287,6 +1287,54 @@ func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
 				"id": 3
 			}`,
 		},
+		{
+			name: "getASRoutingConsistency",
+			params: `{
+				"jsonrpc": "2.0",
+				"method": "tools/call",
+				"params": {
+					"name": "getASRoutingConsistency",
+					"arguments": {"resource": "AS3333"}
+				},
+				"id": 4
+			}`,
+		},
+		{
+			name: "getASPathLength",
+			params: `{
+				"jsonrpc": "2.0",
+				"method": "tools/call",
+				"params": {
+					"name": "getASPathLength",
+					"arguments": {"resource": "AS3333"}
+				},
+				"id": 5
+			}`,
+		},
+		{
+			name: "getAllocationHistory",
+			params: `{
+				"jsonrpc": "2.0",
+				"method": "tools/call",
+				"params": {
+					"name": "getAllocationHistory",
+					"arguments": {"resource": "8.8.8.0/24"}
+				},
+				"id": 6
+			}`,
+		},
+		{
+			name: "getRelatedPrefixes",
+			params: `{
+				"jsonrpc": "2.0",
+				"method": "tools/call",
+				"params": {
+					"name": "getRelatedPrefixes",
+					"arguments": {"resource": "8.8.8.0/24"}
+				},
+				"id": 7
+			}`,
+		},
 	}
 
 	for _, test := range toolTests {
