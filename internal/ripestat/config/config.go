@@ -28,6 +28,16 @@ const (
 
 	// DefaultSourceApp is the default sourceapp parameter for RIPE API compliance.
 	DefaultSourceApp = "mcp-ripestat"
+
+	// Connection pool defaults for optimal performance.
+	DefaultMaxIdleConns        = 100              // Maximum idle connections across all hosts
+	DefaultMaxIdleConnsPerHost = 10               // Maximum idle connections per host
+	DefaultMaxConnsPerHost     = 100              // Maximum connections per host
+	DefaultIdleConnTimeout     = 90 * time.Second // Idle connection timeout
+
+	// HTTP/2 defaults.
+	DefaultHTTP2ReadIdleTimeout = 30 * time.Second // HTTP/2 read idle timeout
+	DefaultHTTP2PingTimeout     = 15 * time.Second // HTTP/2 ping timeout
 )
 
 // Config represents the configuration for the RIPEstat API client.
@@ -52,6 +62,17 @@ type Config struct {
 
 	// SourceApp is the sourceapp parameter for RIPE API compliance.
 	SourceApp string
+
+	// Connection pool settings for HTTP client optimization
+	MaxIdleConns        int           // Maximum number of idle connections across all hosts
+	MaxIdleConnsPerHost int           // Maximum number of idle connections per host
+	MaxConnsPerHost     int           // Maximum number of connections per host
+	IdleConnTimeout     time.Duration // Maximum time an idle connection will remain idle
+
+	// HTTP/2 settings
+	ForceHTTP2           bool          // Force HTTP/2 usage (with fallback to HTTP/1.1)
+	HTTP2ReadIdleTimeout time.Duration // HTTP/2 read idle timeout
+	HTTP2PingTimeout     time.Duration // HTTP/2 ping timeout
 }
 
 // DefaultConfig returns a new Config with default settings.
@@ -69,6 +90,17 @@ func DefaultConfig() *Config {
 		MaxRetryWaitTime: DefaultMaxRetryWaitTime,
 		UserAgent:        DefaultUserAgent,
 		SourceApp:        sourceApp,
+
+		// Connection pool settings
+		MaxIdleConns:        DefaultMaxIdleConns,
+		MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
+		MaxConnsPerHost:     DefaultMaxConnsPerHost,
+		IdleConnTimeout:     DefaultIdleConnTimeout,
+
+		// HTTP/2 settings
+		ForceHTTP2:           true, // Enable HTTP/2 by default
+		HTTP2ReadIdleTimeout: DefaultHTTP2ReadIdleTimeout,
+		HTTP2PingTimeout:     DefaultHTTP2PingTimeout,
 	}
 }
 
@@ -152,6 +184,86 @@ func (c *Config) WithSourceApp(sourceApp string) *Config {
 
 	newConfig := *c
 	newConfig.SourceApp = sourceApp
+
+	return &newConfig
+}
+
+// WithMaxIdleConns returns a new Config with the specified maximum idle connections.
+func (c *Config) WithMaxIdleConns(maxIdleConns int) *Config {
+	if maxIdleConns < 0 {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.MaxIdleConns = maxIdleConns
+
+	return &newConfig
+}
+
+// WithMaxIdleConnsPerHost returns a new Config with the specified maximum idle connections per host.
+func (c *Config) WithMaxIdleConnsPerHost(maxIdleConnsPerHost int) *Config {
+	if maxIdleConnsPerHost < 0 {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.MaxIdleConnsPerHost = maxIdleConnsPerHost
+
+	return &newConfig
+}
+
+// WithMaxConnsPerHost returns a new Config with the specified maximum connections per host.
+func (c *Config) WithMaxConnsPerHost(maxConnsPerHost int) *Config {
+	if maxConnsPerHost < 0 {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.MaxConnsPerHost = maxConnsPerHost
+
+	return &newConfig
+}
+
+// WithIdleConnTimeout returns a new Config with the specified idle connection timeout.
+func (c *Config) WithIdleConnTimeout(idleConnTimeout time.Duration) *Config {
+	if idleConnTimeout <= 0 {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.IdleConnTimeout = idleConnTimeout
+
+	return &newConfig
+}
+
+// WithForceHTTP2 returns a new Config with the specified HTTP/2 force setting.
+func (c *Config) WithForceHTTP2(forceHTTP2 bool) *Config {
+	newConfig := *c
+	newConfig.ForceHTTP2 = forceHTTP2
+
+	return &newConfig
+}
+
+// WithHTTP2ReadIdleTimeout returns a new Config with the specified HTTP/2 read idle timeout.
+func (c *Config) WithHTTP2ReadIdleTimeout(timeout time.Duration) *Config {
+	if timeout <= 0 {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.HTTP2ReadIdleTimeout = timeout
+
+	return &newConfig
+}
+
+// WithHTTP2PingTimeout returns a new Config with the specified HTTP/2 ping timeout.
+func (c *Config) WithHTTP2PingTimeout(timeout time.Duration) *Config {
+	if timeout <= 0 {
+		return c
+	}
+
+	newConfig := *c
+	newConfig.HTTP2PingTimeout = timeout
 
 	return &newConfig
 }

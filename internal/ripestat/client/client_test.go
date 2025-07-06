@@ -778,3 +778,185 @@ func TestCopyInterface(t *testing.T) {
 		t.Errorf("Expected key2 to be 42.0, got %v", target["key2"])
 	}
 }
+
+// BenchmarkHTTPClientPerformance benchmarks the performance of different HTTP client configurations.
+func BenchmarkHTTPClientPerformance(b *testing.B) {
+	b.Run("DefaultClient", func(b *testing.B) {
+		client := &http.Client{Timeout: 30 * time.Second}
+		benchmarkHTTPClient(b, client)
+	})
+
+	b.Run("OptimizedClient", func(b *testing.B) {
+		cfg := config.DefaultConfig()
+		client := createOptimizedHTTPClient(cfg)
+		benchmarkHTTPClient(b, client)
+	})
+
+	b.Run("OptimizedClientHighConcurrency", func(b *testing.B) {
+		cfg := config.DefaultConfig().
+			WithMaxIdleConns(200).
+			WithMaxIdleConnsPerHost(20).
+			WithMaxConnsPerHost(200)
+		client := createOptimizedHTTPClient(cfg)
+		benchmarkHTTPClient(b, client)
+	})
+}
+
+func benchmarkHTTPClient(b *testing.B, client *http.Client) {
+	// Create a test server that simulates RIPE API behavior
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Simulate some processing time
+		time.Sleep(10 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"data": {"test": "response"}}`))
+	}))
+	defer server.Close()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req, _ := http.NewRequestWithContext(context.Background(), "GET", server.URL, nil)
+			resp, err := client.Do(req)
+			if err != nil {
+				b.Error(err)
+				continue
+			}
+			_ = resp.Body.Close()
+		}
+	})
+}
+
+// TestOptimizedHTTPClientConfiguration tests the optimized HTTP client configuration.
+func TestOptimizedHTTPClientConfiguration(t *testing.T) {
+	cfg := config.DefaultConfig().
+		WithMaxIdleConns(50).
+		WithMaxIdleConnsPerHost(5).
+		WithMaxConnsPerHost(50).
+		WithIdleConnTimeout(60 * time.Second).
+		WithForceHTTP2(true)
+
+	client := createOptimizedHTTPClient(cfg)
+
+	// Verify client is created
+	if client == nil {
+		t.Fatal("Expected client to be created, got nil")
+	}
+
+	// Verify timeout is set correctly
+	if client.Timeout != cfg.Timeout {
+		t.Errorf("Expected timeout %v, got %v", cfg.Timeout, client.Timeout)
+	}
+
+	// Verify transport is configured (type assertion)
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("Expected *http.Transport, got different type")
+	}
+
+	// Verify connection pool settings
+	if transport.MaxIdleConns != cfg.MaxIdleConns {
+		t.Errorf("Expected MaxIdleConns %d, got %d", cfg.MaxIdleConns, transport.MaxIdleConns)
+	}
+
+	if transport.MaxIdleConnsPerHost != cfg.MaxIdleConnsPerHost {
+		t.Errorf("Expected MaxIdleConnsPerHost %d, got %d", cfg.MaxIdleConnsPerHost, transport.MaxIdleConnsPerHost)
+	}
+
+	if transport.MaxConnsPerHost != cfg.MaxConnsPerHost {
+		t.Errorf("Expected MaxConnsPerHost %d, got %d", cfg.MaxConnsPerHost, transport.MaxConnsPerHost)
+	}
+
+	if transport.IdleConnTimeout != cfg.IdleConnTimeout {
+		t.Errorf("Expected IdleConnTimeout %v, got %v", cfg.IdleConnTimeout, transport.IdleConnTimeout)
+	}
+
+	// Verify HTTP/2 is enabled
+	if !transport.ForceAttemptHTTP2 {
+		t.Error("Expected ForceAttemptHTTP2 to be true")
+	}
+
+	// Verify other performance settings
+	if transport.DisableCompression {
+		t.Error("Expected compression to be enabled")
+	}
+
+	if transport.DisableKeepAlives {
+		t.Error("Expected keep-alives to be enabled")
+	}
+}
+
+// TestHTTP2Support tests HTTP/2 support functionality.
+func TestHTTP2Support(t *testing.T) {
+	t.Run("HTTP2Enabled", func(t *testing.T) {
+		cfg := config.DefaultConfig().WithForceHTTP2(true)
+		client := createOptimizedHTTPClient(cfg)
+
+		transport, ok := client.Transport.(*http.Transport)
+		if !ok {
+			t.Fatal("Expected *http.Transport")
+		}
+
+		if !transport.ForceAttemptHTTP2 {
+			t.Error("Expected HTTP/2 to be enabled")
+		}
+	})
+
+	t.Run("HTTP2Disabled", func(t *testing.T) {
+		cfg := config.DefaultConfig().WithForceHTTP2(false)
+		client := createOptimizedHTTPClient(cfg)
+
+		transport, ok := client.Transport.(*http.Transport)
+		if !ok {
+			t.Fatal("Expected *http.Transport")
+		}
+
+		if transport.ForceAttemptHTTP2 {
+			t.Error("Expected HTTP/2 to be disabled")
+		}
+	})
+}
+
+// TestConnectionPoolingBehavior tests connection pooling behavior under load.
+func TestConnectionPoolingBehavior(t *testing.T) {
+	// Create a test server
+	var requestCount int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt64(&requestCount, 1)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"test": "response"}`))
+	}))
+	defer server.Close()
+
+	// Create client with small connection pool for testing
+	cfg := config.DefaultConfig().
+		WithMaxIdleConns(2).
+		WithMaxIdleConnsPerHost(1).
+		WithMaxConnsPerHost(2)
+
+	client := createOptimizedHTTPClient(cfg)
+
+	// Make concurrent requests
+	const numRequests = 10
+	var wg sync.WaitGroup
+	wg.Add(numRequests)
+
+	for i := 0; i < numRequests; i++ {
+		go func() {
+			defer wg.Done()
+			req, _ := http.NewRequestWithContext(context.Background(), "GET", server.URL, nil)
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Errorf("Request failed: %v", err)
+				return
+			}
+			_ = resp.Body.Close()
+		}()
+	}
+
+	wg.Wait()
+
+	if atomic.LoadInt64(&requestCount) != numRequests {
+		t.Errorf("Expected %d requests, got %d", numRequests, atomic.LoadInt64(&requestCount))
+	}
+}
