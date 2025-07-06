@@ -19,6 +19,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/aspathlength"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asroutingconsistency"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgplay"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpupdates"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
@@ -349,6 +350,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callCountryASNs(ctx, args)
 	case "getBGPlay":
 		return s.callBGPlay(ctx, args)
+	case "getBGPUpdates":
+		return s.callBGPUpdates(ctx, args)
 	case "getPrefixRoutingConsistency":
 		return s.callPrefixRoutingConsistency(ctx, args)
 	case "getPrefixOverview":
@@ -611,6 +614,20 @@ func (s *Server) callBGPlay(ctx context.Context, args map[string]interface{}) (*
 	}
 
 	result, err := bgplay.GetBGPlay(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callBGPUpdates(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := bgpupdates.GetBGPUpdates(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
