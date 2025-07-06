@@ -779,7 +779,7 @@ func TestCopyInterface(t *testing.T) {
 	}
 }
 
-// BenchmarkHTTPClientPerformance benchmarks the performance of different HTTP client configurations
+// BenchmarkHTTPClientPerformance benchmarks the performance of different HTTP client configurations.
 func BenchmarkHTTPClientPerformance(b *testing.B) {
 	b.Run("DefaultClient", func(b *testing.B) {
 		client := &http.Client{Timeout: 30 * time.Second}
@@ -804,7 +804,7 @@ func BenchmarkHTTPClientPerformance(b *testing.B) {
 
 func benchmarkHTTPClient(b *testing.B, client *http.Client) {
 	// Create a test server that simulates RIPE API behavior
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Simulate some processing time
 		time.Sleep(10 * time.Millisecond)
 		w.Header().Set("Content-Type", "application/json")
@@ -816,7 +816,7 @@ func benchmarkHTTPClient(b *testing.B, client *http.Client) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			req, _ := http.NewRequest("GET", server.URL, nil)
+			req, _ := http.NewRequestWithContext(context.Background(), "GET", server.URL, nil)
 			resp, err := client.Do(req)
 			if err != nil {
 				b.Error(err)
@@ -827,7 +827,7 @@ func benchmarkHTTPClient(b *testing.B, client *http.Client) {
 	})
 }
 
-// TestOptimizedHTTPClientConfiguration tests the optimized HTTP client configuration
+// TestOptimizedHTTPClientConfiguration tests the optimized HTTP client configuration.
 func TestOptimizedHTTPClientConfiguration(t *testing.T) {
 	cfg := config.DefaultConfig().
 		WithMaxIdleConns(50).
@@ -886,7 +886,7 @@ func TestOptimizedHTTPClientConfiguration(t *testing.T) {
 	}
 }
 
-// TestHTTP2Support tests HTTP/2 support functionality
+// TestHTTP2Support tests HTTP/2 support functionality.
 func TestHTTP2Support(t *testing.T) {
 	t.Run("HTTP2Enabled", func(t *testing.T) {
 		cfg := config.DefaultConfig().WithForceHTTP2(true)
@@ -917,12 +917,12 @@ func TestHTTP2Support(t *testing.T) {
 	})
 }
 
-// TestConnectionPoolingBehavior tests connection pooling behavior under load
+// TestConnectionPoolingBehavior tests connection pooling behavior under load.
 func TestConnectionPoolingBehavior(t *testing.T) {
 	// Create a test server
-	requestCount := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+	var requestCount int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt64(&requestCount, 1)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"test": "response"}`))
 	}))
@@ -944,7 +944,7 @@ func TestConnectionPoolingBehavior(t *testing.T) {
 	for i := 0; i < numRequests; i++ {
 		go func() {
 			defer wg.Done()
-			req, _ := http.NewRequest("GET", server.URL, nil)
+			req, _ := http.NewRequestWithContext(context.Background(), "GET", server.URL, nil)
 			resp, err := client.Do(req)
 			if err != nil {
 				t.Errorf("Request failed: %v", err)
@@ -956,7 +956,7 @@ func TestConnectionPoolingBehavior(t *testing.T) {
 
 	wg.Wait()
 
-	if requestCount != numRequests {
-		t.Errorf("Expected %d requests, got %d", numRequests, requestCount)
+	if atomic.LoadInt64(&requestCount) != numRequests {
+		t.Errorf("Expected %d requests, got %d", numRequests, atomic.LoadInt64(&requestCount))
 	}
 }

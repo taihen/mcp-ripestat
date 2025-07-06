@@ -18,7 +18,8 @@ import (
 
 // ripeLimiter enforces RIPE's 8 concurrent request limit with a safety margin.
 var ripeLimiter = make(chan struct{}, 7)
-// createOptimizedHTTPClient creates an HTTP client with connection pooling and HTTP/2 support
+
+// createOptimizedHTTPClient creates an HTTP client with connection pooling and HTTP/2 support.
 func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 	// Create custom transport with connection pooling
 	transport := &http.Transport{
@@ -27,24 +28,24 @@ func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 		MaxIdleConnsPerHost: cfg.MaxIdleConnsPerHost,
 		MaxConnsPerHost:     cfg.MaxConnsPerHost,
 		IdleConnTimeout:     cfg.IdleConnTimeout,
-		
+
 		// Performance optimizations
 		DisableCompression: false, // Enable compression for bandwidth efficiency
 		DisableKeepAlives:  false, // Enable keep-alives for connection reuse
-		
+
 		// Timeouts for connection establishment
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: cfg.Timeout,
 		ExpectContinueTimeout: 1 * time.Second,
-		
+
 		// Enable HTTP/2 if requested (Go's standard library enables HTTP/2 by default for HTTPS)
 		ForceAttemptHTTP2: cfg.ForceHTTP2,
-		
+
 		// Additional HTTP/2 optimizations
-		// Note: HTTP/2 specific settings like ReadIdleTimeout and PingTimeout 
+		// Note: HTTP/2 specific settings like ReadIdleTimeout and PingTimeout
 		// are handled automatically by Go's HTTP/2 implementation
 	}
-	
+
 	return &http.Client{
 		Transport: transport,
 		Timeout:   cfg.Timeout,

@@ -29,13 +29,13 @@ const (
 	// DefaultSourceApp is the default sourceapp parameter for RIPE API compliance.
 	DefaultSourceApp = "mcp-ripestat"
 
-	// Connection pool defaults for optimal performance
+	// Connection pool defaults for optimal performance.
 	DefaultMaxIdleConns        = 100              // Maximum idle connections across all hosts
 	DefaultMaxIdleConnsPerHost = 10               // Maximum idle connections per host
 	DefaultMaxConnsPerHost     = 100              // Maximum connections per host
 	DefaultIdleConnTimeout     = 90 * time.Second // Idle connection timeout
 
-	// HTTP/2 defaults
+	// HTTP/2 defaults.
 	DefaultHTTP2ReadIdleTimeout = 30 * time.Second // HTTP/2 read idle timeout
 	DefaultHTTP2PingTimeout     = 15 * time.Second // HTTP/2 ping timeout
 )
@@ -68,9 +68,9 @@ type Config struct {
 	MaxIdleConnsPerHost int           // Maximum number of idle connections per host
 	MaxConnsPerHost     int           // Maximum number of connections per host
 	IdleConnTimeout     time.Duration // Maximum time an idle connection will remain idle
-	
+
 	// HTTP/2 settings
-	ForceHTTP2          bool          // Force HTTP/2 usage (with fallback to HTTP/1.1)
+	ForceHTTP2           bool          // Force HTTP/2 usage (with fallback to HTTP/1.1)
 	HTTP2ReadIdleTimeout time.Duration // HTTP/2 read idle timeout
 	HTTP2PingTimeout     time.Duration // HTTP/2 ping timeout
 }
@@ -90,13 +90,13 @@ func DefaultConfig() *Config {
 		MaxRetryWaitTime: DefaultMaxRetryWaitTime,
 		UserAgent:        DefaultUserAgent,
 		SourceApp:        sourceApp,
-		
+
 		// Connection pool settings
 		MaxIdleConns:        DefaultMaxIdleConns,
 		MaxIdleConnsPerHost: DefaultMaxIdleConnsPerHost,
 		MaxConnsPerHost:     DefaultMaxConnsPerHost,
 		IdleConnTimeout:     DefaultIdleConnTimeout,
-		
+
 		// HTTP/2 settings
 		ForceHTTP2:           true, // Enable HTTP/2 by default
 		HTTP2ReadIdleTimeout: DefaultHTTP2ReadIdleTimeout,
