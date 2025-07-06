@@ -26,6 +26,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getRoutingStatus` - Current routing visibility for a prefix
 - `getRoutingHistory` - Historical routing changes and announcements
 - `getPrefixRoutingConsistency` - BGP routing consistency analysis for IP prefixes
+- `getASRoutingConsistency` - AS routing consistency analysis including routing anomaly detection
 - `getRelatedPrefixes` - Find prefixes that are connected or associated with a given prefix
 - `getASNNeighbours` - Upstream/downstream AS relationships
 - `getLookingGlass` - Real-time BGP data from RIPE RRCs
@@ -108,6 +109,16 @@ The current implementation provides these RIPEstat API endpoints:
 "Show routing consistency analysis for 104.16.0.0/13"
 "Compare BGP announcements with IRR records for 1.1.1.0/24"
 "Get prefix routing consistency report for 203.0.113.0/24"
+```
+
+### AS Routing Consistency Queries
+
+```shell
+"Check routing consistency for AS3333"
+"Analyze routing anomalies for AS15169"
+"Show routing consistency analysis for AS13335"
+"Compare BGP announcements with WHOIS for AS8075"
+"Get AS routing consistency report for AS32934"
 ```
 
 ### Country & Geographic Queries
