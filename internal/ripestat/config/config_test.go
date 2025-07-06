@@ -233,3 +233,131 @@ func TestConfig_ChainedMethods(t *testing.T) {
 		t.Errorf("Expected original BaseURL to remain %q, got %q", DefaultBaseURL, cfg.BaseURL)
 	}
 }
+
+func TestConfig_WithConnectionPoolSettings(t *testing.T) {
+	cfg := DefaultConfig().
+		WithMaxIdleConns(50).
+		WithMaxIdleConnsPerHost(5).
+		WithMaxConnsPerHost(50).
+		WithIdleConnTimeout(60 * time.Second)
+
+	if cfg.MaxIdleConns != 50 {
+		t.Errorf("Expected MaxIdleConns to be 50, got %d", cfg.MaxIdleConns)
+	}
+
+	if cfg.MaxIdleConnsPerHost != 5 {
+		t.Errorf("Expected MaxIdleConnsPerHost to be 5, got %d", cfg.MaxIdleConnsPerHost)
+	}
+
+	if cfg.MaxConnsPerHost != 50 {
+		t.Errorf("Expected MaxConnsPerHost to be 50, got %d", cfg.MaxConnsPerHost)
+	}
+
+	if cfg.IdleConnTimeout != 60*time.Second {
+		t.Errorf("Expected IdleConnTimeout to be 60s, got %v", cfg.IdleConnTimeout)
+	}
+}
+
+func TestConfig_WithHTTP2Settings(t *testing.T) {
+	cfg := DefaultConfig().
+		WithForceHTTP2(true).
+		WithHTTP2ReadIdleTimeout(45 * time.Second).
+		WithHTTP2PingTimeout(20 * time.Second)
+
+	if !cfg.ForceHTTP2 {
+		t.Error("Expected ForceHTTP2 to be true")
+	}
+
+	if cfg.HTTP2ReadIdleTimeout != 45*time.Second {
+		t.Errorf("Expected HTTP2ReadIdleTimeout to be 45s, got %v", cfg.HTTP2ReadIdleTimeout)
+	}
+
+	if cfg.HTTP2PingTimeout != 20*time.Second {
+		t.Errorf("Expected HTTP2PingTimeout to be 20s, got %v", cfg.HTTP2PingTimeout)
+	}
+}
+
+func TestConfig_WithConnectionPoolSettings_InvalidValues(t *testing.T) {
+	original := DefaultConfig()
+
+	// Test with negative values (should return original config)
+	cfg := original.WithMaxIdleConns(-1)
+	if cfg.MaxIdleConns != original.MaxIdleConns {
+		t.Error("Expected negative MaxIdleConns to be ignored")
+	}
+
+	cfg = original.WithMaxIdleConnsPerHost(-1)
+	if cfg.MaxIdleConnsPerHost != original.MaxIdleConnsPerHost {
+		t.Error("Expected negative MaxIdleConnsPerHost to be ignored")
+	}
+
+	cfg = original.WithMaxConnsPerHost(-1)
+	if cfg.MaxConnsPerHost != original.MaxConnsPerHost {
+		t.Error("Expected negative MaxConnsPerHost to be ignored")
+	}
+
+	cfg = original.WithIdleConnTimeout(-1 * time.Second)
+	if cfg.IdleConnTimeout != original.IdleConnTimeout {
+		t.Error("Expected negative IdleConnTimeout to be ignored")
+	}
+}
+
+func TestConfig_WithHTTP2Settings_InvalidValues(t *testing.T) {
+	original := DefaultConfig()
+
+	// Test with zero/negative values (should return original config)
+	cfg := original.WithHTTP2ReadIdleTimeout(0)
+	if cfg.HTTP2ReadIdleTimeout != original.HTTP2ReadIdleTimeout {
+		t.Error("Expected zero HTTP2ReadIdleTimeout to be ignored")
+	}
+
+	cfg = original.WithHTTP2PingTimeout(-1 * time.Second)
+	if cfg.HTTP2PingTimeout != original.HTTP2PingTimeout {
+		t.Error("Expected negative HTTP2PingTimeout to be ignored")
+	}
+}
+
+func TestConfig_PerformanceChainedMethods(t *testing.T) {
+	cfg := DefaultConfig().
+		WithMaxIdleConns(200).
+		WithMaxIdleConnsPerHost(20).
+		WithMaxConnsPerHost(200).
+		WithIdleConnTimeout(120 * time.Second).
+		WithForceHTTP2(true).
+		WithHTTP2ReadIdleTimeout(60 * time.Second).
+		WithHTTP2PingTimeout(30 * time.Second).
+		WithTimeout(45 * time.Second)
+
+	// Verify all settings are applied correctly
+	if cfg.MaxIdleConns != 200 {
+		t.Errorf("Expected MaxIdleConns to be 200, got %d", cfg.MaxIdleConns)
+	}
+
+	if cfg.MaxIdleConnsPerHost != 20 {
+		t.Errorf("Expected MaxIdleConnsPerHost to be 20, got %d", cfg.MaxIdleConnsPerHost)
+	}
+
+	if cfg.MaxConnsPerHost != 200 {
+		t.Errorf("Expected MaxConnsPerHost to be 200, got %d", cfg.MaxConnsPerHost)
+	}
+
+	if cfg.IdleConnTimeout != 120*time.Second {
+		t.Errorf("Expected IdleConnTimeout to be 120s, got %v", cfg.IdleConnTimeout)
+	}
+
+	if !cfg.ForceHTTP2 {
+		t.Error("Expected ForceHTTP2 to be true")
+	}
+
+	if cfg.HTTP2ReadIdleTimeout != 60*time.Second {
+		t.Errorf("Expected HTTP2ReadIdleTimeout to be 60s, got %v", cfg.HTTP2ReadIdleTimeout)
+	}
+
+	if cfg.HTTP2PingTimeout != 30*time.Second {
+		t.Errorf("Expected HTTP2PingTimeout to be 30s, got %v", cfg.HTTP2PingTimeout)
+	}
+
+	if cfg.Timeout != 45*time.Second {
+		t.Errorf("Expected Timeout to be 45s, got %v", cfg.Timeout)
+	}
+}
