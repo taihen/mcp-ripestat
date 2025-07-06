@@ -2,7 +2,7 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
-**Current Status**: 20/64 endpoints implemented (31.3% coverage)
+**Current Status**: 21/64 endpoints implemented (32.8% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |
 | --- | ----------------------------------- | ----------- | ------ | -------- | ------------------------------------ |
@@ -13,7 +13,7 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 | 5   | announced-prefixes                  | ✅          | 4      | Critical | Prefixes announced by AS             |
 | 6   | as-overview                         | ✅          | 3      | Critical | Autonomous System information        |
 | 7   | as-path-length                      | ✅          | 29     | High     | BGP path optimization analysis       |
-| 8   | as-routing-consistency              | ❌          | 30     | High     | Routing anomaly detection            |
+| 8   | as-routing-consistency              | ✅          | 30     | High     | Routing anomaly detection            |
 | 9   | asn-neighbours                      | ✅          | 9      | High     | AS peering relationships             |
 | 10  | asn-neighbours-history              | ❌          | -      | Medium   | Historical AS neighbor data          |
 | 11  | atlas-probe-deployment              | ❌          | -      | Low      | RIPE Atlas probe distribution        |

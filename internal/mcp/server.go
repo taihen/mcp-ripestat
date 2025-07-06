@@ -17,6 +17,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/aspathlength"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/asroutingconsistency"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgplay"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
@@ -358,6 +359,8 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		return s.callAllocationHistory(ctx, args)
 	case "getASPathLength":
 		return s.callASPathLength(ctx, args)
+	case "getASRoutingConsistency":
+		return s.callASRoutingConsistency(ctx, args)
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
@@ -678,6 +681,20 @@ func (s *Server) callASPathLength(ctx context.Context, args map[string]interface
 	}
 
 	result, err := aspathlength.GetASPathLength(ctx, resource)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) callASRoutingConsistency(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
+	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
+	if errResult != nil {
+		return errResult, nil
+	}
+
+	result, err := asroutingconsistency.GetASRoutingConsistency(ctx, resource)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
