@@ -2,7 +2,7 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
-**Current Status**: 21/64 endpoints implemented (32.8% coverage)
+**Current Status**: 22/64 endpoints implemented (34.4% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |
 | --- | ----------------------------------- | ----------- | ------ | -------- | ------------------------------------ |
@@ -21,7 +21,7 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 | 13  | atlas-targets                       | ❌          | -      | Low      | RIPE Atlas measurement targets       |
 | 14  | bgp-state                           | ❌          | -      | Medium   | BGP routing table state              |
 | 15  | bgp-update-activity                 | ❌          | -      | Medium   | BGP update frequency analysis        |
-| 16  | bgp-updates                         | ❌          | 21     | Critical | Real-time BGP change monitoring      |
+| 16  | bgp-updates                         | ✅          | 21     | Critical | Real-time BGP change monitoring      |
 | 17  | bgplay                              | ✅          | 16     | High     | BGP routing history visualization    |
 | 18  | blocklist                           | ❌          | -      | Medium   | Security threat intelligence         |
 | 19  | country-asns                        | ✅          | 18     | Medium   | ASNs by country                      |
