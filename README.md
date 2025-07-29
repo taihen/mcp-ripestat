@@ -59,8 +59,12 @@ per-server instance rather than per-client-connection, managing RIPE API quotas
 across multiple concurrent sessions.
 
 > [!WARNING]
-> At current stage this MCP server does not provide authentication.
-> Use firewall or other L3 networking to restrict access to the server.
+> At current stage this MCP server does not provide authentication. The initial
+> version of MCP released on 2024-11-05 did not support authorization. However,
+> in the 2025-03-26 update, the MCP protocol introduced an OAuth 2.1-based
+> authorization mechanism. It is still not widely adopted and might be subject
+> to change in the future - therefore, we recommend using a firewall or other
+> native MCP solution, such as MCPProxy, to restrict access to the server.
 
 ## Installation
 

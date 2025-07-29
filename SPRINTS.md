@@ -35,7 +35,7 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 18     | `sprint-18` | v2.3.0  | Country ASNs                  | `country-asns`               | Completed |
 | 19     | `sprint-19` | v2.9.0  | Prefix Overview               | `prefix-overview`            | Completed |
 | 20     | `sprint-20` | v2.4.0  | RPKI History                  | `rpki-history`               | Completed |
-| 21     | `sprint-21` | TBD     | BGP Updates                   | `bgp-updates`                | Completed |
+| 21     | `sprint-21` | v2.16.0 | BGP Updates                   | `bgp-updates`                | Completed |
 | 22     | `sprint-22` | v2.8.0  | Prefix Routing Consistency    | `prefix-routing-consistency` | Completed |
 | 23     | `sprint-23` | v2.0.0  | Removal of REST API Endpoints | N/A                          | Completed |
 | 24     | `sprint-24` | v2.1.0  | Support proxy headers         | N/A                          | Completed |
