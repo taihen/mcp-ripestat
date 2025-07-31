@@ -249,6 +249,10 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
 	}
 
+	// Auto-initialize for better client compatibility
+	s.initialized = true
+	slog.Info("auto-initialized server for protocol version", "version", params.ProtocolVersion)
+
 	result := CreateInitializeResult(s.serverName, s.serverVersion)
 	return NewResponse(result, req.ID), nil
 }
