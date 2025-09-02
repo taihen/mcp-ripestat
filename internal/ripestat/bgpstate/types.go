@@ -23,5 +23,5 @@ type BGPRoute struct {
 	TargetPrefix string   `json:"target_prefix"`
 	SourceID     string   `json:"source_id"`
 	Path         []int    `json:"path"`
-	Community    []string `json:"community"`
+Community    [][]int `json:"community"`
 }
