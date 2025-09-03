@@ -283,7 +283,7 @@ func TestStreamableHTTP(t *testing.T) {
 			"method":  "ping",
 			"id":      1,
 		}
-		
+
 		reqBody, _ := json.Marshal(requestData)
 		req, err := http.NewRequest("POST", mcpURL, bytes.NewBuffer(reqBody))
 		if err != nil {
@@ -331,13 +331,13 @@ func TestStreamableHTTP(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status 200 for endpoint info, got %d", resp.StatusCode)
 		}
-		
+
 		// Should return endpoint info JSON
 		var response map[string]interface{}
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
-		
+
 		if response["service"] != "mcp-ripestat" {
 			t.Errorf("Expected service 'mcp-ripestat', got %v", response["service"])
 		}

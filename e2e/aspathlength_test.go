@@ -19,7 +19,7 @@ func TestASPathLengthE2E(t *testing.T) {
 
 	// Use the proper MCP endpoint and initialization flow
 	mcpURL := serverURL + "/mcp"
-	
+
 	// First initialize the MCP server
 	initReq := map[string]interface{}{
 		"jsonrpc": "2.0",
@@ -29,7 +29,7 @@ func TestASPathLengthE2E(t *testing.T) {
 			"protocolVersion": "2025-06-18",
 			"capabilities":    map[string]interface{}{},
 			"clientInfo": map[string]interface{}{
-				"name":    "test-client", 
+				"name":    "test-client",
 				"version": "1.0.0",
 			},
 		},
