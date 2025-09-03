@@ -17,7 +17,46 @@ func TestASPathLengthE2E(t *testing.T) {
 		t.Skip("Skipping E2E test in short mode")
 	}
 
-	// Prepare the MCP request for AS Path Length
+	// Use the proper MCP endpoint and initialization flow
+	mcpURL := serverURL + "/mcp"
+
+	// First initialize the MCP server
+	initReq := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      "init",
+		"method":  "initialize",
+		"params": map[string]interface{}{
+			"protocolVersion": "2025-06-18",
+			"capabilities":    map[string]interface{}{},
+			"clientInfo": map[string]interface{}{
+				"name":    "test-client",
+				"version": "1.0.0",
+			},
+		},
+	}
+
+	initBody, err := json.Marshal(initReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal init request: %v", err)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Post(mcpURL, "application/json", bytes.NewBuffer(initBody))
+	if err != nil {
+		t.Fatalf("Failed to initialize MCP: %v", err)
+	}
+	resp.Body.Close()
+
+	// Send initialized notification
+	notif := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "initialized",
+		"params":  nil,
+	}
+	notifBody, _ := json.Marshal(notif)
+	http.Post(mcpURL, "application/json", bytes.NewBuffer(notifBody))
+
+	// Now prepare the MCP request for AS Path Length
 	request := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      "test-as-path-length",
@@ -36,8 +75,7 @@ func TestASPathLengthE2E(t *testing.T) {
 		t.Fatalf("Failed to marshal request: %v", err)
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Post(serverURL, "application/json", bytes.NewBuffer(requestBody))
+	resp, err = client.Post(mcpURL, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}

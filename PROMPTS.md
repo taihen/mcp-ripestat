@@ -33,6 +33,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getBGPlay` - BGP routing events and timeline for IP addresses/prefixes
 - `getBGPUpdates` - BGP update activity and routing changes for IP addresses/prefixes
 - `getASPathLength` - AS path length statistics and distribution data for route optimization analysis
+- `getBGPState` - BGP routing table state for IP addresses/prefixes as observed by RIS collectors
 
 **Security & Compliance:**
 
@@ -62,6 +63,8 @@ The current implementation provides these RIPEstat API endpoints:
 "Show allocation history for 8.8.8.8"
 "Show BGP play data for 8.8.8.8"
 "What's the network ownership of 2001:db8::1?"
+"Get BGP state for IP 1.1.1.1"
+"Show current BGP routing table for 8.8.8.8"
 ```
 
 ### IP Prefix Queries
@@ -75,6 +78,9 @@ The current implementation provides these RIPEstat API endpoints:
 "Show allocation history for 193.0.0.0/21"
 "Find related prefixes connected to 193.0.0.0/21"
 "Find the network owner of 198.51.100.0/24"
+"Get current BGP state for prefix 8.8.8.0/24"
+"Show BGP routing table entries for 193.0.0.0/21"
+"What's the BGP state for 104.16.0.0/13 as seen by RIS collectors?"
 ```
 
 ### Autonomous System (ASN) Queries
