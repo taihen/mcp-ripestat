@@ -66,8 +66,10 @@ func TestManifest(t *testing.T) {
 	}
 }
 
-// TestNetworkInfo tests that the network-info endpoint returns a 400 status code when no resource is provided
+// TestNetworkInfoMissingResource tests that MCP tools/call returns error when no resource is provided
 func TestNetworkInfoMissingResource(t *testing.T) {
+	// Since REST endpoints were removed in Sprint 23, this test now verifies MCP error handling
+	// The old REST endpoint `/network-info` no longer exists, so we expect 404
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -82,7 +84,8 @@ func TestNetworkInfoMissingResource(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, resp.StatusCode)
+	// REST endpoints were removed in Sprint 23, so we expect 404 Not Found
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status code %d (REST endpoints removed), got %d", http.StatusNotFound, resp.StatusCode)
 	}
 }

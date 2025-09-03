@@ -183,6 +183,13 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 
 	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "protocol_version", protocolVersion)
 
+	// Validate protocol version first, before any routing decisions
+	if !isSupportedProtocolVersion(protocolVersion) {
+		slog.Warn("unsupported protocol version", "version", protocolVersion)
+		http.Error(w, "Unsupported protocol version", http.StatusBadRequest)
+		return
+	}
+
 	// Determine client capabilities based on protocol version
 	supportsStreamableHTTP := isProtocolVersionAtLeast(protocolVersion, "2025-06-18")
 
@@ -509,6 +516,13 @@ func isProtocolVersionAtLeast(version, minVersion string) bool {
 // handleLegacyMCPClient handles requests from clients using protocol versions < 2025-06-18.
 func handleLegacyMCPClient(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	origin := r.Header.Get("Origin")
+	protocolVersion := r.Header.Get("MCP-Protocol-Version")
+	if protocolVersion == "" {
+		protocolVersion = "2025-03-26" // Default to legacy version
+	}
+
+	// Set the protocol version header in response
+	w.Header().Set("MCP-Protocol-Version", protocolVersion)
 
 	// Simple CORS handling for legacy clients
 	if origin != "" && isValidOrigin(origin) {
