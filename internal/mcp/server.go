@@ -10,29 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/addressspacehierarchy"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/allocationhistory"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/asnneighbours"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/asoverview"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/aspathlength"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/asroutingconsistency"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/bgplay"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpstate"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpupdates"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/prefixoverview"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/prefixroutingconsistency"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/relatedprefixes"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/routinghistory"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/routingstatus"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkihistory"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/rpkivalidation"
+	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
 // contextKey is a custom type for context keys to avoid collisions.
@@ -131,19 +110,25 @@ func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) 
 
 // Server represents an MCP server.
 type Server struct {
-	serverName          string
-	serverVersion       string
-	initialized         bool
-	disableWhatsMyIP    bool
-	globallyInitialized bool // For compatibility with older protocol versions
+	serverName           string
+	serverVersion        string
+	initialized          bool
+	disableWhatsMyIP     bool
+	globallyInitialized  bool // For compatibility with older protocol versions
+	consolidatedTools    *consolidated.ConsolidatedTools
 }
 
 // NewServer creates a new MCP server.
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
+	// Initialize consolidated tools with direct executor
+	executor := consolidated.NewDirectExecutor()
+	consolidatedTools := consolidated.NewConsolidatedTools(executor)
+	
 	return &Server{
-		serverName:       serverName,
-		serverVersion:    serverVersion,
-		disableWhatsMyIP: disableWhatsMyIP,
+		serverName:        serverName,
+		serverVersion:     serverVersion,
+		disableWhatsMyIP:  disableWhatsMyIP,
+		consolidatedTools: consolidatedTools,
 	}
 }
 
@@ -326,436 +311,62 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		}
 	}
 
+	// Route to consolidated tools
 	switch params.Name {
-	case "getNetworkInfo":
-		return s.callNetworkInfo(ctx, args)
-	case "getASOverview":
-		return s.callASOverview(ctx, args)
-	case "getAnnouncedPrefixes":
-		return s.callAnnouncedPrefixes(ctx, args)
-	case "getRelatedPrefixes":
-		return s.callRelatedPrefixes(ctx, args)
-	case "getRoutingStatus":
-		return s.callRoutingStatus(ctx, args)
-	case "getRoutingHistory":
-		return s.callRoutingHistory(ctx, args)
-	case "getWhois":
-		return s.callWhois(ctx, args)
-	case "getAbuseContactFinder":
-		return s.callAbuseContactFinder(ctx, args)
-	case "getRPKIValidation":
-		return s.callRPKIValidation(ctx, args)
-	case "getRPKIHistory":
-		return s.callRPKIHistory(ctx, args)
-	case "getASNNeighbours":
-		return s.callASNNeighbours(ctx, args)
-	case "getLookingGlass":
-		return s.callLookingGlass(ctx, args)
-	case "getCountryASNs":
-		return s.callCountryASNs(ctx, args)
-	case "getBGPlay":
-		return s.callBGPlay(ctx, args)
-	case "getBGPUpdates":
-		return s.callBGPUpdates(ctx, args)
-	case "getBGPState":
-		return s.callBGPState(ctx, args)
-	case "getPrefixRoutingConsistency":
-		return s.callPrefixRoutingConsistency(ctx, args)
-	case "getPrefixOverview":
-		return s.callPrefixOverview(ctx, args)
-	case "getAddressSpaceHierarchy":
-		return s.callAddressSpaceHierarchy(ctx, args)
-	case "getAllocationHistory":
-		return s.callAllocationHistory(ctx, args)
-	case "getASPathLength":
-		return s.callASPathLength(ctx, args)
-	case "getASRoutingConsistency":
-		return s.callASRoutingConsistency(ctx, args)
+	case "investigateResource":
+		result, err := s.consolidatedTools.InvestigateResource(ctx, args)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+		
+	case "analyzeRouting":
+		result, err := s.consolidatedTools.AnalyzeRouting(ctx, args)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+		
+	case "queryRegistry":
+		result, err := s.consolidatedTools.QueryRegistry(ctx, args)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+		
+	case "validateSecurity":
+		result, err := s.consolidatedTools.ValidateSecurity(ctx, args)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+		
+	case "exploreRelationships":
+		result, err := s.consolidatedTools.ExploreRelationships(ctx, args)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+		
+	case "searchByLocation":
+		result, err := s.consolidatedTools.SearchByLocation(ctx, args)
+		if err != nil {
+			return CreateToolResult(formatErrorMessage(err), true), nil
+		}
+		return CreateToolResultFromJSON(result), nil
+		
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
 		}
 		return s.callWhatsMyIP(ctx, args)
+		
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}
 }
 
-// Tool call implementations.
-
-func (s *Server) callNetworkInfo(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := networkinfo.GetNetworkInfo(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callASOverview(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := asoverview.GetASOverview(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callAnnouncedPrefixes(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callRelatedPrefixes(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := relatedprefixes.GetRelatedPrefixes(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callRoutingStatus(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := routingstatus.GetRoutingStatus(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callRoutingHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	// Get optional pagination parameters
-	startTime := getOptionalStringParam(args, "start_time")
-	endTime := getOptionalStringParam(args, "end_time")
-
-	var maxResults int
-	if maxResultsStr := getOptionalStringParam(args, "max_results"); maxResultsStr != "" {
-		var err error
-		maxResults, err = strconv.Atoi(maxResultsStr)
-		if err != nil {
-			return CreateToolResult("Error: max_results parameter must be a valid integer", true), nil
-		}
-		if maxResults < 0 {
-			return CreateToolResult("Error: max_results parameter must be non-negative", true), nil
-		}
-	}
-
-	// Use paginated version if any optional parameters are provided
-	if startTime != "" || endTime != "" || maxResults > 0 {
-		result, err := routinghistory.GetRoutingHistoryWithOptions(ctx, resource, startTime, endTime, maxResults)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-	}
-
-	// Default behavior - use original function for backward compatibility
-	result, err := routinghistory.GetRoutingHistory(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callWhois(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := whois.GetWhois(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callAbuseContactFinder(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := abusecontactfinder.GetAbuseContactFinder(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callRPKIValidation(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	prefix, errResult := getRequiredStringParam(args, "prefix", ErrPrefixRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callRPKIHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := rpkihistory.GetRPKIHistory(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callASNNeighbours(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	lod, errResult := validateLODParam(args)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	queryTime := getOptionalStringParam(args, "query_time")
-
-	result, err := asnneighbours.GetASNNeighbours(ctx, resource, lod, queryTime)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callLookingGlass(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	lookBackLimit, errResult := validateLookBackLimitParam(args)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := lookingglass.GetLookingGlass(ctx, resource, lookBackLimit)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callCountryASNs(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	lod, errResult := validateLODParam(args)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	opts := &countryasns.GetOptions{LOD: lod}
-	result, err := countryasns.GetCountryASNs(ctx, resource, opts)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callBGPlay(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := bgplay.GetBGPlay(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callBGPUpdates(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := bgpupdates.GetBGPUpdates(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callBGPState(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	opts := bgpstate.Options{
-		Resource: resource,
-	}
-
-	if timestamp, ok := args["timestamp"].(string); ok && timestamp != "" {
-		opts.Timestamp = timestamp
-	}
-
-	if rrcs, ok := args["rrcs"].(string); ok && rrcs != "" {
-		opts.RRCs = rrcs
-	}
-
-	if unixTimestamps, ok := args["unix_timestamps"].(bool); ok {
-		opts.UnixTimestamps = unixTimestamps
-	}
-
-	client := bgpstate.DefaultClient()
-	result, err := client.Get(ctx, opts)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callPrefixRoutingConsistency(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := prefixroutingconsistency.GetPrefixRoutingConsistency(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callPrefixOverview(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := prefixoverview.GetPrefixOverview(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callAddressSpaceHierarchy(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := addressspacehierarchy.GetAddressSpaceHierarchy(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callAllocationHistory(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := allocationhistory.GetAllocationHistory(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callASPathLength(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := aspathlength.GetASPathLength(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
-
-func (s *Server) callASRoutingConsistency(ctx context.Context, args map[string]interface{}) (*ToolResult, error) {
-	resource, errResult := getRequiredStringParam(args, "resource", ErrResourceRequired)
-	if errResult != nil {
-		return errResult, nil
-	}
-
-	result, err := asroutingconsistency.GetASRoutingConsistency(ctx, resource)
-	if err != nil {
-		return CreateToolResult(formatErrorMessage(err), true), nil
-	}
-
-	return CreateToolResultFromJSON(result), nil
-}
+// Keep only the callWhatsMyIP implementation for the special case
 
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
 	// Check if we have HTTP request context for client IP extraction

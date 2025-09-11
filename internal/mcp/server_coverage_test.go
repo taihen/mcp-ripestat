@@ -33,74 +33,54 @@ func TestCoverageCompletionForAPIErrors(t *testing.T) {
 		args     map[string]interface{}
 	}{
 		{
-			name:     "callNetworkInfo_error",
-			toolName: "getNetworkInfo",
+			name:     "investigateResource_error",
+			toolName: "investigateResource",
 			args:     map[string]interface{}{"resource": "invalid.example.com"},
 		},
 		{
-			name:     "callASOverview_error",
-			toolName: "getASOverview",
+			name:     "analyzeRouting_error",
+			toolName: "analyzeRouting",
 			args:     map[string]interface{}{"resource": "AS99999999"},
 		},
 		{
-			name:     "callAnnouncedPrefixes_error",
-			toolName: "getAnnouncedPrefixes",
+			name:     "queryRegistry_error",
+			toolName: "queryRegistry",
 			args:     map[string]interface{}{"resource": "AS99999999"},
 		},
 		{
-			name:     "callRoutingStatus_error",
-			toolName: "getRoutingStatus",
+			name:     "validateSecurity_error", 
+			toolName: "validateSecurity",
 			args:     map[string]interface{}{"resource": "999.999.999.999"},
 		},
 		{
-			name:     "callRoutingHistory_error",
-			toolName: "getRoutingHistory",
+			name:     "exploreRelationships_error",
+			toolName: "exploreRelationships", 
 			args:     map[string]interface{}{"resource": "AS99999999"},
 		},
 		{
-			name:     "callWhois_error",
-			toolName: "getWhois",
-			args:     map[string]interface{}{"resource": "999.999.999.999"},
-		},
-		{
-			name:     "callAbuseContactFinder_error",
-			toolName: "getAbuseContactFinder",
-			args:     map[string]interface{}{"resource": "999.999.999.999"},
-		},
-		{
-			name:     "callRPKIValidation_error",
-			toolName: "getRPKIValidation",
-			args:     map[string]interface{}{"resource": "AS99999999", "prefix": "999.999.999.999/32"},
-		},
-		{
-			name:     "callRPKIHistory_error",
-			toolName: "getRPKIHistory",
-			args:     map[string]interface{}{"resource": "999.999.999.999/32"},
-		},
-		{
-			name:     "callASNNeighbours_error",
-			toolName: "getASNNeighbours",
-			args:     map[string]interface{}{"resource": "AS99999999"},
-		},
-		{
-			name:     "callLookingGlass_error",
-			toolName: "getLookingGlass",
-			args:     map[string]interface{}{"resource": "999.999.999.999/32"},
-		},
-		{
-			name:     "callCountryASNs_error",
-			toolName: "getCountryASNs",
+			name:     "searchByLocation_error",
+			toolName: "searchByLocation",
 			args:     map[string]interface{}{"resource": "XX"},
 		},
 		{
-			name:     "callBGPlay_error",
-			toolName: "getBGPlay",
-			args:     map[string]interface{}{"resource": "999.999.999.999"},
+			name:     "validateSecurity_error",
+			toolName: "validateSecurity",
+			args:     map[string]interface{}{"resource": "invalid-resource"},
 		},
 		{
-			name:     "callAddressSpaceHierarchy_error",
-			toolName: "getAddressSpaceHierarchy",
-			args:     map[string]interface{}{"resource": "invalid.example.com"},
+			name:     "analyzeRouting_error",
+			toolName: "analyzeRouting",
+			args:     map[string]interface{}{"resource": "invalid-resource"},
+		},
+		{
+			name:     "exploreRelationships_error",
+			toolName: "exploreRelationships",
+			args:     map[string]interface{}{"resource": "invalid-resource"},
+		},
+		{
+			name:     "searchByLocation_error",
+			toolName: "searchByLocation",
+			args:     map[string]interface{}{"resource": "invalid-country"},
 		},
 	}
 
@@ -241,7 +221,7 @@ func TestRPKIValidationErrorPaths(t *testing.T) {
 
 	// Test the API error path by using an invalid combination that should fail
 	params := &CallToolParams{
-		Name: "getRPKIValidation",
+		Name: "validateSecurity",
 		Arguments: map[string]interface{}{
 			"resource": "AS99999999",         // Invalid ASN
 			"prefix":   "999.999.999.999/32", // Invalid prefix
@@ -275,19 +255,19 @@ func TestParameterValidationErrorPaths(t *testing.T) {
 		args     map[string]interface{}
 	}{
 		{
-			name:     "lookingGlass_invalid_look_back_limit",
-			toolName: "getLookingGlass",
+			name:     "analyzeRouting_invalid_operations",
+			toolName: "analyzeRouting",
 			args: map[string]interface{}{
-				"resource":        "8.8.8.0/24",
-				"look_back_limit": map[string]interface{}{"invalid": "type"},
+				"resource":   "8.8.8.0/24",
+				"operations": map[string]interface{}{"invalid": "type"},
 			},
 		},
 		{
-			name:     "asnNeighbours_invalid_lod_type",
-			toolName: "getASNNeighbours",
+			name:     "exploreRelationships_invalid_type",
+			toolName: "exploreRelationships",
 			args: map[string]interface{}{
 				"resource": "AS15169",
-				"lod":      []string{"invalid", "array"},
+				"depth":    []string{"invalid", "array"},
 			},
 		},
 	}

@@ -2421,22 +2421,17 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 		}
 	}
 
-	// Test callRPKIHistory
-	t.Run("callRPKIHistory", func(t *testing.T) {
-		testBasicResourceTool(t, "getRPKIHistory", "8.8.8.0/24")
+	// Test validateSecurity
+	t.Run("validateSecurity", func(t *testing.T) {
+		testBasicResourceTool(t, "validateSecurity", "8.8.8.0/24")
 	})
 
-	// Test callCountryASNs
-	t.Run("callCountryASNs", func(t *testing.T) {
-		testBasicResourceTool(t, "getCountryASNs", "NL")
-
-		// Test with LOD parameter
+	// Test searchByLocation
+	t.Run("searchByLocation", func(t *testing.T) {
+		// Test success case
 		params := &CallToolParams{
-			Name: "getCountryASNs",
-			Arguments: map[string]interface{}{
-				"resource": "NL",
-				"lod":      "1",
-			},
+			Name:      "searchByLocation",
+			Arguments: map[string]interface{}{"country": "NL"},
 		}
 
 		result, err := server.executeToolCall(ctx, params)
@@ -2446,13 +2441,10 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 			t.Error("Expected non-nil result")
 		}
 
-		// Test invalid LOD
+		// Test missing country case
 		params = &CallToolParams{
-			Name: "getCountryASNs",
-			Arguments: map[string]interface{}{
-				"resource": "NL",
-				"lod":      "invalid",
-			},
+			Name:      "searchByLocation",
+			Arguments: map[string]interface{}{},
 		}
 
 		result, err = server.executeToolCall(ctx, params)
@@ -2466,13 +2458,13 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 		if !result.IsError {
 			t.Error("Expected error ToolResult")
 		}
-		if !strings.Contains(result.Content[0].Text, "lod parameter must be 0 or 1") {
-			t.Errorf("Expected error message about invalid LOD, got %s", result.Content[0].Text)
+		if !strings.Contains(result.Content[0].Text, "country parameter is required") {
+			t.Errorf("Expected error message about missing country, got %s", result.Content[0].Text)
 		}
 	})
 
-	// Test callBGPlay
-	t.Run("callBGPlay", func(t *testing.T) {
-		testBasicResourceTool(t, "getBGPlay", "8.8.8.8")
+	// Test analyzeRouting 
+	t.Run("analyzeRouting", func(t *testing.T) {
+		testBasicResourceTool(t, "analyzeRouting", "8.8.8.8")
 	})
 }

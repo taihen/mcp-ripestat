@@ -40,9 +40,20 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 
 ## Features
 
-This MCP server offers a subset of RIPEstat Data API.
-See [ENDPOINT_PARITY](ENDPOINT_PARITY.md) for a detailed list of all endpoints
-and their implementation status.
+This MCP server provides intelligent access to RIPEstat Data API through **6 consolidated semantic tools** that automatically detect resource types and route requests to appropriate endpoints:
+
+- **🔍 investigateResource** - Primary investigation tool with auto-detection and intelligent routing
+- **📊 analyzeRouting** - BGP and routing analysis with timeframe support  
+- **📋 queryRegistry** - Registry and administrative data lookup
+- **🔒 validateSecurity** - Security and compliance checks (RPKI, abuse contacts)
+- **🌐 exploreRelationships** - Network topology and relationships
+- **🌍 searchByLocation** - Geographic analysis by country
+
+**Smart Resource Detection**: Automatically identifies IP addresses, prefixes, ASNs, and country codes without requiring explicit type specification.
+
+**Intelligent Operation Routing**: Maps semantic operations to the most relevant RIPEstat endpoints based on resource type and context.
+
+See [ENDPOINT_PARITY](ENDPOINT_PARITY.md) for implementation status of underlying RIPEstat endpoints.
 
 ## Architectural Rationale
 
