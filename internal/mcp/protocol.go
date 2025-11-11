@@ -327,6 +327,33 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
+			Name:        "getBGPState",
+			Description: "Get the state of BGP routes for a resource at a certain point in time, as observed by all the RIS collectors.",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resource": map[string]interface{}{
+						"type":        "string",
+						"description": "The IP address, prefix, AS, or comma-separated list of resources to query.",
+					},
+					"timestamp": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional timestamp for historical BGP data (ISO format or Unix timestamp).",
+					},
+					"rrcs": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional specific Route Collectors to query.",
+					},
+					"unix_timestamps": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Format timestamps as Unix time (default: false).",
+					},
+				},
+				"required":             []string{"resource"},
+				"additionalProperties": false,
+			},
+		},
+		{
 			Name:        "getWhatsMyIP",
 			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
 			InputSchema: map[string]interface{}{

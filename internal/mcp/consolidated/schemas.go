@@ -1,6 +1,6 @@
 package consolidated
 
-// ConsolidatedSchemas contains the JSON schemas for all consolidated tools
+// ConsolidatedSchemas contains the JSON schemas for all consolidated tools.
 var ConsolidatedSchemas = map[string]map[string]interface{}{
 	"investigateResource": {
 		"type": "object",

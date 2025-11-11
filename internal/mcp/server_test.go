@@ -2463,7 +2463,7 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 		}
 	})
 
-	// Test analyzeRouting 
+	// Test analyzeRouting
 	t.Run("analyzeRouting", func(t *testing.T) {
 		testBasicResourceTool(t, "analyzeRouting", "8.8.8.8")
 	})

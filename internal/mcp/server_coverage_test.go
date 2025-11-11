@@ -48,13 +48,13 @@ func TestCoverageCompletionForAPIErrors(t *testing.T) {
 			args:     map[string]interface{}{"resource": "AS99999999"},
 		},
 		{
-			name:     "validateSecurity_error", 
+			name:     "validateSecurity_error",
 			toolName: "validateSecurity",
 			args:     map[string]interface{}{"resource": "999.999.999.999"},
 		},
 		{
 			name:     "exploreRelationships_error",
-			toolName: "exploreRelationships", 
+			toolName: "exploreRelationships",
 			args:     map[string]interface{}{"resource": "AS99999999"},
 		},
 		{

@@ -29,15 +29,15 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
-// DirectExecutor implements ToolExecutor by calling RIPEstat endpoints directly
+// DirectExecutor implements ToolExecutor by calling RIPEstat endpoints directly.
 type DirectExecutor struct{}
 
-// NewDirectExecutor creates a new direct executor
+// NewDirectExecutor creates a new direct executor.
 func NewDirectExecutor() *DirectExecutor {
 	return &DirectExecutor{}
 }
 
-// ExecuteEndpoint executes a specific RIPEstat endpoint directly
+// ExecuteEndpoint executes a specific RIPEstat endpoint directly.
 func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error) {
 	switch endpoint {
 	case "getNetworkInfo":
@@ -129,7 +129,7 @@ func (de *DirectExecutor) handleCountryASNs(ctx context.Context, resource string
 
 func (de *DirectExecutor) handleBGPState(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
 	opts := bgpstate.Options{Resource: resource}
-	
+
 	if timestamp := getOptionalStringParam(params, "timestamp"); timestamp != "" {
 		opts.Timestamp = timestamp
 	}
@@ -144,7 +144,7 @@ func (de *DirectExecutor) handleBGPState(ctx context.Context, resource string, p
 	return client.Get(ctx, opts)
 }
 
-// Helper functions for parameter extraction
+// Helper functions for parameter extraction.
 func getOptionalStringParam(params map[string]interface{}, key string) string {
 	if value, ok := params[key].(string); ok {
 		return value

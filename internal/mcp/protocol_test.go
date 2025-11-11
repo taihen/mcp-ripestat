@@ -59,7 +59,7 @@ func TestCreateToolsList(t *testing.T) {
 	// Check that all expected tools are present
 	expectedTools := []string{
 		"investigateResource",
-		"analyzeRouting", 
+		"analyzeRouting",
 		"queryRegistry",
 		"validateSecurity",
 		"exploreRelationships",
