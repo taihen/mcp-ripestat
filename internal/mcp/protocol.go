@@ -157,14 +157,29 @@ func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeR
 func CreateToolsList() *ToolsListResult {
 	tools := []Tool{
 		{
-			Name:        "getNetworkInfo",
-			Description: "Get network information for an IP address or prefix.",
+			Name:        "investigateResource",
+			Description: "Comprehensive investigation of IP addresses, prefixes, or ASNs with intelligent routing to relevant endpoints based on resource type and requested operations.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"resource": map[string]interface{}{
 						"type":        "string",
-						"description": "The IP address or prefix to query.",
+						"description": "IP address, prefix, ASN, or country code to investigate",
+					},
+					"operations": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"overview", "routing", "security", "history", "neighbors", "relationships", "hierarchy"},
+						},
+						"description": "Operations to perform on the resource",
+						"default":     []string{"overview"},
+					},
+					"depth": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"basic", "detailed", "comprehensive"},
+						"description": "Level of detail for the investigation",
+						"default":     "basic",
 					},
 				},
 				"required":             []string{"resource"},
@@ -172,315 +187,143 @@ func CreateToolsList() *ToolsListResult {
 			},
 		},
 		{
-			Name:        "getASOverview",
-			Description: "Get an overview of an Autonomous System (AS).",
+			Name:        "analyzeRouting",
+			Description: "BGP and routing analysis with timeframe support for consistency checks, path optimization, updates monitoring, and looking glass data.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"resource": map[string]interface{}{
 						"type":        "string",
-						"description": "The AS number to query.",
+						"description": "IP address, prefix, or ASN to analyze",
+					},
+					"analysis": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"consistency", "path-optimization", "updates", "looking-glass"},
+						},
+						"description": "Types of routing analysis to perform",
+						"default":     []string{"consistency"},
+					},
+					"timeframe": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"current", "1d", "1w", "1m"},
+						"description": "Timeframe for analysis",
+						"default":     "current",
 					},
 				},
-				"required": []string{"resource"},
+				"required":             []string{"resource"},
+				"additionalProperties": false,
 			},
 		},
 		{
-			Name:        "getAnnouncedPrefixes",
-			Description: "Get a list of prefixes announced by an Autonomous System (AS).",
+			Name:        "queryRegistry",
+			Description: "Registry and administrative data retrieval including WHOIS information, allocation history, address space hierarchy, and contact information.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"resource": map[string]interface{}{
 						"type":        "string",
-						"description": "The AS number to query.",
+						"description": "IP address, prefix, or ASN to query",
+					},
+					"data": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"whois", "allocation-history", "hierarchy", "contacts"},
+						},
+						"description": "Types of registry data to retrieve",
+						"default":     []string{"whois"},
+					},
+					"format": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"summary", "detailed"},
+						"description": "Format of the returned data",
+						"default":     "summary",
 					},
 				},
-				"required": []string{"resource"},
+				"required":             []string{"resource"},
+				"additionalProperties": false,
 			},
 		},
 		{
-			Name:        "getRelatedPrefixes",
-			Description: "Get related prefixes that are connected or associated with the given prefix.",
+			Name:        "validateSecurity",
+			Description: "Security and compliance validation including RPKI validation, abuse contact discovery, and BGP hijacking detection.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"resource": map[string]interface{}{
 						"type":        "string",
-						"description": "The IP prefix in CIDR notation to query.",
+						"description": "IP address, prefix, or ASN to validate",
+					},
+					"checks": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"rpki", "abuse-contacts", "bgp-hijacking"},
+						},
+						"description": "Security checks to perform",
+						"default":     []string{"rpki", "abuse-contacts"},
+					},
+					"asn": map[string]interface{}{
+						"type":        "string",
+						"description": "ASN for RPKI validation (optional)",
 					},
 				},
-				"required": []string{"resource"},
+				"required":             []string{"resource"},
+				"additionalProperties": false,
 			},
 		},
 		{
-			Name:        "getRoutingStatus",
-			Description: "Get the routing status for an IP prefix.",
+			Name:        "exploreRelationships",
+			Description: "Network topology and relationship exploration including AS neighbors, announced prefixes, and related network discovery.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"resource": map[string]interface{}{
 						"type":        "string",
-						"description": "The IP prefix to query.",
+						"description": "ASN or prefix to explore relationships for",
+					},
+					"relationships": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "string",
+							"enum": []string{"neighbors", "announced-prefixes", "related-networks"},
+						},
+						"description": "Types of relationships to explore",
+						"default":     []string{"neighbors"},
+					},
+					"scope": map[string]interface{}{
+						"type":        "string",
+						"enum":        []string{"direct", "extended"},
+						"description": "Scope of relationship exploration",
+						"default":     "direct",
 					},
 				},
-				"required": []string{"resource"},
+				"required":             []string{"resource"},
+				"additionalProperties": false,
 			},
 		},
 		{
-			Name:        "getRoutingHistory",
-			Description: "Get routing history information for an IP address, prefix, or ASN.",
+			Name:        "searchByLocation",
+			Description: "Geographic analysis and location-based resource discovery for ASNs, prefixes, and statistics by country.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
+					"country": map[string]interface{}{
 						"type":        "string",
-						"description": "The IP address, prefix, or ASN to query for routing history.",
+						"pattern":     "^[A-Z]{2}$",
+						"description": "Two-letter ISO country code",
 					},
-					"start_time": map[string]interface{}{
+					"type": map[string]interface{}{
 						"type":        "string",
-						"description": "Start time for the query in ISO8601 format (e.g., '2024-01-01T00:00:00Z'). If omitted, uses default historical range.",
-					},
-					"end_time": map[string]interface{}{
-						"type":        "string",
-						"description": "End time for the query in ISO8601 format (e.g., '2024-12-31T23:59:59Z'). If omitted, uses current time.",
-					},
-					"max_results": map[string]interface{}{
-						"type":        "string",
-						"description": "Maximum number of routing events to return. Helps limit response size for large datasets.",
+						"enum":        []string{"asns", "prefixes", "statistics"},
+						"description": "Type of location-based data to retrieve",
+						"default":     "asns",
 					},
 				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getWhois",
-			Description: "Get whois information for an IP address, prefix, or ASN.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address, prefix, or ASN to query.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getAbuseContactFinder",
-			Description: "Get abuse contact information for an IP address or prefix.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address or prefix to query for abuse contacts.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getRPKIValidation",
-			Description: "Get RPKI validation status for a resource (ASN) and prefix combination.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The ASN to validate against the prefix.",
-					},
-					"prefix": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP prefix to validate.",
-					},
-				},
-				"required": []string{"resource", "prefix"},
-			},
-		},
-		{
-			Name:        "getASNNeighbours",
-			Description: "Get ASN neighbours for an Autonomous System. Left neighbours are downstream providers, right neighbours are upstream providers.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The AS number to query for neighbours.",
-					},
-					"lod": map[string]interface{}{
-						"type":        "string",
-						"description": "Level of detail: 0 (basic) or 1 (detailed with power, v4_peers, v6_peers). Default is 0.",
-					},
-					"query_time": map[string]interface{}{
-						"type":        "string",
-						"description": "Query time in ISO8601 format for historical data. If omitted, uses latest snapshot.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getLookingGlass",
-			Description: "Get looking glass information for an IP prefix, showing BGP routing data from RIPE NCC's Route Reflection Collectors (RRCs).",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP prefix to query for looking glass information.",
-					},
-					"look_back_limit": map[string]interface{}{
-						"type":        "string",
-						"description": "Time limit in seconds to look back for BGP data. Maximum is 172800 seconds (48 hours). Default is 0.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getCountryASNs",
-			Description: "Get Autonomous System Numbers (ASNs) for a given country code.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "Two-letter ISO country code (e.g., 'nl', 'us', 'de').",
-					},
-					"lod": map[string]interface{}{
-						"type":        "string",
-						"description": "Level of detail: 0 (basic stats) or 1 (includes lists of routed/non-routed ASNs). Default is 0.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getRPKIHistory",
-			Description: "Get RPKI history information for an IP prefix, showing the historical RPKI validation status.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP prefix to query for RPKI history.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getBGPlay",
-			Description: "Get BGP play data for an IP address or prefix, showing BGP routing events and timeline.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address or prefix to query for BGP play data.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getPrefixRoutingConsistency",
-			Description: "Get prefix routing consistency information for an IP prefix, showing BGP routing consistency data.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP prefix to query for routing consistency.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getPrefixOverview",
-			Description: "Get prefix overview information for an IP prefix.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP prefix to query.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getAddressSpaceHierarchy",
-			Description: "Get address space hierarchy information for an IP address or prefix.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address or prefix to query.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getAllocationHistory",
-			Description: "Get allocation history information for an IP address or prefix.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address or prefix to query for allocation history.",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getASPathLength",
-			Description: "Get AS path length statistics and distribution data for an Autonomous System (AS).",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The AS number to query (e.g., AS3333).",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getASRoutingConsistency",
-			Description: "Get AS routing consistency information for an Autonomous System (AS).",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The AS number to query (e.g., AS3333).",
-					},
-				},
-				"required": []string{"resource"},
-			},
-		},
-		{
-			Name:        "getBGPUpdates",
-			Description: "Get BGP update activity and routing changes for an IP address or prefix.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address or prefix to query for BGP updates.",
-					},
-				},
-				"required": []string{"resource"},
+				"required":             []string{"country"},
+				"additionalProperties": false,
 			},
 		},
 		{

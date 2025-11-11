@@ -48,3 +48,4 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 31     | `sprint-31` | TBD     | Sign packages                                                   | N/A                          | Planned   |
 | 32     | `sprint-32` | TBD     | Instead of own MCP implementaions use mcp-go if oauth is merged | N/A                          | Planned   |
 | 33     | `sprint-33` | v2.17.0 | BGP State                                                       | `bgp-state`                  | Completed |
+| 34     | `sprint-34` | v3.0.0  | MCP Tool Consolidation - Intelligent Routing Architecture       | N/A                          | Planned   |
