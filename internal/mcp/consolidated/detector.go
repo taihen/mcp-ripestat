@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	// Regex patterns for resource detection
+	// Regex patterns for resource detection.
 	asnPattern     = regexp.MustCompile(`^AS?(\d+)$`)
 	countryPattern = regexp.MustCompile(`^[A-Z]{2}$`)
 	ipv4Pattern    = regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
@@ -18,7 +18,7 @@ var (
 	cidrV6Pattern  = regexp.MustCompile(`^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}/\d{1,3}$`)
 )
 
-// DetectResource analyzes input string and returns detected resource information
+// DetectResource analyzes input string and returns detected resource information.
 func DetectResource(input string) (*DetectedResource, error) {
 	if input == "" {
 		return nil, fmt.Errorf("empty input")
@@ -45,7 +45,7 @@ func DetectResource(input string) (*DetectedResource, error) {
 		if asn < 1 || asn > 4294967295 { // 32-bit ASN range
 			return nil, fmt.Errorf("ASN out of valid range: %d", asn)
 		}
-		
+
 		resource.Type = ASN
 		resource.Value = fmt.Sprintf("AS%d", asn)
 		resource.Validated = true
@@ -111,7 +111,7 @@ func DetectResource(input string) (*DetectedResource, error) {
 	return resource, fmt.Errorf("unrecognized resource format: %s", input)
 }
 
-// ValidateASN validates ASN format and range
+// ValidateASN validates ASN format and range.
 func ValidateASN(asn string) error {
 	matches := asnPattern.FindStringSubmatch(strings.ToUpper(asn))
 	if matches == nil {
@@ -130,7 +130,7 @@ func ValidateASN(asn string) error {
 	return nil
 }
 
-// ValidateIPAddress validates IP address format
+// ValidateIPAddress validates IP address format.
 func ValidateIPAddress(ip string) error {
 	parsed := net.ParseIP(ip)
 	if parsed == nil {
@@ -139,7 +139,7 @@ func ValidateIPAddress(ip string) error {
 	return nil
 }
 
-// ValidateIPPrefix validates IP prefix/CIDR format
+// ValidateIPPrefix validates IP prefix/CIDR format.
 func ValidateIPPrefix(prefix string) error {
 	_, _, err := net.ParseCIDR(prefix)
 	if err != nil {
@@ -148,7 +148,7 @@ func ValidateIPPrefix(prefix string) error {
 	return nil
 }
 
-// GetIPVersion returns the IP version (4 or 6) for IP addresses and prefixes
+// GetIPVersion returns the IP version (4 or 6) for IP addresses and prefixes.
 func GetIPVersion(resource string) (int, error) {
 	// Try parsing as IP first
 	if ip := net.ParseIP(resource); ip != nil {

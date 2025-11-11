@@ -4,27 +4,27 @@ import (
 	"fmt"
 )
 
-// routingMatrix defines which endpoints to call for each resource type and operation combination
+// routingMatrix defines which endpoints to call for each resource type and operation combination.
 var routingMatrix = map[ResourceType]map[Operation][]string{
 	IPAddress: {
-		OpOverview:    {"getNetworkInfo", "getWhois"},
-		OpSecurity:    {"getAbuseContactFinder", "getRPKIValidation"},
-		OpRouting:     {"getRoutingStatus", "getBGPUpdates"},
-		OpHistory:     {"getRoutingHistory", "getAllocationHistory"},
-		OpHierarchy:   {"getAddressSpaceHierarchy"},
-		OpUpdates:     {"getBGPUpdates"},
-		OpLookingGlass: {"getLookingGlass", "getBGPState"},
-	},
-	IPPrefix: {
-		OpOverview:     {"getPrefixOverview", "getNetworkInfo", "getWhois"},
-		OpSecurity:     {"getAbuseContactFinder", "getRPKIValidation", "getRPKIHistory"},
-		OpRouting:      {"getRoutingStatus", "getPrefixRoutingConsistency"},
+		OpOverview:     {"getNetworkInfo", "getWhois"},
+		OpSecurity:     {"getAbuseContactFinder", "getRPKIValidation"},
+		OpRouting:      {"getRoutingStatus", "getBGPUpdates"},
 		OpHistory:      {"getRoutingHistory", "getAllocationHistory"},
-		OpConsistency:  {"getPrefixRoutingConsistency"},
-		OpRelationships: {"getRelatedPrefixes"},
 		OpHierarchy:    {"getAddressSpaceHierarchy"},
 		OpUpdates:      {"getBGPUpdates"},
 		OpLookingGlass: {"getLookingGlass", "getBGPState"},
+	},
+	IPPrefix: {
+		OpOverview:      {"getPrefixOverview", "getNetworkInfo", "getWhois"},
+		OpSecurity:      {"getAbuseContactFinder", "getRPKIValidation", "getRPKIHistory"},
+		OpRouting:       {"getRoutingStatus", "getPrefixRoutingConsistency"},
+		OpHistory:       {"getRoutingHistory", "getAllocationHistory"},
+		OpConsistency:   {"getPrefixRoutingConsistency"},
+		OpRelationships: {"getRelatedPrefixes"},
+		OpHierarchy:     {"getAddressSpaceHierarchy"},
+		OpUpdates:       {"getBGPUpdates"},
+		OpLookingGlass:  {"getLookingGlass", "getBGPState"},
 	},
 	ASN: {
 		OpOverview:      {"getASOverview", "getWhois"},
@@ -39,7 +39,7 @@ var routingMatrix = map[ResourceType]map[Operation][]string{
 	},
 }
 
-// operationPriority defines the execution order for operations (lower number = higher priority)
+// operationPriority defines the execution order for operations (lower number = higher priority).
 var operationPriority = map[Operation]int{
 	OpOverview:      1,
 	OpSecurity:      2,
@@ -53,7 +53,7 @@ var operationPriority = map[Operation]int{
 	OpHierarchy:     10,
 }
 
-// RouteOperations determines which endpoints to call for given operations on a resource
+// RouteOperations determines which endpoints to call for given operations on a resource.
 func RouteOperations(resource *DetectedResource, operations []Operation) (*RouteResult, error) {
 	if resource == nil {
 		return nil, fmt.Errorf("resource cannot be nil")
@@ -101,8 +101,8 @@ func RouteOperations(resource *DetectedResource, operations []Operation) (*Route
 	return result, nil
 }
 
-// buildDependencies sets up execution dependencies between endpoints
-func buildDependencies(endpoints []string, resourceType ResourceType) map[string][]string {
+// buildDependencies sets up execution dependencies between endpoints.
+func buildDependencies(endpoints []string, _ ResourceType) map[string][]string {
 	dependencies := make(map[string][]string)
 
 	// Some endpoints should run after others for optimal data aggregation
@@ -134,7 +134,7 @@ func buildDependencies(endpoints []string, resourceType ResourceType) map[string
 	return dependencies
 }
 
-// GetSupportedOperations returns the operations supported for a given resource type
+// GetSupportedOperations returns the operations supported for a given resource type.
 func GetSupportedOperations(resourceType ResourceType) []Operation {
 	resourceRoutes, exists := routingMatrix[resourceType]
 	if !exists {
@@ -149,7 +149,7 @@ func GetSupportedOperations(resourceType ResourceType) []Operation {
 	return operations
 }
 
-// ValidateOperations checks if all operations are supported for the given resource type
+// ValidateOperations checks if all operations are supported for the given resource type.
 func ValidateOperations(resourceType ResourceType, operations []Operation) error {
 	supportedOps := GetSupportedOperations(resourceType)
 	supportedSet := make(map[Operation]bool)
@@ -166,7 +166,7 @@ func ValidateOperations(resourceType ResourceType, operations []Operation) error
 	return nil
 }
 
-// GetEndpointsForOperation returns the specific endpoints that will be called for an operation
+// GetEndpointsForOperation returns the specific endpoints that will be called for an operation.
 func GetEndpointsForOperation(resourceType ResourceType, operation Operation) ([]string, error) {
 	resourceRoutes, exists := routingMatrix[resourceType]
 	if !exists {

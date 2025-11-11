@@ -110,20 +110,20 @@ func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) 
 
 // Server represents an MCP server.
 type Server struct {
-	serverName           string
-	serverVersion        string
-	initialized          bool
-	disableWhatsMyIP     bool
-	globallyInitialized  bool // For compatibility with older protocol versions
-	consolidatedTools    *consolidated.ConsolidatedTools
+	serverName          string
+	serverVersion       string
+	initialized         bool
+	disableWhatsMyIP    bool
+	globallyInitialized bool // For compatibility with older protocol versions
+	consolidatedTools   *consolidated.Tools
 }
 
 // NewServer creates a new MCP server.
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
 	// Initialize consolidated tools with direct executor
 	executor := consolidated.NewDirectExecutor()
-	consolidatedTools := consolidated.NewConsolidatedTools(executor)
-	
+	consolidatedTools := consolidated.NewTools(executor)
+
 	return &Server{
 		serverName:        serverName,
 		serverVersion:     serverVersion,
@@ -319,48 +319,48 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
-		
+
 	case "analyzeRouting":
 		result, err := s.consolidatedTools.AnalyzeRouting(ctx, args)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
-		
+
 	case "queryRegistry":
 		result, err := s.consolidatedTools.QueryRegistry(ctx, args)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
-		
+
 	case "validateSecurity":
 		result, err := s.consolidatedTools.ValidateSecurity(ctx, args)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
-		
+
 	case "exploreRelationships":
 		result, err := s.consolidatedTools.ExploreRelationships(ctx, args)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
-		
+
 	case "searchByLocation":
 		result, err := s.consolidatedTools.SearchByLocation(ctx, args)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
-		
+
 	case "getWhatsMyIP":
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
 		}
 		return s.callWhatsMyIP(ctx, args)
-		
+
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}

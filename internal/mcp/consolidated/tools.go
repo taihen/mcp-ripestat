@@ -5,25 +5,25 @@ import (
 	"fmt"
 )
 
-// ToolExecutor defines the interface for executing individual RIPEstat endpoints
+// ToolExecutor defines the interface for executing individual RIPEstat endpoints.
 type ToolExecutor interface {
 	ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error)
 }
 
-// ConsolidatedTools provides the consolidated tool implementations
-type ConsolidatedTools struct {
+// Tools provides the consolidated tool implementations.
+type Tools struct {
 	executor ToolExecutor
 }
 
-// NewConsolidatedTools creates a new consolidated tools instance
-func NewConsolidatedTools(executor ToolExecutor) *ConsolidatedTools {
-	return &ConsolidatedTools{
+// NewTools creates a new consolidated tools instance.
+func NewTools(executor ToolExecutor) *Tools {
+	return &Tools{
 		executor: executor,
 	}
 }
 
-// InvestigateResource - Primary investigation tool with auto-detection and intelligent routing
-func (ct *ConsolidatedTools) InvestigateResource(ctx context.Context, params map[string]interface{}) (*ConsolidatedResult, error) {
+// InvestigateResource - Primary investigation tool with auto-detection and intelligent routing.
+func (ct *Tools) InvestigateResource(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	// Extract parameters
 	resource, ok := params["resource"].(string)
 	if !ok || resource == "" {
@@ -73,8 +73,8 @@ func (ct *ConsolidatedTools) InvestigateResource(ctx context.Context, params map
 	return ct.executeAndAggregate(ctx, detected, operations, routes, depth)
 }
 
-// AnalyzeRouting - BGP and routing analysis with timeframe support
-func (ct *ConsolidatedTools) AnalyzeRouting(ctx context.Context, params map[string]interface{}) (*ConsolidatedResult, error) {
+// AnalyzeRouting - BGP and routing analysis with timeframe support.
+func (ct *Tools) AnalyzeRouting(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, ok := params["resource"].(string)
 	if !ok || resource == "" {
 		return nil, fmt.Errorf("resource parameter is required")
@@ -156,8 +156,8 @@ func (ct *ConsolidatedTools) AnalyzeRouting(ctx context.Context, params map[stri
 	return result, nil
 }
 
-// QueryRegistry - Registry and administrative data
-func (ct *ConsolidatedTools) QueryRegistry(ctx context.Context, params map[string]interface{}) (*ConsolidatedResult, error) {
+// QueryRegistry - Registry and administrative data.
+func (ct *Tools) QueryRegistry(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, ok := params["resource"].(string)
 	if !ok || resource == "" {
 		return nil, fmt.Errorf("resource parameter is required")
@@ -233,8 +233,8 @@ func (ct *ConsolidatedTools) QueryRegistry(ctx context.Context, params map[strin
 	return ct.executeAndAggregate(ctx, detected, operations, routes, depth)
 }
 
-// ValidateSecurity - Security and compliance checks
-func (ct *ConsolidatedTools) ValidateSecurity(ctx context.Context, params map[string]interface{}) (*ConsolidatedResult, error) {
+// ValidateSecurity - Security and compliance checks.
+func (ct *Tools) ValidateSecurity(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, ok := params["resource"].(string)
 	if !ok || resource == "" {
 		return nil, fmt.Errorf("resource parameter is required")
@@ -307,8 +307,8 @@ func (ct *ConsolidatedTools) ValidateSecurity(ctx context.Context, params map[st
 	return result, nil
 }
 
-// ExploreRelationships - Network topology and relationships
-func (ct *ConsolidatedTools) ExploreRelationships(ctx context.Context, params map[string]interface{}) (*ConsolidatedResult, error) {
+// ExploreRelationships - Network topology and relationships.
+func (ct *Tools) ExploreRelationships(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, ok := params["resource"].(string)
 	if !ok || resource == "" {
 		return nil, fmt.Errorf("resource parameter is required")
@@ -391,8 +391,8 @@ func (ct *ConsolidatedTools) ExploreRelationships(ctx context.Context, params ma
 	return result, nil
 }
 
-// SearchByLocation - Geographic analysis
-func (ct *ConsolidatedTools) SearchByLocation(ctx context.Context, params map[string]interface{}) (*ConsolidatedResult, error) {
+// SearchByLocation - Geographic analysis.
+func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	country, ok := params["country"].(string)
 	if !ok || country == "" {
 		return nil, fmt.Errorf("country parameter is required")
@@ -431,9 +431,9 @@ func (ct *ConsolidatedTools) SearchByLocation(ctx context.Context, params map[st
 	return ct.executeAndAggregate(ctx, detected, operations, routes, "basic")
 }
 
-// executeAndAggregate executes all endpoints and aggregates the results
-func (ct *ConsolidatedTools) executeAndAggregate(ctx context.Context, resource *DetectedResource, operations []Operation, routes *RouteResult, depth string) (*ConsolidatedResult, error) {
-	result := &ConsolidatedResult{
+// executeAndAggregate executes all endpoints and aggregates the results.
+func (ct *Tools) executeAndAggregate(ctx context.Context, resource *DetectedResource, operations []Operation, routes *RouteResult, depth string) (*Result, error) {
+	result := &Result{
 		Resource:   resource,
 		Operations: operations,
 		Results:    make(map[string]interface{}),

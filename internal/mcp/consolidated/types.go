@@ -1,6 +1,6 @@
 package consolidated
 
-// ResourceType represents the type of resource being analyzed
+// ResourceType represents the type of resource being analyzed.
 type ResourceType int
 
 const (
@@ -11,7 +11,7 @@ const (
 	Invalid
 )
 
-// String returns the string representation of ResourceType
+// String returns the string representation of ResourceType.
 func (rt ResourceType) String() string {
 	switch rt {
 	case IPAddress:
@@ -27,7 +27,7 @@ func (rt ResourceType) String() string {
 	}
 }
 
-// DetectedResource contains information about a detected resource
+// DetectedResource contains information about a detected resource.
 type DetectedResource struct {
 	Type      ResourceType `json:"type"`
 	Value     string       `json:"value"`
@@ -36,7 +36,7 @@ type DetectedResource struct {
 	Original  string       `json:"original"`
 }
 
-// Operation represents a high-level operation that can be performed on a resource
+// Operation represents a high-level operation that can be performed on a resource.
 type Operation string
 
 const (
@@ -52,15 +52,15 @@ const (
 	OpHierarchy     Operation = "hierarchy"
 )
 
-// RouteResult contains the routing information for executing operations
+// RouteResult contains the routing information for executing operations.
 type RouteResult struct {
 	Endpoints    []string            `json:"endpoints"`
 	Order        []int               `json:"order"`
 	Dependencies map[string][]string `json:"dependencies"`
 }
 
-// ConsolidatedResult represents the aggregated result from multiple endpoint calls
-type ConsolidatedResult struct {
+// Result represents the aggregated result from multiple endpoint calls.
+type Result struct {
 	Resource   *DetectedResource      `json:"resource"`
 	Operations []Operation            `json:"operations"`
 	Results    map[string]interface{} `json:"results"`
