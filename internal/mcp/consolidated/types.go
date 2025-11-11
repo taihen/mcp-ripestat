@@ -67,3 +67,21 @@ type Result struct {
 	Errors     map[string]string      `json:"errors,omitempty"`
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
+
+// AddMetadata safely adds a single metadata entry, initializing the map if needed.
+func (r *Result) AddMetadata(key string, value interface{}) {
+	if r.Metadata == nil {
+		r.Metadata = make(map[string]interface{})
+	}
+	r.Metadata[key] = value
+}
+
+// AddMetadataMap adds multiple metadata entries at once, initializing the map if needed.
+func (r *Result) AddMetadataMap(data map[string]interface{}) {
+	if r.Metadata == nil {
+		r.Metadata = make(map[string]interface{})
+	}
+	for k, v := range data {
+		r.Metadata[k] = v
+	}
+}

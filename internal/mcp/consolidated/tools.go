@@ -22,286 +22,128 @@ func NewTools(executor ToolExecutor) *Tools {
 	}
 }
 
-// InvestigateResource - Primary investigation tool with auto-detection and intelligent routing.
-func (ct *Tools) InvestigateResource(ctx context.Context, params map[string]interface{}) (*Result, error) {
-	// Extract parameters
-	resource, ok := params["resource"].(string)
-	if !ok || resource == "" {
-		return nil, fmt.Errorf("resource parameter is required")
-	}
-
-	operationsParam, ok := params["operations"]
-	if !ok {
-		operationsParam = []string{"overview"} // Default to overview
-	}
-
-	// Convert operations to []Operation
-	var operations []Operation
-	switch v := operationsParam.(type) {
-	case []string:
-		for _, op := range v {
-			operations = append(operations, Operation(op))
-		}
-	case []interface{}:
-		for _, op := range v {
-			if opStr, ok := op.(string); ok {
-				operations = append(operations, Operation(opStr))
-			}
-		}
-	default:
-		return nil, fmt.Errorf("operations must be an array of strings")
-	}
-
-	depth := "basic" // Default depth
-	if d, ok := params["depth"].(string); ok {
-		depth = d
-	}
-
-	// Detect resource type
+// executeOperations is a convenience wrapper for the detect-route-execute pattern.
+func (ct *Tools) executeOperations(
+	ctx context.Context,
+	resource string,
+	operations []Operation,
+	depth string,
+) (*Result, error) {
 	detected, err := DetectResource(resource)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect resource type: %w", err)
 	}
 
-	// Route operations to endpoints
 	routes, err := RouteOperations(detected, operations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to route operations: %w", err)
 	}
 
-	// Execute endpoints and aggregate results
 	return ct.executeAndAggregate(ctx, detected, operations, routes, depth)
 }
 
-// AnalyzeRouting - BGP and routing analysis with timeframe support.
-func (ct *Tools) AnalyzeRouting(ctx context.Context, params map[string]interface{}) (*Result, error) {
-	resource, ok := params["resource"].(string)
-	if !ok || resource == "" {
-		return nil, fmt.Errorf("resource parameter is required")
-	}
-
-	analysisParam, ok := params["analysis"]
-	if !ok {
-		analysisParam = []string{"consistency"} // Default analysis
-	}
-
-	// Convert analysis types to operations
-	var operations []Operation
-	switch v := analysisParam.(type) {
-	case []string:
-		for _, analysis := range v {
-			switch analysis {
-			case "consistency":
-				operations = append(operations, OpConsistency)
-			case "path-optimization":
-				operations = append(operations, OpRouting)
-			case "updates":
-				operations = append(operations, OpUpdates)
-			case "looking-glass":
-				operations = append(operations, OpLookingGlass)
-			default:
-				return nil, fmt.Errorf("unsupported analysis type: %s", analysis)
-			}
-		}
-	case []interface{}:
-		for _, analysis := range v {
-			if analysisStr, ok := analysis.(string); ok {
-				switch analysisStr {
-				case "consistency":
-					operations = append(operations, OpConsistency)
-				case "path-optimization":
-					operations = append(operations, OpRouting)
-				case "updates":
-					operations = append(operations, OpUpdates)
-				case "looking-glass":
-					operations = append(operations, OpLookingGlass)
-				default:
-					return nil, fmt.Errorf("unsupported analysis type: %s", analysisStr)
-				}
-			}
-		}
-	default:
-		return nil, fmt.Errorf("analysis must be an array of strings")
-	}
-
-	timeframe := "current" // Default timeframe
-	if tf, ok := params["timeframe"].(string); ok {
-		timeframe = tf
-	}
-
-	// Detect resource type
-	detected, err := DetectResource(resource)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect resource type: %w", err)
-	}
-
-	// Route operations to endpoints
-	routes, err := RouteOperations(detected, operations)
-	if err != nil {
-		return nil, fmt.Errorf("failed to route operations: %w", err)
-	}
-
-	// Execute with timeframe context
-	result, err := ct.executeAndAggregate(ctx, detected, operations, routes, "detailed")
+// InvestigateResource - Primary investigation tool with auto-detection and intelligent routing.
+func (ct *Tools) InvestigateResource(ctx context.Context, params map[string]interface{}) (*Result, error) {
+	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
 		return nil, err
 	}
 
-	// Add timeframe metadata
-	if result.Metadata == nil {
-		result.Metadata = make(map[string]interface{})
+	operationStrings, err := extractStringSliceWithDefault(params, "operations", []string{"overview"})
+	if err != nil {
+		return nil, err
 	}
-	result.Metadata["timeframe"] = timeframe
 
+	depth := extractOptionalString(params, "depth", DepthBasic)
+
+	return ct.executeOperations(ctx, resource, toOperations(operationStrings), depth)
+}
+
+// AnalyzeRouting - BGP and routing analysis with timeframe support.
+func (ct *Tools) AnalyzeRouting(ctx context.Context, params map[string]interface{}) (*Result, error) {
+	resource, err := extractRequiredString(params, "resource")
+	if err != nil {
+		return nil, err
+	}
+
+	analysisTypes, err := extractStringSliceWithDefault(params, "analysis", []string{AnalysisConsistency})
+	if err != nil {
+		return nil, err
+	}
+
+	operations, err := mapStringsToOperations(analysisTypes, "analysis")
+	if err != nil {
+		return nil, err
+	}
+
+	timeframe := extractOptionalString(params, "timeframe", TimeframeCurrent)
+
+	result, err := ct.executeOperations(ctx, resource, operations, DepthDetailed)
+	if err != nil {
+		return nil, err
+	}
+
+	result.AddMetadata("timeframe", timeframe)
 	return result, nil
 }
 
 // QueryRegistry - Registry and administrative data.
 func (ct *Tools) QueryRegistry(ctx context.Context, params map[string]interface{}) (*Result, error) {
-	resource, ok := params["resource"].(string)
-	if !ok || resource == "" {
-		return nil, fmt.Errorf("resource parameter is required")
-	}
-
-	dataParam, ok := params["data"]
-	if !ok {
-		dataParam = []string{"whois"} // Default to whois
-	}
-
-	// Convert data types to operations
-	var operations []Operation
-	switch v := dataParam.(type) {
-	case []string:
-		for _, data := range v {
-			switch data {
-			case "whois":
-				operations = append(operations, OpOverview)
-			case "allocation-history":
-				operations = append(operations, OpHistory)
-			case "hierarchy":
-				operations = append(operations, OpHierarchy)
-			case "contacts":
-				operations = append(operations, OpSecurity)
-			default:
-				return nil, fmt.Errorf("unsupported data type: %s", data)
-			}
-		}
-	case []interface{}:
-		for _, data := range v {
-			if dataStr, ok := data.(string); ok {
-				switch dataStr {
-				case "whois":
-					operations = append(operations, OpOverview)
-				case "allocation-history":
-					operations = append(operations, OpHistory)
-				case "hierarchy":
-					operations = append(operations, OpHierarchy)
-				case "contacts":
-					operations = append(operations, OpSecurity)
-				default:
-					return nil, fmt.Errorf("unsupported data type: %s", dataStr)
-				}
-			}
-		}
-	default:
-		return nil, fmt.Errorf("data must be an array of strings")
-	}
-
-	format := "summary" // Default format
-	if f, ok := params["format"].(string); ok {
-		format = f
-	}
-
-	// Detect resource type
-	detected, err := DetectResource(resource)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect resource type: %w", err)
-	}
-
-	// Route operations to endpoints
-	routes, err := RouteOperations(detected, operations)
-	if err != nil {
-		return nil, fmt.Errorf("failed to route operations: %w", err)
-	}
-
-	// Execute with format context
-	depth := "basic"
-	if format == "detailed" {
-		depth = "detailed"
-	}
-
-	return ct.executeAndAggregate(ctx, detected, operations, routes, depth)
-}
-
-// ValidateSecurity - Security and compliance checks.
-func (ct *Tools) ValidateSecurity(ctx context.Context, params map[string]interface{}) (*Result, error) {
-	resource, ok := params["resource"].(string)
-	if !ok || resource == "" {
-		return nil, fmt.Errorf("resource parameter is required")
-	}
-
-	checksParam, ok := params["checks"]
-	if !ok {
-		checksParam = []string{"rpki", "abuse-contacts"} // Default checks
-	}
-
-	// Convert checks to operations
-	var operations []Operation
-	switch v := checksParam.(type) {
-	case []string:
-		for _, check := range v {
-			switch check {
-			case "rpki", "abuse-contacts", "bgp-hijacking":
-				operations = append(operations, OpSecurity)
-			default:
-				return nil, fmt.Errorf("unsupported security check: %s", check)
-			}
-		}
-	case []interface{}:
-		for _, check := range v {
-			if checkStr, ok := check.(string); ok {
-				switch checkStr {
-				case "rpki", "abuse-contacts", "bgp-hijacking":
-					operations = append(operations, OpSecurity)
-				default:
-					return nil, fmt.Errorf("unsupported security check: %s", checkStr)
-				}
-			}
-		}
-	default:
-		return nil, fmt.Errorf("checks must be an array of strings")
-	}
-
-	// Optional ASN parameter for RPKI validation
-	var asnParam string
-	if asn, ok := params["asn"].(string); ok {
-		asnParam = asn
-	}
-
-	// Detect resource type
-	detected, err := DetectResource(resource)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect resource type: %w", err)
-	}
-
-	// Route operations to endpoints
-	routes, err := RouteOperations(detected, operations)
-	if err != nil {
-		return nil, fmt.Errorf("failed to route operations: %w", err)
-	}
-
-	// Execute security checks
-	result, err := ct.executeAndAggregate(ctx, detected, operations, routes, "detailed")
+	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
 		return nil, err
 	}
 
-	// Add ASN context if provided
+	dataTypes, err := extractStringSliceWithDefault(params, "data", []string{DataTypeWhois})
+	if err != nil {
+		return nil, err
+	}
+
+	operations, err := mapStringsToOperations(dataTypes, "data")
+	if err != nil {
+		return nil, err
+	}
+
+	format := extractOptionalString(params, "format", FormatSummary)
+
+	depth := DepthBasic
+	if format == FormatDetailed {
+		depth = DepthDetailed
+	}
+
+	return ct.executeOperations(ctx, resource, operations, depth)
+}
+
+// ValidateSecurity - Security and compliance checks.
+func (ct *Tools) ValidateSecurity(ctx context.Context, params map[string]interface{}) (*Result, error) {
+	resource, err := extractRequiredString(params, "resource")
+	if err != nil {
+		return nil, err
+	}
+
+	checkTypes, err := extractStringSliceWithDefault(
+		params,
+		"checks",
+		[]string{SecurityCheckRPKI, SecurityCheckAbuseContacts},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	operations, err := mapStringsToOperations(checkTypes, "checks")
+	if err != nil {
+		return nil, err
+	}
+
+	asnParam := extractOptionalString(params, "asn", "")
+
+	result, err := ct.executeOperations(ctx, resource, operations, DepthDetailed)
+	if err != nil {
+		return nil, err
+	}
+
 	if asnParam != "" {
-		if result.Metadata == nil {
-			result.Metadata = make(map[string]interface{})
-		}
-		result.Metadata["asn"] = asnParam
+		result.AddMetadata("asn", asnParam)
 	}
 
 	return result, nil
@@ -309,105 +151,54 @@ func (ct *Tools) ValidateSecurity(ctx context.Context, params map[string]interfa
 
 // ExploreRelationships - Network topology and relationships.
 func (ct *Tools) ExploreRelationships(ctx context.Context, params map[string]interface{}) (*Result, error) {
-	resource, ok := params["resource"].(string)
-	if !ok || resource == "" {
-		return nil, fmt.Errorf("resource parameter is required")
-	}
-
-	relationshipsParam, ok := params["relationships"]
-	if !ok {
-		relationshipsParam = []string{"neighbors"} // Default relationships
-	}
-
-	// Convert relationship types to operations
-	var operations []Operation
-	switch v := relationshipsParam.(type) {
-	case []string:
-		for _, rel := range v {
-			switch rel {
-			case "neighbors":
-				operations = append(operations, OpNeighbors)
-			case "announced-prefixes":
-				operations = append(operations, OpRouting)
-			case "related-networks":
-				operations = append(operations, OpRelationships)
-			default:
-				return nil, fmt.Errorf("unsupported relationship type: %s", rel)
-			}
-		}
-	case []interface{}:
-		for _, rel := range v {
-			if relStr, ok := rel.(string); ok {
-				switch relStr {
-				case "neighbors":
-					operations = append(operations, OpNeighbors)
-				case "announced-prefixes":
-					operations = append(operations, OpRouting)
-				case "related-networks":
-					operations = append(operations, OpRelationships)
-				default:
-					return nil, fmt.Errorf("unsupported relationship type: %s", relStr)
-				}
-			}
-		}
-	default:
-		return nil, fmt.Errorf("relationships must be an array of strings")
-	}
-
-	scope := "direct" // Default scope
-	if s, ok := params["scope"].(string); ok {
-		scope = s
-	}
-
-	// Detect resource type
-	detected, err := DetectResource(resource)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect resource type: %w", err)
-	}
-
-	// Route operations to endpoints
-	routes, err := RouteOperations(detected, operations)
-	if err != nil {
-		return nil, fmt.Errorf("failed to route operations: %w", err)
-	}
-
-	// Execute with scope context
-	depth := "basic"
-	if scope == "extended" {
-		depth = "detailed"
-	}
-
-	result, err := ct.executeAndAggregate(ctx, detected, operations, routes, depth)
+	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
 		return nil, err
 	}
 
-	// Add scope metadata
-	if result.Metadata == nil {
-		result.Metadata = make(map[string]interface{})
+	relationshipTypes, err := extractStringSliceWithDefault(
+		params,
+		"relationships",
+		[]string{RelationshipNeighbors},
+	)
+	if err != nil {
+		return nil, err
 	}
-	result.Metadata["scope"] = scope
 
+	operations, err := mapStringsToOperations(relationshipTypes, "relationships")
+	if err != nil {
+		return nil, err
+	}
+
+	scope := extractOptionalString(params, "scope", ScopeDirect)
+
+	depth := DepthBasic
+	if scope == ScopeExtended {
+		depth = DepthDetailed
+	}
+
+	result, err := ct.executeOperations(ctx, resource, operations, depth)
+	if err != nil {
+		return nil, err
+	}
+
+	result.AddMetadata("scope", scope)
 	return result, nil
 }
 
 // SearchByLocation - Geographic analysis.
 func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interface{}) (*Result, error) {
-	country, ok := params["country"].(string)
-	if !ok || country == "" {
-		return nil, fmt.Errorf("country parameter is required")
+	country, err := extractRequiredString(params, "country")
+	if err != nil {
+		return nil, err
 	}
 
-	typeParam, ok := params["type"].(string)
-	if !ok {
-		typeParam = "asns" // Default type
-	}
+	typeParam := extractOptionalString(params, "type", LocationTypeASNs)
 
-	// Convert type to operations
-	var operations []Operation
+	// Validate type parameter
 	switch typeParam {
-	case "asns", "prefixes", "statistics":
-		operations = append(operations, OpOverview)
+	case LocationTypeASNs, LocationTypePrefixes, LocationTypeStatistics:
+		// Valid type
 	default:
 		return nil, fmt.Errorf("unsupported type: %s", typeParam)
 	}
@@ -423,16 +214,22 @@ func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interfa
 	}
 
 	// Route operations to endpoints
-	routes, err := RouteOperations(detected, operations)
+	routes, err := RouteOperations(detected, []Operation{OpOverview})
 	if err != nil {
 		return nil, fmt.Errorf("failed to route operations: %w", err)
 	}
 
-	return ct.executeAndAggregate(ctx, detected, operations, routes, "basic")
+	return ct.executeAndAggregate(ctx, detected, []Operation{OpOverview}, routes, DepthBasic)
 }
 
 // executeAndAggregate executes all endpoints and aggregates the results.
-func (ct *Tools) executeAndAggregate(ctx context.Context, resource *DetectedResource, operations []Operation, routes *RouteResult, depth string) (*Result, error) {
+func (ct *Tools) executeAndAggregate(
+	ctx context.Context,
+	resource *DetectedResource,
+	operations []Operation,
+	routes *RouteResult,
+	depth string,
+) (*Result, error) {
 	result := &Result{
 		Resource:   resource,
 		Operations: operations,
@@ -455,9 +252,11 @@ func (ct *Tools) executeAndAggregate(ctx context.Context, resource *DetectedReso
 	}
 
 	// Add routing metadata
-	result.Metadata["endpoints_called"] = routes.Endpoints
-	result.Metadata["depth"] = depth
-	result.Metadata["resource_type"] = resource.Type.String()
+	result.AddMetadataMap(map[string]interface{}{
+		"endpoints_called": routes.Endpoints,
+		"depth":            depth,
+		"resource_type":    resource.Type.String(),
+	})
 
 	return result, nil
 }
