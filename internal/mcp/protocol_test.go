@@ -58,15 +58,12 @@ func TestCreateToolsList(t *testing.T) {
 
 	// Check that all expected tools are present
 	expectedTools := []string{
-		"getNetworkInfo",
-		"getASOverview",
-		"getAnnouncedPrefixes",
-		"getRoutingStatus",
-		"getWhois",
-		"getAbuseContactFinder",
-		"getRPKIValidation",
-		"getASNNeighbours",
-		"getLookingGlass",
+		"investigateResource",
+		"analyzeRouting",
+		"queryRegistry",
+		"validateSecurity",
+		"exploreRelationships",
+		"searchByLocation",
 		"getWhatsMyIP",
 	}
 
@@ -103,13 +100,13 @@ func TestParseCallToolParams(t *testing.T) {
 		{
 			name: "valid params",
 			params: map[string]interface{}{
-				"name": "getNetworkInfo",
+				"name": "investigateResource",
 				"arguments": map[string]interface{}{
 					"resource": "8.8.8.8",
 				},
 			},
 			want: &CallToolParams{
-				Name: "getNetworkInfo",
+				Name: "investigateResource",
 				Arguments: map[string]interface{}{
 					"resource": "8.8.8.8",
 				},

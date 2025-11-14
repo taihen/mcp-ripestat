@@ -36,19 +36,16 @@ func TestDefaultConfig(t *testing.T) {
 func TestConfig_WithBaseURL(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// Test with valid URL
 	newCfg := cfg.WithBaseURL("https://example.com")
 	if newCfg.BaseURL != "https://example.com" {
 		t.Errorf("Expected BaseURL to be %q, got %q", "https://example.com", newCfg.BaseURL)
 	}
 
-	// Test with empty URL (should not change)
 	newCfg = cfg.WithBaseURL("")
 	if newCfg.BaseURL != DefaultBaseURL {
 		t.Errorf("Expected BaseURL to remain %q, got %q", DefaultBaseURL, newCfg.BaseURL)
 	}
 
-	// Verify original config is unchanged
 	if cfg.BaseURL != DefaultBaseURL {
 		t.Errorf("Expected original BaseURL to remain %q, got %q", DefaultBaseURL, cfg.BaseURL)
 	}
@@ -57,7 +54,6 @@ func TestConfig_WithBaseURL(t *testing.T) {
 func TestConfig_WithTimeout(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// Test with valid timeout
 	newTimeout := 20 * time.Second
 	newCfg := cfg.WithTimeout(newTimeout)
 
@@ -65,19 +61,16 @@ func TestConfig_WithTimeout(t *testing.T) {
 		t.Errorf("Expected Timeout to be %v, got %v", newTimeout, newCfg.Timeout)
 	}
 
-	// Test with zero timeout (should not change)
 	newCfg = cfg.WithTimeout(0)
 	if newCfg.Timeout != DefaultTimeout {
 		t.Errorf("Expected Timeout to remain %v, got %v", DefaultTimeout, newCfg.Timeout)
 	}
 
-	// Test with negative timeout (should not change)
 	newCfg = cfg.WithTimeout(-1 * time.Second)
 	if newCfg.Timeout != DefaultTimeout {
 		t.Errorf("Expected Timeout to remain %v, got %v", DefaultTimeout, newCfg.Timeout)
 	}
 
-	// Verify original config is unchanged
 	if cfg.Timeout != DefaultTimeout {
 		t.Errorf("Expected original Timeout to remain %v, got %v", DefaultTimeout, cfg.Timeout)
 	}
@@ -86,7 +79,6 @@ func TestConfig_WithTimeout(t *testing.T) {
 func TestConfig_WithRetryCount(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// Test with valid retry count
 	newRetryCount := 5
 	newCfg := cfg.WithRetryCount(newRetryCount)
 
@@ -94,19 +86,16 @@ func TestConfig_WithRetryCount(t *testing.T) {
 		t.Errorf("Expected RetryCount to be %d, got %d", newRetryCount, newCfg.RetryCount)
 	}
 
-	// Test with zero retry count
 	newCfg = cfg.WithRetryCount(0)
 	if newCfg.RetryCount != 0 {
 		t.Errorf("Expected RetryCount to be 0, got %d", newCfg.RetryCount)
 	}
 
-	// Test with negative retry count (should not change)
 	newCfg = cfg.WithRetryCount(-1)
 	if newCfg.RetryCount != DefaultRetryCount {
 		t.Errorf("Expected RetryCount to remain %d, got %d", DefaultRetryCount, newCfg.RetryCount)
 	}
 
-	// Verify original config is unchanged
 	if cfg.RetryCount != DefaultRetryCount {
 		t.Errorf("Expected original RetryCount to remain %d, got %d", DefaultRetryCount, cfg.RetryCount)
 	}
@@ -115,7 +104,6 @@ func TestConfig_WithRetryCount(t *testing.T) {
 func TestConfig_WithRetryWaitTime(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// Test with valid retry wait time
 	newRetryWaitTime := 2 * time.Second
 	newCfg := cfg.WithRetryWaitTime(newRetryWaitTime)
 
@@ -123,19 +111,16 @@ func TestConfig_WithRetryWaitTime(t *testing.T) {
 		t.Errorf("Expected RetryWaitTime to be %v, got %v", newRetryWaitTime, newCfg.RetryWaitTime)
 	}
 
-	// Test with zero retry wait time (should not change)
 	newCfg = cfg.WithRetryWaitTime(0)
 	if newCfg.RetryWaitTime != DefaultRetryWaitTime {
 		t.Errorf("Expected RetryWaitTime to remain %v, got %v", DefaultRetryWaitTime, newCfg.RetryWaitTime)
 	}
 
-	// Test with negative retry wait time (should not change)
 	newCfg = cfg.WithRetryWaitTime(-1 * time.Second)
 	if newCfg.RetryWaitTime != DefaultRetryWaitTime {
 		t.Errorf("Expected RetryWaitTime to remain %v, got %v", DefaultRetryWaitTime, newCfg.RetryWaitTime)
 	}
 
-	// Verify original config is unchanged
 	if cfg.RetryWaitTime != DefaultRetryWaitTime {
 		t.Errorf("Expected original RetryWaitTime to remain %v, got %v", DefaultRetryWaitTime, cfg.RetryWaitTime)
 	}
@@ -144,7 +129,6 @@ func TestConfig_WithRetryWaitTime(t *testing.T) {
 func TestConfig_WithMaxRetryWaitTime(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// Test with valid max retry wait time
 	newMaxRetryWaitTime := 60 * time.Second
 	newCfg := cfg.WithMaxRetryWaitTime(newMaxRetryWaitTime)
 
@@ -152,19 +136,16 @@ func TestConfig_WithMaxRetryWaitTime(t *testing.T) {
 		t.Errorf("Expected MaxRetryWaitTime to be %v, got %v", newMaxRetryWaitTime, newCfg.MaxRetryWaitTime)
 	}
 
-	// Test with zero max retry wait time (should not change)
 	newCfg = cfg.WithMaxRetryWaitTime(0)
 	if newCfg.MaxRetryWaitTime != DefaultMaxRetryWaitTime {
 		t.Errorf("Expected MaxRetryWaitTime to remain %v, got %v", DefaultMaxRetryWaitTime, newCfg.MaxRetryWaitTime)
 	}
 
-	// Test with negative max retry wait time (should not change)
 	newCfg = cfg.WithMaxRetryWaitTime(-1 * time.Second)
 	if newCfg.MaxRetryWaitTime != DefaultMaxRetryWaitTime {
 		t.Errorf("Expected MaxRetryWaitTime to remain %v, got %v", DefaultMaxRetryWaitTime, newCfg.MaxRetryWaitTime)
 	}
 
-	// Verify original config is unchanged
 	if cfg.MaxRetryWaitTime != DefaultMaxRetryWaitTime {
 		t.Errorf("Expected original MaxRetryWaitTime to remain %v, got %v", DefaultMaxRetryWaitTime, cfg.MaxRetryWaitTime)
 	}
@@ -173,7 +154,6 @@ func TestConfig_WithMaxRetryWaitTime(t *testing.T) {
 func TestConfig_WithUserAgent(t *testing.T) {
 	cfg := DefaultConfig()
 
-	// Test with valid user agent
 	newUserAgent := "test-agent/1.0"
 	newCfg := cfg.WithUserAgent(newUserAgent)
 
@@ -181,13 +161,11 @@ func TestConfig_WithUserAgent(t *testing.T) {
 		t.Errorf("Expected UserAgent to be %q, got %q", newUserAgent, newCfg.UserAgent)
 	}
 
-	// Test with empty user agent (should not change)
 	newCfg = cfg.WithUserAgent("")
 	if newCfg.UserAgent != DefaultUserAgent {
 		t.Errorf("Expected UserAgent to remain %q, got %q", DefaultUserAgent, newCfg.UserAgent)
 	}
 
-	// Verify original config is unchanged
 	if cfg.UserAgent != DefaultUserAgent {
 		t.Errorf("Expected original UserAgent to remain %q, got %q", DefaultUserAgent, cfg.UserAgent)
 	}
@@ -228,7 +206,6 @@ func TestConfig_ChainedMethods(t *testing.T) {
 		t.Errorf("Expected UserAgent to be %q, got %q", "test-agent/1.0", newCfg.UserAgent)
 	}
 
-	// Verify original config is unchanged
 	if cfg.BaseURL != DefaultBaseURL {
 		t.Errorf("Expected original BaseURL to remain %q, got %q", DefaultBaseURL, cfg.BaseURL)
 	}
@@ -280,7 +257,6 @@ func TestConfig_WithHTTP2Settings(t *testing.T) {
 func TestConfig_WithConnectionPoolSettings_InvalidValues(t *testing.T) {
 	original := DefaultConfig()
 
-	// Test with negative values (should return original config)
 	cfg := original.WithMaxIdleConns(-1)
 	if cfg.MaxIdleConns != original.MaxIdleConns {
 		t.Error("Expected negative MaxIdleConns to be ignored")
@@ -305,7 +281,6 @@ func TestConfig_WithConnectionPoolSettings_InvalidValues(t *testing.T) {
 func TestConfig_WithHTTP2Settings_InvalidValues(t *testing.T) {
 	original := DefaultConfig()
 
-	// Test with zero/negative values (should return original config)
 	cfg := original.WithHTTP2ReadIdleTimeout(0)
 	if cfg.HTTP2ReadIdleTimeout != original.HTTP2ReadIdleTimeout {
 		t.Error("Expected zero HTTP2ReadIdleTimeout to be ignored")
@@ -328,7 +303,6 @@ func TestConfig_PerformanceChainedMethods(t *testing.T) {
 		WithHTTP2PingTimeout(30 * time.Second).
 		WithTimeout(45 * time.Second)
 
-	// Verify all settings are applied correctly
 	if cfg.MaxIdleConns != 200 {
 		t.Errorf("Expected MaxIdleConns to be 200, got %d", cfg.MaxIdleConns)
 	}
@@ -359,5 +333,24 @@ func TestConfig_PerformanceChainedMethods(t *testing.T) {
 
 	if cfg.Timeout != 45*time.Second {
 		t.Errorf("Expected Timeout to be 45s, got %v", cfg.Timeout)
+	}
+}
+
+func TestConfig_WithSourceApp(t *testing.T) {
+	cfg := DefaultConfig()
+
+	newSourceApp := "test-app/1.0"
+	newCfg := cfg.WithSourceApp(newSourceApp)
+	if newCfg.SourceApp != newSourceApp {
+		t.Errorf("Expected SourceApp to be %q, got %q", newSourceApp, newCfg.SourceApp)
+	}
+
+	newCfg = cfg.WithSourceApp("")
+	if newCfg.SourceApp != DefaultSourceApp {
+		t.Errorf("Expected SourceApp to remain %q, got %q", DefaultSourceApp, newCfg.SourceApp)
+	}
+
+	if cfg.SourceApp != DefaultSourceApp {
+		t.Errorf("Expected original SourceApp to remain %q, got %q", DefaultSourceApp, cfg.SourceApp)
 	}
 }

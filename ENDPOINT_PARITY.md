@@ -2,6 +2,9 @@
 
 Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
+> [!NOTE]
+> These endpoints are **internal implementation details** and are not directly callable by users. They are automatically invoked by the 7 user-facing tools (`investigateResource`, `analyzeRouting`, `queryRegistry`, `validateSecurity`, `exploreRelationships`, `searchByLocation`, `getWhatsMyIP`) based on resource type and requested operations.
+
 **Current Status**: 23/64 endpoints implemented (35.9% coverage)
 
 | #   | Endpoint                            | Implemented | Sprint | Priority | Use Case                             |

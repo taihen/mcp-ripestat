@@ -1,4 +1,4 @@
-package util
+package util //nolint:revive // package name is meaningful in context
 
 import (
 	"strings"
