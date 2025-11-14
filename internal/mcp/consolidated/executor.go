@@ -29,15 +29,12 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
-// DirectExecutor implements ToolExecutor by calling RIPEstat endpoints directly.
 type DirectExecutor struct{}
 
-// NewDirectExecutor creates a new direct executor.
 func NewDirectExecutor() *DirectExecutor {
 	return &DirectExecutor{}
 }
 
-// ExecuteEndpoint executes a specific RIPEstat endpoint directly.
 func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error) {
 	switch endpoint {
 	case "getNetworkInfo":
@@ -88,8 +85,6 @@ func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, 
 		return nil, fmt.Errorf("unknown endpoint: %s", endpoint)
 	}
 }
-
-// Helper methods for endpoints that require additional parameters
 
 func (de *DirectExecutor) handleRoutingHistory(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
 	startTime := getOptionalStringParam(params, "start_time")
@@ -144,7 +139,6 @@ func (de *DirectExecutor) handleBGPState(ctx context.Context, resource string, p
 	return client.Get(ctx, opts)
 }
 
-// Helper functions for parameter extraction.
 func getOptionalStringParam(params map[string]interface{}, key string) string {
 	if value, ok := params[key].(string); ok {
 		return value
@@ -153,10 +147,22 @@ func getOptionalStringParam(params map[string]interface{}, key string) string {
 }
 
 func getOptionalIntParam(params map[string]interface{}, key string) int {
-	if value, ok := params[key].(string); ok {
-		if intVal, err := strconv.Atoi(value); err == nil {
+	value, ok := params[key]
+	if !ok {
+		return 0
+	}
+
+	switch v := value.(type) {
+	case string:
+		if intVal, err := strconv.Atoi(v); err == nil {
 			return intVal
 		}
+	case float64:
+		return int(v)
+	case int:
+		return v
+	case int64:
+		return int(v)
 	}
 	return 0
 }

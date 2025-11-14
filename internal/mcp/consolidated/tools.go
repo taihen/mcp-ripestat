@@ -5,24 +5,20 @@ import (
 	"fmt"
 )
 
-// ToolExecutor defines the interface for executing individual RIPEstat endpoints.
 type ToolExecutor interface {
 	ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error)
 }
 
-// Tools provides the consolidated tool implementations.
 type Tools struct {
 	executor ToolExecutor
 }
 
-// NewTools creates a new consolidated tools instance.
 func NewTools(executor ToolExecutor) *Tools {
 	return &Tools{
 		executor: executor,
 	}
 }
 
-// executeOperations is a convenience wrapper for the detect-route-execute pattern.
 func (ct *Tools) executeOperations(
 	ctx context.Context,
 	resource string,
@@ -42,7 +38,6 @@ func (ct *Tools) executeOperations(
 	return ct.executeAndAggregate(ctx, detected, operations, routes, depth)
 }
 
-// InvestigateResource - Primary investigation tool with auto-detection and intelligent routing.
 func (ct *Tools) InvestigateResource(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
@@ -59,7 +54,6 @@ func (ct *Tools) InvestigateResource(ctx context.Context, params map[string]inte
 	return ct.executeOperations(ctx, resource, toOperations(operationStrings), depth)
 }
 
-// AnalyzeRouting - BGP and routing analysis with timeframe support.
 func (ct *Tools) AnalyzeRouting(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
@@ -87,7 +81,6 @@ func (ct *Tools) AnalyzeRouting(ctx context.Context, params map[string]interface
 	return result, nil
 }
 
-// QueryRegistry - Registry and administrative data.
 func (ct *Tools) QueryRegistry(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
@@ -114,7 +107,6 @@ func (ct *Tools) QueryRegistry(ctx context.Context, params map[string]interface{
 	return ct.executeOperations(ctx, resource, operations, depth)
 }
 
-// ValidateSecurity - Security and compliance checks.
 func (ct *Tools) ValidateSecurity(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
@@ -149,7 +141,6 @@ func (ct *Tools) ValidateSecurity(ctx context.Context, params map[string]interfa
 	return result, nil
 }
 
-// ExploreRelationships - Network topology and relationships.
 func (ct *Tools) ExploreRelationships(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	resource, err := extractRequiredString(params, "resource")
 	if err != nil {
@@ -186,7 +177,6 @@ func (ct *Tools) ExploreRelationships(ctx context.Context, params map[string]int
 	return result, nil
 }
 
-// SearchByLocation - Geographic analysis.
 func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interface{}) (*Result, error) {
 	country, err := extractRequiredString(params, "country")
 	if err != nil {
@@ -195,15 +185,12 @@ func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interfa
 
 	typeParam := extractOptionalString(params, "type", LocationTypeASNs)
 
-	// Validate type parameter
 	switch typeParam {
 	case LocationTypeASNs, LocationTypePrefixes, LocationTypeStatistics:
-		// Valid type
 	default:
 		return nil, fmt.Errorf("unsupported type: %s", typeParam)
 	}
 
-	// Detect country resource
 	detected, err := DetectResource(country)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect country: %w", err)
@@ -213,7 +200,6 @@ func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interfa
 		return nil, fmt.Errorf("invalid country code: %s", country)
 	}
 
-	// Route operations to endpoints
 	routes, err := RouteOperations(detected, []Operation{OpOverview})
 	if err != nil {
 		return nil, fmt.Errorf("failed to route operations: %w", err)
@@ -222,7 +208,46 @@ func (ct *Tools) SearchByLocation(ctx context.Context, params map[string]interfa
 	return ct.executeAndAggregate(ctx, detected, []Operation{OpOverview}, routes, DepthBasic)
 }
 
-// executeAndAggregate executes all endpoints and aggregates the results.
+func (ct *Tools) ExecuteIndividualEndpoint(ctx context.Context, endpoint string, args map[string]interface{}) (interface{}, error) {
+	resource, ok := args["resource"].(string)
+	if !ok || resource == "" {
+		return nil, fmt.Errorf("resource parameter is required")
+	}
+
+	params := make(map[string]interface{})
+	for key, value := range args {
+		if key != "resource" {
+			params[key] = value
+		}
+	}
+
+	return ct.executor.ExecuteEndpoint(ctx, endpoint, resource, params)
+}
+
+func translateDepthToEndpointParams(endpoint string, depth string) map[string]interface{} {
+	params := make(map[string]interface{})
+	
+	lodEndpoints := map[string]bool{
+		"getASNNeighbours": true,
+		"getCountryASNs":   true,
+	}
+	
+	if lodEndpoints[endpoint] {
+		var lod int
+		switch depth {
+		case DepthBasic:
+			lod = 0
+		case DepthDetailed, DepthComprehensive:
+			lod = 1
+		default:
+			lod = 0
+		}
+		params["lod"] = lod
+	}
+	
+	return params
+}
+
 func (ct *Tools) executeAndAggregate(
 	ctx context.Context,
 	resource *DetectedResource,
@@ -238,11 +263,10 @@ func (ct *Tools) executeAndAggregate(
 		Metadata:   make(map[string]interface{}),
 	}
 
-	// Execute each endpoint
 	for _, endpoint := range routes.Endpoints {
-		endpointResult, err := ct.executor.ExecuteEndpoint(ctx, endpoint, resource.Value, map[string]interface{}{
-			"depth": depth,
-		})
+		endpointParams := translateDepthToEndpointParams(endpoint, depth)
+		
+		endpointResult, err := ct.executor.ExecuteEndpoint(ctx, endpoint, resource.Value, endpointParams)
 		if err != nil {
 			result.Errors[endpoint] = err.Error()
 			continue
@@ -251,7 +275,6 @@ func (ct *Tools) executeAndAggregate(
 		result.Results[endpoint] = endpointResult
 	}
 
-	// Add routing metadata
 	result.AddMetadataMap(map[string]interface{}{
 		"endpoints_called": routes.Endpoints,
 		"depth":            depth,

@@ -58,7 +58,7 @@ func TestProcessMessage_Initialize(t *testing.T) {
 	if response.JSONRPC != "2.0" {
 		t.Errorf("Expected JSONRPC to be '2.0', got %s", response.JSONRPC)
 	}
-	// JSON unmarshaling converts numbers to float64
+
 	if response.ID.(float64) != 1.0 {
 		t.Errorf("Expected ID to be 1, got %v", response.ID)
 	}
@@ -74,7 +74,6 @@ func TestProcessMessage_Initialized(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// First initialize
 	initRequest := `{
 		"jsonrpc": "2.0",
 		"method": "initialize",
@@ -94,7 +93,6 @@ func TestProcessMessage_Initialized(t *testing.T) {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Then send initialized notification
 	initializedNotif := `{
 		"jsonrpc": "2.0",
 		"method": "initialized"
@@ -116,7 +114,7 @@ func TestProcessMessage_Initialized(t *testing.T) {
 
 func TestProcessMessage_ToolsList(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
-	server.initialized = true // Skip initialization for this test
+	server.initialized = true
 	ctx := context.Background()
 
 	toolsListRequest := `{
@@ -139,7 +137,6 @@ func TestProcessMessage_ToolsList(t *testing.T) {
 		t.Errorf("Expected no error, got %v", response.Error)
 	}
 
-	// Verify the result contains tools
 	resultData, err := json.Marshal(response.Result)
 	if err != nil {
 		t.Fatalf("Failed to marshal result: %v", err)
@@ -156,7 +153,7 @@ func TestProcessMessage_ToolsList(t *testing.T) {
 }
 
 func TestProcessMessage_ToolsListWithWhatsMyIPDisabled(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", true) // Disable whats-my-ip
+	server := NewServer("test-server", "1.0.0", true)
 	server.initialized = true
 	ctx := context.Background()
 
@@ -186,7 +183,6 @@ func TestProcessMessage_ToolsListWithWhatsMyIPDisabled(t *testing.T) {
 		t.Fatalf("Failed to unmarshal tools result: %v", err)
 	}
 
-	// Check that getWhatsMyIP is not in the list
 	for _, tool := range toolsResult.Tools {
 		if tool.Name == "getWhatsMyIP" {
 			t.Error("getWhatsMyIP should not be in tools list when disabled")
@@ -217,7 +213,7 @@ func TestProcessMessage_Ping(t *testing.T) {
 	if response.Error != nil {
 		t.Errorf("Expected no error, got %v", response.Error)
 	}
-	// JSON unmarshaling converts numbers to float64
+
 	if response.ID.(float64) != 3.0 {
 		t.Errorf("Expected ID to be 3, got %v", response.ID)
 	}
@@ -328,7 +324,7 @@ func TestExecuteToolCall_UnknownTool(t *testing.T) {
 }
 
 func TestExecuteToolCall_WhatsMyIPDisabled(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", true) // Disable whats-my-ip
+	server := NewServer("test-server", "1.0.0", true)
 	ctx := context.Background()
 
 	params := &CallToolParams{
@@ -373,120 +369,11 @@ func TestValidateRequest_Integration(t *testing.T) {
 	}
 }
 
-func TestExecuteToolCall_NetworkInfo_MissingResource(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	params := &CallToolParams{
-		Name:      "getNetworkInfo",
-		Arguments: map[string]interface{}{}, // Missing resource
-	}
-
-	result, err := server.executeToolCall(ctx, params)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if result == nil {
-		t.Error("Expected ToolResult, got nil")
-		return
-	}
-	if !result.IsError {
-		t.Error("Expected error ToolResult")
-	}
-	if !strings.Contains(result.Content[0].Text, "resource parameter is required") {
-		t.Errorf("Expected error message about missing resource, got %s", result.Content[0].Text)
-	}
-}
-
-func TestExecuteToolCall_RPKIValidation_MissingPrefix(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	params := &CallToolParams{
-		Name: "getRPKIValidation",
-		Arguments: map[string]interface{}{
-			"resource": "AS15169", // Missing prefix
-		},
-	}
-
-	result, err := server.executeToolCall(ctx, params)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if result == nil {
-		t.Error("Expected ToolResult, got nil")
-		return
-	}
-	if !result.IsError {
-		t.Error("Expected error ToolResult")
-	}
-	if !strings.Contains(result.Content[0].Text, "prefix parameter is required") {
-		t.Errorf("Expected error message about missing prefix, got %s", result.Content[0].Text)
-	}
-}
-
-func TestExecuteToolCall_ASNNeighbours_InvalidLOD(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	params := &CallToolParams{
-		Name: "getASNNeighbours",
-		Arguments: map[string]interface{}{
-			"resource": "AS15169",
-			"lod":      "invalid", // Invalid LOD
-		},
-	}
-
-	result, err := server.executeToolCall(ctx, params)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if result == nil {
-		t.Error("Expected ToolResult, got nil")
-		return
-	}
-	if !result.IsError {
-		t.Error("Expected error ToolResult")
-	}
-	if !strings.Contains(result.Content[0].Text, "lod parameter must be 0 or 1") {
-		t.Errorf("Expected error message about invalid LOD, got %s", result.Content[0].Text)
-	}
-}
-
-func TestExecuteToolCall_LookingGlass_InvalidLookBackLimit(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	params := &CallToolParams{
-		Name: "getLookingGlass",
-		Arguments: map[string]interface{}{
-			"resource":        "8.8.8.0/24",
-			"look_back_limit": "invalid", // Invalid look back limit
-		},
-	}
-
-	result, err := server.executeToolCall(ctx, params)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if result == nil {
-		t.Error("Expected ToolResult, got nil")
-		return
-	}
-	if !result.IsError {
-		t.Error("Expected error ToolResult")
-	}
-	if !strings.Contains(result.Content[0].Text, "look_back_limit parameter must be a valid integer") {
-		t.Errorf("Expected error message about invalid look_back_limit, got %s", result.Content[0].Text)
-	}
-}
-
 func TestProcessMessage_ToolsCall_InvalidParams(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	server.initialized = true
 	ctx := context.Background()
 
-	// Test with invalid params structure
 	toolsCallRequest := `{
 		"jsonrpc": "2.0",
 		"method": "tools/call",
@@ -516,7 +403,6 @@ func TestProcessMessage_Initialize_InvalidParams(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// Test with invalid params structure
 	initRequest := `{
 		"jsonrpc": "2.0",
 		"method": "initialize",
@@ -581,7 +467,7 @@ func TestProcessMessage_CancellationNotification(t *testing.T) {
 }
 
 func TestExecuteToolCall_ArgumentParsing(t *testing.T) {
-	// Test argument parsing without making network calls
+
 	testCases := []struct {
 		name        string
 		params      *CallToolParams
@@ -614,7 +500,7 @@ func TestExecuteToolCall_ArgumentParsing(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Parse arguments to test the argument parsing logic
+
 			args := make(map[string]interface{})
 			if tc.params.Arguments != nil {
 				jsonData, err := json.Marshal(tc.params.Arguments)
@@ -626,7 +512,6 @@ func TestExecuteToolCall_ArgumentParsing(t *testing.T) {
 				}
 			}
 
-			// Test that we can get the resource parameter
 			if !tc.expectError {
 				if resource, ok := args["resource"].(string); !ok || resource == "" {
 					t.Error("Expected valid resource parameter")
@@ -637,7 +522,7 @@ func TestExecuteToolCall_ArgumentParsing(t *testing.T) {
 }
 
 func TestParseCallToolParams_InvalidJSON(t *testing.T) {
-	// Test with a channel that can't be marshaled
+
 	ch := make(chan int)
 	_, err := ParseCallToolParams(ch)
 	if err == nil {
@@ -646,7 +531,7 @@ func TestParseCallToolParams_InvalidJSON(t *testing.T) {
 }
 
 func TestCreateToolResultFromJSON_InvalidData(t *testing.T) {
-	// Test with data that can't be marshaled (function)
+
 	invalidData := func() {}
 	result := CreateToolResultFromJSON(invalidData)
 
@@ -658,171 +543,8 @@ func TestCreateToolResultFromJSON_InvalidData(t *testing.T) {
 	}
 }
 
-func TestExecuteToolCall_AllToolFunctions(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name         string
-		toolName     string
-		args         map[string]interface{}
-		expectError  bool
-		errorMessage string
-	}{
-		{
-			name:     "callASOverview success",
-			toolName: "getASOverview",
-			args:     map[string]interface{}{"resource": "15169"},
-		},
-		{
-			name:         "callASOverview missing resource",
-			toolName:     "getASOverview",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callAnnouncedPrefixes success",
-			toolName: "getAnnouncedPrefixes",
-			args:     map[string]interface{}{"resource": "15169"},
-		},
-		{
-			name:         "callAnnouncedPrefixes missing resource",
-			toolName:     "getAnnouncedPrefixes",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callRoutingStatus success",
-			toolName: "getRoutingStatus",
-			args:     map[string]interface{}{"resource": "8.8.8.8"},
-		},
-		{
-			name:         "callRoutingStatus missing resource",
-			toolName:     "getRoutingStatus",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callWhois success",
-			toolName: "getWhois",
-			args:     map[string]interface{}{"resource": "8.8.8.8"},
-		},
-		{
-			name:         "callWhois missing resource",
-			toolName:     "getWhois",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callAbuseContactFinder success",
-			toolName: "getAbuseContactFinder",
-			args:     map[string]interface{}{"resource": "8.8.8.8"},
-		},
-		{
-			name:         "callAbuseContactFinder missing resource",
-			toolName:     "getAbuseContactFinder",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callRoutingHistory success",
-			toolName: "getRoutingHistory",
-			args:     map[string]interface{}{"resource": "AS3333"},
-		},
-		{
-			name:         "callRoutingHistory missing resource",
-			toolName:     "getRoutingHistory",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callWhatsMyIP success",
-			toolName: "getWhatsMyIP",
-			args:     map[string]interface{}{},
-		},
-		{
-			name:     "callAddressSpaceHierarchy success",
-			toolName: "getAddressSpaceHierarchy",
-			args:     map[string]interface{}{"resource": "193.0.0.0/21"},
-		},
-		{
-			name:         "callAddressSpaceHierarchy missing resource",
-			toolName:     "getAddressSpaceHierarchy",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callPrefixOverview success",
-			toolName: "getPrefixOverview",
-			args:     map[string]interface{}{"resource": "193.0.0.0/21"},
-		},
-		{
-			name:         "callPrefixOverview missing resource",
-			toolName:     "getPrefixOverview",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:     "callPrefixRoutingConsistency success",
-			toolName: "getPrefixRoutingConsistency",
-			args:     map[string]interface{}{"resource": "193.0.0.0/21"},
-		},
-		{
-			name:         "callPrefixRoutingConsistency missing resource",
-			toolName:     "getPrefixRoutingConsistency",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      tc.toolName,
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-
-			if tc.expectError {
-				if err != nil {
-					t.Errorf("Expected no error, got %v", err)
-					return
-				}
-				if result == nil {
-					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
-					return
-				}
-				if !result.IsError {
-					t.Errorf("Expected error ToolResult for %s", tc.name)
-					return
-				}
-				if tc.errorMessage != "" && !strings.Contains(result.Content[0].Text, tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
-				}
-			} else {
-				// Note: These might fail due to network issues in tests, so we accept that
-				if err != nil {
-					t.Logf("Network call failed (expected in test environment): %v", err)
-				} else if result == nil {
-					t.Error("Expected non-nil result when no error occurred")
-				}
-			}
-		})
-	}
-}
-
 func TestExecuteToolCall_WhatsMyIPDisabledInDepth(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", true) // Disable whats-my-ip
+	server := NewServer("test-server", "1.0.0", true)
 	ctx := context.Background()
 
 	params := &CallToolParams{
@@ -839,335 +561,10 @@ func TestExecuteToolCall_WhatsMyIPDisabledInDepth(t *testing.T) {
 	}
 }
 
-func TestExecuteToolCall_RPKIValidation_ErrorCases(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name         string
-		args         map[string]interface{}
-		expectError  bool
-		errorMessage string
-	}{
-		{
-			name:         "missing resource",
-			args:         map[string]interface{}{"prefix": "8.8.8.0/24"},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:         "missing prefix",
-			args:         map[string]interface{}{"resource": "AS15169"},
-			expectError:  true,
-			errorMessage: "prefix parameter is required",
-		},
-		{
-			name:         "both parameters missing",
-			args:         map[string]interface{}{},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getRPKIValidation",
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-			if tc.expectError {
-				if err != nil {
-					t.Errorf("Expected no error, got %v", err)
-					return
-				}
-				if result == nil {
-					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
-					return
-				}
-				if !result.IsError {
-					t.Errorf("Expected error ToolResult for %s", tc.name)
-					return
-				}
-				if !strings.Contains(result.Content[0].Text, tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
-				}
-			} else if err != nil {
-				t.Errorf("Unexpected error for %s: %v", tc.name, err)
-			}
-		})
-	}
-}
-
-func TestExecuteToolCall_LookingGlass_ErrorCases(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name         string
-		args         map[string]interface{}
-		expectError  bool
-		errorMessage string
-	}{
-		{
-			name:         "missing resource",
-			args:         map[string]interface{}{"look_back_limit": 3600},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:         "invalid look_back_limit type",
-			args:         map[string]interface{}{"resource": "8.8.8.0/24", "look_back_limit": "not_a_number"},
-			expectError:  true,
-			errorMessage: "look_back_limit parameter must be a valid integer",
-		},
-		{
-			name:         "invalid look_back_limit format",
-			args:         map[string]interface{}{"resource": "8.8.8.0/24", "look_back_limit": []int{1, 2, 3}},
-			expectError:  false, // This will succeed as it gets converted properly in JSON marshal/unmarshal
-			errorMessage: "",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getLookingGlass",
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-			if tc.expectError {
-				if err != nil {
-					t.Errorf("Expected no error, got %v", err)
-					return
-				}
-				if result == nil {
-					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
-					return
-				}
-				if !result.IsError {
-					t.Errorf("Expected error ToolResult for %s", tc.name)
-					return
-				}
-				if !strings.Contains(result.Content[0].Text, tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
-				}
-			} else if err != nil {
-				t.Errorf("Unexpected error for %s: %v", tc.name, err)
-			}
-		})
-	}
-}
-
-func TestExecuteToolCall_ASNNeighbours_ErrorCases(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name         string
-		args         map[string]interface{}
-		expectError  bool
-		errorMessage string
-	}{
-		{
-			name:         "missing resource",
-			args:         map[string]interface{}{"lod": 1},
-			expectError:  true,
-			errorMessage: "resource parameter is required",
-		},
-		{
-			name:         "invalid lod type string",
-			args:         map[string]interface{}{"resource": "AS15169", "lod": "invalid"},
-			expectError:  true,
-			errorMessage: "lod parameter must be 0 or 1",
-		},
-		{
-			name:         "invalid lod value high",
-			args:         map[string]interface{}{"resource": "AS15169", "lod": 5},
-			expectError:  false, // This actually gets accepted in the current implementation
-			errorMessage: "",
-		},
-		{
-			name:         "invalid lod value negative",
-			args:         map[string]interface{}{"resource": "AS15169", "lod": -1},
-			expectError:  false, // This actually gets accepted in the current implementation
-			errorMessage: "",
-		},
-		{
-			name:         "invalid lod type array",
-			args:         map[string]interface{}{"resource": "AS15169", "lod": []int{1, 2}},
-			expectError:  false, // This gets converted properly in JSON marshal/unmarshal
-			errorMessage: "",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getASNNeighbours",
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-			if tc.expectError {
-				if err != nil {
-					t.Errorf("Expected no error, got %v", err)
-					return
-				}
-				if result == nil {
-					t.Errorf("Expected ToolResult for %s, got nil", tc.name)
-					return
-				}
-				if !result.IsError {
-					t.Errorf("Expected error ToolResult for %s", tc.name)
-					return
-				}
-				if !strings.Contains(result.Content[0].Text, tc.errorMessage) {
-					t.Errorf("Expected error message to contain '%s', got %s", tc.errorMessage, result.Content[0].Text)
-				}
-			} else if err != nil {
-				t.Errorf("Unexpected error for %s: %v", tc.name, err)
-			}
-		})
-	}
-}
-
-func TestExecuteToolCall_RoutingHistory(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	// Test success case
-	params := &CallToolParams{
-		Name:      "getRoutingHistory",
-		Arguments: map[string]interface{}{"resource": "AS3333"},
-	}
-
-	result, err := server.executeToolCall(ctx, params)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if result == nil {
-		t.Error("Expected non-nil result")
-	}
-
-	// Test missing resource case
-	params = &CallToolParams{
-		Name:      "getRoutingHistory",
-		Arguments: map[string]interface{}{},
-	}
-
-	result, err = server.executeToolCall(ctx, params)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if result == nil {
-		t.Error("Expected ToolResult, got nil")
-		return
-	}
-	if !result.IsError {
-		t.Error("Expected error ToolResult")
-	}
-	if !strings.Contains(result.Content[0].Text, "resource parameter is required") {
-		t.Errorf("Expected error message about missing resource, got %s", result.Content[0].Text)
-	}
-}
-
-func TestExecuteToolCall_RoutingHistory_WithPagination(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name      string
-		arguments map[string]interface{}
-		wantError bool
-		errorMsg  string
-	}{
-		{
-			name: "valid pagination parameters",
-			arguments: map[string]interface{}{
-				"resource":    "AS3333",
-				"start_time":  "2024-01-01T00:00:00Z",
-				"end_time":    "2024-12-31T23:59:59Z",
-				"max_results": "100",
-			},
-			wantError: false,
-		},
-		{
-			name: "partial pagination parameters",
-			arguments: map[string]interface{}{
-				"resource":   "AS3333",
-				"start_time": "2024-01-01T00:00:00Z",
-			},
-			wantError: false,
-		},
-		{
-			name: "only max_results",
-			arguments: map[string]interface{}{
-				"resource":    "AS3333",
-				"max_results": "50",
-			},
-			wantError: false,
-		},
-		{
-			name: "invalid max_results - non-numeric",
-			arguments: map[string]interface{}{
-				"resource":    "AS3333",
-				"max_results": "invalid",
-			},
-			wantError: true,
-			errorMsg:  "max_results parameter must be a valid integer",
-		},
-		{
-			name: "invalid max_results - negative",
-			arguments: map[string]interface{}{
-				"resource":    "AS3333",
-				"max_results": "-10",
-			},
-			wantError: true,
-			errorMsg:  "max_results parameter must be non-negative",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getRoutingHistory",
-				Arguments: tc.arguments,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-			if err != nil {
-				t.Errorf("Expected no error, got %v", err)
-				return
-			}
-
-			if result == nil {
-				t.Error("Expected ToolResult, got nil")
-				return
-			}
-
-			if tc.wantError {
-				if !result.IsError {
-					t.Error("Expected error ToolResult")
-					return
-				}
-				if !strings.Contains(result.Content[0].Text, tc.errorMsg) {
-					t.Errorf("Expected error message containing '%s', got %s", tc.errorMsg, result.Content[0].Text)
-				}
-			} else if result.IsError {
-				t.Errorf("Expected success ToolResult, got error: %s", result.Content[0].Text)
-			}
-		})
-	}
-}
-
 func TestProcessMessage_EdgeCases(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// Test invalid JSON
 	result, err := server.ProcessMessage(ctx, []byte("invalid json"))
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -1178,7 +575,6 @@ func TestProcessMessage_EdgeCases(t *testing.T) {
 		}
 	}
 
-	// Test unknown message type
 	unknownMessage := []byte(`{"jsonrpc": "2.0"}`)
 	result, err = server.ProcessMessage(ctx, unknownMessage)
 	if err != nil {
@@ -1194,7 +590,6 @@ func TestProcessMessage_EdgeCases(t *testing.T) {
 func TestHandleInitialize_EdgeCases(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 
-	// Test with nil params
 	req := &Request{
 		JSONRPC: "2.0",
 		Method:  "initialize",
@@ -1210,8 +605,7 @@ func TestHandleInitialize_EdgeCases(t *testing.T) {
 		t.Error("Expected successful response with nil params")
 	}
 
-	// Test with invalid params that can't be marshaled
-	req.Params = make(chan int) // Invalid JSON type
+	req.Params = make(chan int)
 	result, err = server.handleInitialize(req)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -1227,7 +621,6 @@ func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// First initialize the server
 	initRequest := `{
 		"jsonrpc": "2.0",
 		"method": "initialize",
@@ -1247,7 +640,6 @@ func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Send initialized notification
 	initializedNotif := `{
 		"jsonrpc": "2.0",
 		"method": "initialized"
@@ -1258,79 +650,78 @@ func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
 		t.Fatalf("Initialized notification failed: %v", err)
 	}
 
-	// Test tools/call for each tool
 	toolTests := []struct {
 		name   string
 		params string
 	}{
 		{
-			name: "getNetworkInfo",
+			name: "investigateResource",
 			params: `{
 				"jsonrpc": "2.0",
 				"method": "tools/call",
 				"params": {
-					"name": "getNetworkInfo",
+					"name": "investigateResource",
 					"arguments": {"resource": "8.8.8.8"}
 				},
 				"id": 2
 			}`,
 		},
 		{
-			name: "getASOverview",
+			name: "analyzeRouting",
 			params: `{
 				"jsonrpc": "2.0",
 				"method": "tools/call",
 				"params": {
-					"name": "getASOverview",
-					"arguments": {"resource": "15169"}
+					"name": "analyzeRouting",
+					"arguments": {"resource": "AS15169"}
 				},
 				"id": 3
 			}`,
 		},
 		{
-			name: "getASRoutingConsistency",
+			name: "queryRegistry",
 			params: `{
 				"jsonrpc": "2.0",
 				"method": "tools/call",
 				"params": {
-					"name": "getASRoutingConsistency",
+					"name": "queryRegistry",
 					"arguments": {"resource": "AS3333"}
 				},
 				"id": 4
 			}`,
 		},
 		{
-			name: "getASPathLength",
+			name: "validateSecurity",
 			params: `{
 				"jsonrpc": "2.0",
 				"method": "tools/call",
 				"params": {
-					"name": "getASPathLength",
-					"arguments": {"resource": "AS3333"}
+					"name": "validateSecurity",
+					"arguments": {"resource": "8.8.8.0/24"}
 				},
 				"id": 5
 			}`,
 		},
 		{
-			name: "getAllocationHistory",
+			name: "exploreRelationships",
 			params: `{
 				"jsonrpc": "2.0",
 				"method": "tools/call",
 				"params": {
-					"name": "getAllocationHistory",
-					"arguments": {"resource": "8.8.8.0/24"}
+					"name": "exploreRelationships",
+					"arguments": {"resource": "AS15169"}
 				},
 				"id": 6
 			}`,
 		},
 		{
-			name: "getRelatedPrefixes",
+			name: "searchByLocation",
 			params: `{
 				"jsonrpc": "2.0",
 				"method": "tools/call",
 				"params": {
-					"name": "getRelatedPrefixes",
-					"arguments": {"resource": "8.8.8.0/24"}
+					"name": "searchByLocation",
+					"arguments": {"country": "US"}
 				},
 				"id": 7
 			}`,
@@ -1351,7 +742,6 @@ func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
 				return
 			}
 
-			// Accept either success or error due to network conditions in tests
 			if response.Error != nil {
 				t.Logf("Tool call returned error (may be due to network): %v", response.Error)
 			} else if response.Result == nil {
@@ -1361,13 +751,10 @@ func TestProcessMessage_ToolsCall_CompleteFlow(t *testing.T) {
 	}
 }
 
-// Test for uncovered lines and edge cases
-
 func TestProcessMessage_ParseError(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// Test with completely invalid JSON
 	invalidJSON := `{completely invalid json`
 
 	result, err := server.ProcessMessage(ctx, []byte(invalidJSON))
@@ -1432,7 +819,7 @@ func TestParseMessage_ErrorResponseCases(t *testing.T) {
 				"id": 1,
 				"invalid_field": true
 			}`,
-			isError: false, // Valid JSON, extra fields are OK
+			isError: false,
 		},
 		{
 			name: "invalid request structure",
@@ -1471,11 +858,10 @@ func TestExecuteToolCall_ArgumentMarshalingError(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// Create params with arguments that can't be marshaled
 	params := &CallToolParams{
-		Name: "getNetworkInfo",
+		Name: "investigateResource",
 		Arguments: map[string]interface{}{
-			"resource": make(chan int), // Channels can't be marshaled
+			"resource": make(chan int),
 		},
 	}
 
@@ -1492,16 +878,13 @@ func TestExecuteToolCall_ArgumentUnmarshalingError(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// This is harder to trigger since we control the marshaling,
-	// but we can test with invalid JSON that gets through marshaling
 	params := &CallToolParams{
-		Name:      "getNetworkInfo",
-		Arguments: "invalid json string", // This will marshal fine but unmarshal poorly
+		Name:      "investigateResource",
+		Arguments: "invalid json string",
 	}
 
 	_, err := server.executeToolCall(ctx, params)
-	// This might not fail as expected since string marshals/unmarshals OK
-	// The test mainly covers the error path structure
+
 	if err != nil {
 		t.Logf("Got expected error: %v", err)
 	}
@@ -1540,215 +923,10 @@ func TestHandleToolsCall_ToolExecutionError(t *testing.T) {
 	}
 }
 
-func TestCallRPKIValidation_ErrorHandling(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	// Test all error paths for RPKI validation
-	testCases := []struct {
-		name     string
-		args     map[string]interface{}
-		errorMsg string
-	}{
-		{
-			name:     "missing resource",
-			args:     map[string]interface{}{"prefix": "192.0.2.0/24"},
-			errorMsg: "resource parameter is required",
-		},
-		{
-			name:     "missing prefix",
-			args:     map[string]interface{}{"resource": "AS15169"},
-			errorMsg: "prefix parameter is required",
-		},
-		{
-			name:     "both missing",
-			args:     map[string]interface{}{},
-			errorMsg: "resource parameter is required",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getRPKIValidation",
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-			if err != nil {
-				t.Errorf("Expected no error, got %v", err)
-				return
-			}
-			if result == nil {
-				t.Error("Expected ToolResult, got nil")
-				return
-			}
-			if !result.IsError {
-				t.Error("Expected error ToolResult")
-				return
-			}
-			if !strings.Contains(result.Content[0].Text, tc.errorMsg) {
-				t.Errorf("Expected error message '%s', got %s", tc.errorMsg, result.Content[0].Text)
-			}
-		})
-	}
-}
-
-func TestCallASNNeighbours_LODValidation(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name      string
-		args      map[string]interface{}
-		expectErr bool
-		errorMsg  string
-	}{
-		{
-			name: "valid LOD 0",
-			args: map[string]interface{}{
-				"resource": "AS15169",
-				"lod":      "0",
-			},
-			expectErr: false,
-		},
-		{
-			name: "valid LOD 1",
-			args: map[string]interface{}{
-				"resource": "AS15169",
-				"lod":      "1",
-			},
-			expectErr: false,
-		},
-		{
-			name: "invalid LOD 2",
-			args: map[string]interface{}{
-				"resource": "AS15169",
-				"lod":      "2",
-			},
-			expectErr: true,
-			errorMsg:  "lod parameter must be 0 or 1",
-		},
-		{
-			name: "invalid LOD non-numeric",
-			args: map[string]interface{}{
-				"resource": "AS15169",
-				"lod":      "abc",
-			},
-			expectErr: true,
-			errorMsg:  "lod parameter must be 0 or 1",
-		},
-		{
-			name: "with query_time",
-			args: map[string]interface{}{
-				"resource":   "AS15169",
-				"lod":        "0",
-				"query_time": "2023-01-01T00:00:00Z",
-			},
-			expectErr: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getASNNeighbours",
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-
-			if tc.expectErr {
-				if err != nil {
-					t.Errorf("Expected no error, got %v", err)
-					return
-				}
-				if result == nil || !result.IsError {
-					t.Error("Expected error ToolResult")
-					return
-				}
-				if !strings.Contains(result.Content[0].Text, tc.errorMsg) {
-					t.Errorf("Expected error message '%s', got %s", tc.errorMsg, result.Content[0].Text)
-				}
-			} else if err != nil {
-				// Network call might fail in test environment, that's OK
-				t.Logf("Network call failed (expected in test environment): %v", err)
-			}
-		})
-	}
-}
-
-func TestCallLookingGlass_LookBackLimitValidation(t *testing.T) {
-	server := NewServer("test-server", "1.0.0", false)
-	ctx := context.Background()
-
-	testCases := []struct {
-		name      string
-		args      map[string]interface{}
-		expectErr bool
-		errorMsg  string
-	}{
-		{
-			name: "valid look_back_limit",
-			args: map[string]interface{}{
-				"resource":        "8.8.8.0/24",
-				"look_back_limit": "10",
-			},
-			expectErr: false,
-		},
-		{
-			name: "invalid look_back_limit",
-			args: map[string]interface{}{
-				"resource":        "8.8.8.0/24",
-				"look_back_limit": "abc",
-			},
-			expectErr: true,
-			errorMsg:  "look_back_limit parameter must be a valid integer",
-		},
-		{
-			name: "no look_back_limit",
-			args: map[string]interface{}{
-				"resource": "8.8.8.0/24",
-			},
-			expectErr: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			params := &CallToolParams{
-				Name:      "getLookingGlass",
-				Arguments: tc.args,
-			}
-
-			result, err := server.executeToolCall(ctx, params)
-
-			if tc.expectErr {
-				if err != nil {
-					t.Errorf("Expected no error, got %v", err)
-					return
-				}
-				if result == nil || !result.IsError {
-					t.Error("Expected error ToolResult")
-					return
-				}
-				if !strings.Contains(result.Content[0].Text, tc.errorMsg) {
-					t.Errorf("Expected error message '%s', got %s", tc.errorMsg, result.Content[0].Text)
-				}
-			} else if err != nil {
-				// Network call might fail in test environment, that's OK
-				t.Logf("Network call failed (expected in test environment): %v", err)
-			}
-		})
-	}
-}
-
-// Test to achieve 100% coverage by testing error conditions that are hard to trigger.
 func TestCoverageCompletionTests(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// Test tools/list request before initialization
 	toolsListRequest := `{
 		"jsonrpc": "2.0",
 		"method": "tools/list",
@@ -1773,9 +951,8 @@ func TestCoverageCompletionTests(t *testing.T) {
 	}
 }
 
-// Test for edge cases in ParseMessage that trigger error response parsing.
 func TestParseMessage_ErrorResponseEdgeCases(t *testing.T) {
-	// Test malformed error response that fails JSON unmarshaling
+
 	malformedErrorResponse := `{
 		"jsonrpc": "2.0",
 		"error": {
@@ -1793,7 +970,6 @@ func TestParseMessage_ErrorResponseEdgeCases(t *testing.T) {
 		t.Errorf("Expected 'invalid error response' error, got: %v", err)
 	}
 
-	// Test malformed result response that fails JSON unmarshaling
 	malformedResultResponse := `{
 		"jsonrpc": "2.0",
 		"result": {"data": "test"
@@ -2045,10 +1221,8 @@ func TestWithHTTPRequest(t *testing.T) {
 	ctx := context.Background()
 	req := httptest.NewRequest("GET", "http://example.com", nil)
 
-	// Test storing HTTP request in context
 	ctxWithReq := WithHTTPRequest(ctx, req)
 
-	// Test retrieving HTTP request from context
 	retrievedReq, ok := HTTPRequestFromContext(ctxWithReq)
 	if !ok {
 		t.Fatal("Expected to retrieve HTTP request from context")
@@ -2061,7 +1235,6 @@ func TestWithHTTPRequest(t *testing.T) {
 func TestHTTPRequestFromContext_NotPresent(t *testing.T) {
 	ctx := context.Background()
 
-	// Test retrieving from context without HTTP request
 	_, ok := HTTPRequestFromContext(ctx)
 	if ok {
 		t.Error("Expected no HTTP request in context")
@@ -2106,7 +1279,7 @@ func TestCallWhatsMyIP_WithHTTPContext(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create HTTP request with test headers
+
 			req := httptest.NewRequest("POST", "http://example.com/mcp", nil)
 			req.RemoteAddr = tc.remoteAddr
 
@@ -2120,24 +1293,15 @@ func TestCallWhatsMyIP_WithHTTPContext(t *testing.T) {
 				req.Header.Set("CF-Connecting-IP", tc.cfConnecting)
 			}
 
-			// Create context with HTTP request
 			ctx := WithHTTPRequest(context.Background(), req)
 
-			// Execute callWhatsMyIP - it should use the HTTP context
 			params := &CallToolParams{
 				Name:      "getWhatsMyIP",
 				Arguments: map[string]interface{}{},
 			}
 
-			// Note: This test verifies the context passing but doesn't validate
-			// the actual API call since that requires network access.
-			// The key verification is that ExtractClientIP is called with
-			// the correct HTTP request context.
 			result, err := server.executeToolCall(ctx, params)
 
-			// The result might fail due to network issues in testing,
-			// but we can verify that the HTTP context was properly passed
-			// by checking that no panic occurred and the function executed
 			if result == nil && err == nil {
 				t.Error("Expected either result or error")
 			}
@@ -2154,12 +1318,8 @@ func TestCallWhatsMyIP_WithoutHTTPContext(t *testing.T) {
 		Arguments: map[string]interface{}{},
 	}
 
-	// Execute callWhatsMyIP without HTTP context
-	// Should fallback to standard GetWhatsMyIP behavior
 	result, err := server.executeToolCall(ctx, params)
 
-	// The result might fail due to network issues in testing,
-	// but we can verify that the function executed without panic
 	if result == nil && err == nil {
 		t.Error("Expected either result or error")
 	}
@@ -2169,10 +1329,8 @@ func TestWithSessionID(t *testing.T) {
 	ctx := context.Background()
 	sessionID := "test-session-123"
 
-	// Test storing session ID in context
 	ctxWithSession := WithSessionID(ctx, sessionID)
 
-	// Test retrieving session ID from context
 	retrievedSessionID, ok := SessionIDFromContext(ctxWithSession)
 	if !ok {
 		t.Fatal("Expected to retrieve session ID from context")
@@ -2185,7 +1343,6 @@ func TestWithSessionID(t *testing.T) {
 func TestSessionIDFromContext_NotPresent(t *testing.T) {
 	ctx := context.Background()
 
-	// Test retrieving from context without session ID
 	_, ok := SessionIDFromContext(ctx)
 	if ok {
 		t.Error("Expected no session ID in context")
@@ -2316,7 +1473,7 @@ func testParseQueryToRequestValid(t *testing.T, server *Server) {
 				if request.ID != "789" {
 					t.Errorf("Expected ID '789', got '%v'", request.ID)
 				}
-				// Should use params JSON, not individual resource parameter
+
 				if params, ok := request.Params.(map[string]interface{}); ok {
 					if test, exists := params["test"]; !exists || test != "value" {
 						t.Errorf("Expected test 'value', got '%v'", test)
@@ -2379,14 +1536,12 @@ func testParseQueryToRequestErrors(t *testing.T, server *Server) {
 	}
 }
 
-// Test for uncovered tool functions to achieve 100% coverage.
 func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 	ctx := context.Background()
 
-	// Helper function to test tools with basic resource requirement
 	testBasicResourceTool := func(t *testing.T, toolName, resourceValue string) {
-		// Test success case
+
 		params := &CallToolParams{
 			Name:      toolName,
 			Arguments: map[string]interface{}{"resource": resourceValue},
@@ -2399,7 +1554,6 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 			t.Error("Expected non-nil result")
 		}
 
-		// Test missing resource case
 		params = &CallToolParams{
 			Name:      toolName,
 			Arguments: map[string]interface{}{},
@@ -2421,14 +1575,12 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 		}
 	}
 
-	// Test validateSecurity
 	t.Run("validateSecurity", func(t *testing.T) {
 		testBasicResourceTool(t, "validateSecurity", "8.8.8.0/24")
 	})
 
-	// Test searchByLocation
 	t.Run("searchByLocation", func(t *testing.T) {
-		// Test success case
+
 		params := &CallToolParams{
 			Name:      "searchByLocation",
 			Arguments: map[string]interface{}{"country": "NL"},
@@ -2441,7 +1593,6 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 			t.Error("Expected non-nil result")
 		}
 
-		// Test missing country case
 		params = &CallToolParams{
 			Name:      "searchByLocation",
 			Arguments: map[string]interface{}{},
@@ -2463,7 +1614,6 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 		}
 	})
 
-	// Test analyzeRouting
 	t.Run("analyzeRouting", func(t *testing.T) {
 		testBasicResourceTool(t, "analyzeRouting", "8.8.8.8")
 	})

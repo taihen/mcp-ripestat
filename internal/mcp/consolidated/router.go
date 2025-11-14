@@ -4,7 +4,6 @@ import (
 	"fmt"
 )
 
-// routingMatrix defines which endpoints to call for each resource type and operation combination.
 var routingMatrix = map[ResourceType]map[Operation][]string{
 	IPAddress: {
 		OpOverview:     {"getNetworkInfo", "getWhois"},
@@ -39,21 +38,6 @@ var routingMatrix = map[ResourceType]map[Operation][]string{
 	},
 }
 
-// operationPriority defines the execution order for operations (lower number = higher priority).
-var operationPriority = map[Operation]int{
-	OpOverview:      1,
-	OpSecurity:      2,
-	OpRouting:       3,
-	OpNeighbors:     4,
-	OpRelationships: 5,
-	OpHistory:       6,
-	OpConsistency:   7,
-	OpUpdates:       8,
-	OpLookingGlass:  9,
-	OpHierarchy:     10,
-}
-
-// RouteOperations determines which endpoints to call for given operations on a resource.
 func RouteOperations(resource *DetectedResource, operations []Operation) (*RouteResult, error) {
 	if resource == nil {
 		return nil, fmt.Errorf("resource cannot be nil")
@@ -75,16 +59,12 @@ func RouteOperations(resource *DetectedResource, operations []Operation) (*Route
 	}
 
 	endpointSet := make(map[string]bool)
-	operationOrder := make(map[Operation]int)
 
-	// Collect all endpoints for the requested operations
 	for i, operation := range operations {
 		endpoints, exists := resourceRoutes[operation]
 		if !exists {
 			return nil, fmt.Errorf("operation '%s' not supported for resource type '%s'", operation, resource.Type.String())
 		}
-
-		operationOrder[operation] = operationPriority[operation]
 
 		for _, endpoint := range endpoints {
 			if !endpointSet[endpoint] {
@@ -95,38 +75,31 @@ func RouteOperations(resource *DetectedResource, operations []Operation) (*Route
 		}
 	}
 
-	// Set up dependencies for certain endpoint combinations
 	result.Dependencies = buildDependencies(result.Endpoints, resource.Type)
 
 	return result, nil
 }
 
-// buildDependencies sets up execution dependencies between endpoints.
 func buildDependencies(endpoints []string, _ ResourceType) map[string][]string {
 	dependencies := make(map[string][]string)
 
-	// Some endpoints should run after others for optimal data aggregation
 	endpointSet := make(map[string]bool)
 	for _, endpoint := range endpoints {
 		endpointSet[endpoint] = true
 	}
 
-	// RPKI validation should come after network info for context
 	if endpointSet["getRPKIValidation"] && endpointSet["getNetworkInfo"] {
 		dependencies["getRPKIValidation"] = []string{"getNetworkInfo"}
 	}
 
-	// BGP updates should come after routing status for context
 	if endpointSet["getBGPUpdates"] && endpointSet["getRoutingStatus"] {
 		dependencies["getBGPUpdates"] = []string{"getRoutingStatus"}
 	}
 
-	// Address space hierarchy should come after network info
 	if endpointSet["getAddressSpaceHierarchy"] && endpointSet["getNetworkInfo"] {
 		dependencies["getAddressSpaceHierarchy"] = []string{"getNetworkInfo"}
 	}
 
-	// Related prefixes should come after prefix overview
 	if endpointSet["getRelatedPrefixes"] && endpointSet["getPrefixOverview"] {
 		dependencies["getRelatedPrefixes"] = []string{"getPrefixOverview"}
 	}
@@ -134,7 +107,6 @@ func buildDependencies(endpoints []string, _ ResourceType) map[string][]string {
 	return dependencies
 }
 
-// GetSupportedOperations returns the operations supported for a given resource type.
 func GetSupportedOperations(resourceType ResourceType) []Operation {
 	resourceRoutes, exists := routingMatrix[resourceType]
 	if !exists {
@@ -149,7 +121,6 @@ func GetSupportedOperations(resourceType ResourceType) []Operation {
 	return operations
 }
 
-// ValidateOperations checks if all operations are supported for the given resource type.
 func ValidateOperations(resourceType ResourceType, operations []Operation) error {
 	supportedOps := GetSupportedOperations(resourceType)
 	supportedSet := make(map[Operation]bool)
@@ -166,7 +137,6 @@ func ValidateOperations(resourceType ResourceType, operations []Operation) error
 	return nil
 }
 
-// GetEndpointsForOperation returns the specific endpoints that will be called for an operation.
 func GetEndpointsForOperation(resourceType ResourceType, operation Operation) ([]string, error) {
 	resourceRoutes, exists := routingMatrix[resourceType]
 	if !exists {
