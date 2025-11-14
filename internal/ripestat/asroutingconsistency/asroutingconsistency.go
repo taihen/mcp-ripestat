@@ -1,4 +1,4 @@
-// Package asroutingconsistency provides access to the RIPEstat as-routing-consistency API.
+
 package asroutingconsistency
 
 import (
@@ -11,16 +11,16 @@ import (
 )
 
 const (
-	// EndpointPath is the path to the RIPEstat data API for AS routing consistency information.
+
 	EndpointPath = "/data/as-routing-consistency/data.json"
 )
 
-// Client provides methods to interact with the RIPEstat as-routing-consistency API.
+
 type Client struct {
 	client *client.Client
 }
 
-// NewClient creates a new Client for the RIPEstat as-routing-consistency API.
+
 func NewClient(c *client.Client) *Client {
 	if c == nil {
 		c = client.DefaultClient()
@@ -29,12 +29,12 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-// DefaultClient returns a new Client with default settings.
+
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
 
-// Get fetches AS routing consistency information for the specified resource.
+
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))
@@ -51,7 +51,7 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	return &response, nil
 }
 
-// GetASRoutingConsistency is a convenience function that uses the default client to get AS routing consistency information.
+
 func GetASRoutingConsistency(ctx context.Context, resource string) (*Response, error) {
 	return DefaultClient().Get(ctx, resource)
 }

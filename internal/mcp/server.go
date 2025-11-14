@@ -363,7 +363,7 @@ func (s *Server) handleGetEndpoint(ctx context.Context, endpointName string, arg
 	if !ok || resource == "" {
 		return CreateToolResult(ErrResourceRequired, true), nil
 	}
-	_ = resource // resource is validated but not used directly here
+	_ = resource
 
 	if validationResult := s.validateGetEndpointParams(endpointName, args); validationResult != nil {
 		return validationResult, nil

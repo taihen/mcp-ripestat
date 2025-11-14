@@ -1215,6 +1215,83 @@ func TestParameterHelpers(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("validateMaxResultsParam", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			args        map[string]interface{}
+			expectedVal int
+			expectError bool
+		}{
+			{
+				name:        "valid max_results as string",
+				args:        map[string]interface{}{"max_results": "10"},
+				expectedVal: 10,
+				expectError: false,
+			},
+			{
+				name:        "valid max_results as int",
+				args:        map[string]interface{}{"max_results": 10},
+				expectedVal: 10,
+				expectError: false,
+			},
+			{
+				name:        "valid max_results as float64",
+				args:        map[string]interface{}{"max_results": 10.0},
+				expectedVal: 10,
+				expectError: false,
+			},
+			{
+				name:        "valid max_results as int64",
+				args:        map[string]interface{}{"max_results": int64(10)},
+				expectedVal: 10,
+				expectError: false,
+			},
+			{
+				name:        "missing max_results",
+				args:        map[string]interface{}{},
+				expectedVal: 0,
+				expectError: false,
+			},
+			{
+				name:        "invalid max_results - non-numeric string",
+				args:        map[string]interface{}{"max_results": "abc"},
+				expectedVal: 0,
+				expectError: true,
+			},
+			{
+				name:        "invalid max_results - unsupported type",
+				args:        map[string]interface{}{"max_results": []string{"a"}},
+				expectedVal: 0,
+				expectError: true,
+			},
+			{
+				name:        "invalid max_results - negative",
+				args:        map[string]interface{}{"max_results": -1},
+				expectedVal: 0,
+				expectError: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				val, errResult := validateMaxResultsParam(tc.args)
+
+				if tc.expectError {
+					if errResult == nil {
+						t.Error("Expected error result but got none")
+					}
+				} else {
+					if errResult != nil {
+						t.Errorf("Expected no error but got: %v", errResult.Content[0].Text)
+					}
+					if val != tc.expectedVal {
+						t.Errorf("Expected value %d, got %d", tc.expectedVal, val)
+					}
+				}
+			})
+		}
+	})
 }
 
 func TestWithHTTPRequest(t *testing.T) {

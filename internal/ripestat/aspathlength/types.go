@@ -4,13 +4,13 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-// Response represents the AS Path Length API response structure.
+
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
 
-// Data represents the data field in the AS Path Length response.
+
 type Data struct {
 	Stats     []Stat `json:"stats"`
 	Resource  string `json:"resource"`
@@ -18,7 +18,7 @@ type Data struct {
 	SortBy    string `json:"sort_by"`
 }
 
-// Stat represents a single AS path length statistic entry.
+
 type Stat struct {
 	Number     int       `json:"number"`
 	Count      int       `json:"count"`
@@ -27,7 +27,7 @@ type Stat struct {
 	Unstripped PathStats `json:"unstripped"`
 }
 
-// PathStats represents the path length statistics.
+
 type PathStats struct {
 	Sum int     `json:"sum"`
 	Min int     `json:"min"`

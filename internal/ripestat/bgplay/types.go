@@ -6,13 +6,13 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-// Response represents the top-level response from the RIPEstat bgplay endpoint.
+
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
 
-// Data represents the 'data' field in the response.
+
 type Data struct {
 	Resource       string          `json:"resource"`
 	QueryStartTime string          `json:"query_starttime"`
@@ -26,7 +26,7 @@ type Data struct {
 	Targets        json.RawMessage `json:"targets,omitempty"`
 }
 
-// RouteRecord represents a BGP route record.
+
 type RouteRecord struct {
 	TargetPrefix string   `json:"target_prefix"`
 	SourceID     string   `json:"source_id"`
@@ -34,14 +34,14 @@ type RouteRecord struct {
 	Community    []string `json:"community"`
 }
 
-// Event represents a BGP event in the timeline.
+
 type Event struct {
 	Type      string           `json:"type"`
 	Timestamp types.CustomTime `json:"timestamp"`
 	Attrs     EventAttrs       `json:"attrs"`
 }
 
-// EventAttrs represents event attributes.
+
 type EventAttrs struct {
 	TargetPrefix string   `json:"target_prefix"`
 	SourceID     string   `json:"source_id"`

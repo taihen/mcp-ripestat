@@ -28,7 +28,7 @@ func (rt ResourceType) String() string {
 type DetectedResource struct {
 	Type      ResourceType `json:"type"`
 	Value     string       `json:"value"`
-	Version   int          `json:"version,omitempty"` // 4 or 6 for IP addresses
+	Version   int          `json:"version,omitempty"`
 	Validated bool         `json:"validated"`
 	Original  string       `json:"original"`
 }

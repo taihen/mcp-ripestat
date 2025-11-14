@@ -1,17 +1,17 @@
-// Package asoverview provides access to the RIPEstat as-overview API.
+
 package asoverview
 
 import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-// Response is the top-level structure for the RIPEstat AS Overview API response.
+
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
 
-// Data represents the core data of the AS Overview response.
+
 type Data struct {
 	Type           string `json:"type"`
 	Resource       string `json:"resource"`
@@ -22,7 +22,7 @@ type Data struct {
 	QueryEndTime   string `json:"query_endtime"`
 }
 
-// Block contains information about the AS block.
+
 type Block struct {
 	Resource string `json:"resource"`
 	Desc     string `json:"desc"`

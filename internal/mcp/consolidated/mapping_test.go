@@ -53,7 +53,7 @@ func TestMapStringsToOperations(t *testing.T) {
 			name:       "checks - deduplication",
 			values:     []string{SecurityCheckRPKI, SecurityCheckAbuseContacts, SecurityCheckBGPHijacking},
 			mappingKey: "checks",
-			want:       []Operation{OpSecurity}, // All map to same operation, should deduplicate
+			want:       []Operation{OpSecurity},
 			wantErr:    false,
 		},
 		{

@@ -1,4 +1,4 @@
-// Package countryasns provides access to the RIPEstat country-asns API.
+
 package countryasns
 
 import (
@@ -12,16 +12,16 @@ import (
 )
 
 const (
-	// EndpointPath is the path to the RIPEstat data API for country ASNs information.
+
 	EndpointPath = "/data/country-asns/data.json"
 )
 
-// Client provides methods to interact with the RIPEstat country-asns API.
+
 type Client struct {
 	client *client.Client
 }
 
-// NewClient creates a new Client for the RIPEstat country-asns API.
+
 func NewClient(c *client.Client) *Client {
 	if c == nil {
 		c = client.DefaultClient()
@@ -30,17 +30,17 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-// DefaultClient returns a new Client with default settings.
+
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
 
-// GetOptions represents optional parameters for the country-asns API.
+
 type GetOptions struct {
-	LOD int // Level of detail: 0 (default) or 1 (includes routed/non-routed ASN lists)
+	LOD int
 }
 
-// Get fetches country ASN information for the specified resource.
+
 func (c *Client) Get(ctx context.Context, resource string, opts *GetOptions) (*Response, error) {
 	if resource == "" {
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))
@@ -64,7 +64,7 @@ func (c *Client) Get(ctx context.Context, resource string, opts *GetOptions) (*R
 	return &response, nil
 }
 
-// GetCountryASNs is a convenience function that uses the default client to get country ASN information.
+
 func GetCountryASNs(ctx context.Context, resource string, opts *GetOptions) (*Response, error) {
 	return DefaultClient().Get(ctx, resource, opts)
 }

@@ -1,4 +1,4 @@
-// Package errors provides standardized error handling for the RIPEstat API client.
+
 package errors
 
 import (
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// Common error types that can be returned by the RIPEstat API client.
+
 var (
 	ErrInvalidParameter = NewError("invalid parameter", http.StatusBadRequest)
 	ErrNotFound         = NewError("resource not found", http.StatusNotFound)
@@ -16,14 +16,14 @@ var (
 	ErrTimeout          = NewError("request timed out", http.StatusGatewayTimeout)
 )
 
-// Error represents a standardized error from the RIPEstat API client.
+
 type Error struct {
 	Message    string
 	StatusCode int
 	Err        error
 }
 
-// NewError creates a new Error with the given message and status code.
+
 func NewError(message string, statusCode int) *Error {
 	return &Error{
 		Message:    message,
@@ -31,7 +31,7 @@ func NewError(message string, statusCode int) *Error {
 	}
 }
 
-// WithError wraps an existing error with additional context.
+
 func (e *Error) WithError(err error) *Error {
 	if err == nil {
 		return e
@@ -44,7 +44,7 @@ func (e *Error) WithError(err error) *Error {
 	}
 }
 
-// Error returns the error message.
+
 func (e *Error) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %v", e.Message, e.Err)
@@ -53,12 +53,12 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-// Unwrap returns the wrapped error.
+
 func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-// FromHTTPResponse creates an appropriate error based on the HTTP response status code.
+
 func FromHTTPResponse(resp *http.Response, defaultMessage string) error {
 	var baseErr *Error
 
