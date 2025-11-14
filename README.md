@@ -40,14 +40,21 @@ For examples, investigation workflows, and usage patterns, see [PROMPTS](PROMPTS
 
 ## Features
 
-This MCP server provides intelligent access to RIPEstat Data API through **6 consolidated semantic tools** that automatically detect resource types and route requests to appropriate endpoints:
+This MCP server provides intelligent access to RIPEstat Data API through **7 directly accessible tools**:
 
+**Consolidated Semantic Tools** (6 tools that automatically detect resource types and route requests):
 - **🔍 investigateResource** - Primary investigation tool with auto-detection and intelligent routing
 - **📊 analyzeRouting** - BGP and routing analysis with timeframe support  
 - **📋 queryRegistry** - Registry and administrative data lookup
 - **🔒 validateSecurity** - Security and compliance checks (RPKI, abuse contacts)
 - **🌐 exploreRelationships** - Network topology and relationships
 - **🌍 searchByLocation** - Geographic analysis by country
+
+**Utility Tool** (1 tool):
+- **🔧 getWhatsMyIP** - Get caller's public IP address
+
+> [!NOTE]
+> Only these 7 tools are directly callable. Individual RIPEstat endpoints (like `getNetworkInfo`, `getASOverview`, etc.) are internal implementation details and are automatically called by the consolidated tools based on resource type and requested operations.
 
 **Smart Resource Detection**: Automatically identifies IP addresses, prefixes, ASNs, and country codes without requiring explicit type specification.
 

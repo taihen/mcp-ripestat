@@ -3,6 +3,9 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+
+	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 )
 
 // MCP Protocol Version.
@@ -155,213 +158,39 @@ func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeR
 
 // CreateToolsList creates a list of available tools.
 func CreateToolsList() *ToolsListResult {
-	tools := []Tool{
-		{
-			Name:        "investigateResource",
-			Description: "Comprehensive investigation of IP addresses, prefixes, or ASNs with intelligent routing to relevant endpoints based on resource type and requested operations.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "IP address, prefix, ASN, or country code to investigate",
-					},
-					"operations": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "string",
-							"enum": []string{"overview", "routing", "security", "history", "neighbors", "relationships", "hierarchy"},
-						},
-						"description": "Operations to perform on the resource",
-						"default":     []string{"overview"},
-					},
-					"depth": map[string]interface{}{
-						"type":        "string",
-						"enum":        []string{"basic", "detailed", "comprehensive"},
-						"description": "Level of detail for the investigation",
-						"default":     "basic",
-					},
-				},
-				"required":             []string{"resource"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "analyzeRouting",
-			Description: "BGP and routing analysis with timeframe support for consistency checks, path optimization, updates monitoring, and looking glass data.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "IP address, prefix, or ASN to analyze",
-					},
-					"analysis": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "string",
-							"enum": []string{"consistency", "path-optimization", "updates", "looking-glass"},
-						},
-						"description": "Types of routing analysis to perform",
-						"default":     []string{"consistency"},
-					},
-					"timeframe": map[string]interface{}{
-						"type":        "string",
-						"enum":        []string{"current", "1d", "1w", "1m"},
-						"description": "Timeframe for analysis",
-						"default":     "current",
-					},
-				},
-				"required":             []string{"resource"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "queryRegistry",
-			Description: "Registry and administrative data retrieval including WHOIS information, allocation history, address space hierarchy, and contact information.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "IP address, prefix, or ASN to query",
-					},
-					"data": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "string",
-							"enum": []string{"whois", "allocation-history", "hierarchy", "contacts"},
-						},
-						"description": "Types of registry data to retrieve",
-						"default":     []string{"whois"},
-					},
-					"format": map[string]interface{}{
-						"type":        "string",
-						"enum":        []string{"summary", "detailed"},
-						"description": "Format of the returned data",
-						"default":     "summary",
-					},
-				},
-				"required":             []string{"resource"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "validateSecurity",
-			Description: "Security and compliance validation including RPKI validation, abuse contact discovery, and BGP hijacking detection.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "IP address, prefix, or ASN to validate",
-					},
-					"checks": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "string",
-							"enum": []string{"rpki", "abuse-contacts", "bgp-hijacking"},
-						},
-						"description": "Security checks to perform",
-						"default":     []string{"rpki", "abuse-contacts"},
-					},
-					"asn": map[string]interface{}{
-						"type":        "string",
-						"description": "ASN for RPKI validation (optional)",
-					},
-				},
-				"required":             []string{"resource"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "exploreRelationships",
-			Description: "Network topology and relationship exploration including AS neighbors, announced prefixes, and related network discovery.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "ASN or prefix to explore relationships for",
-					},
-					"relationships": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type": "string",
-							"enum": []string{"neighbors", "announced-prefixes", "related-networks"},
-						},
-						"description": "Types of relationships to explore",
-						"default":     []string{"neighbors"},
-					},
-					"scope": map[string]interface{}{
-						"type":        "string",
-						"enum":        []string{"direct", "extended"},
-						"description": "Scope of relationship exploration",
-						"default":     "direct",
-					},
-				},
-				"required":             []string{"resource"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "searchByLocation",
-			Description: "Geographic analysis and location-based resource discovery for ASNs, prefixes, and statistics by country.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"country": map[string]interface{}{
-						"type":        "string",
-						"pattern":     "^[A-Z]{2}$",
-						"description": "Two-letter ISO country code",
-					},
-					"type": map[string]interface{}{
-						"type":        "string",
-						"enum":        []string{"asns", "prefixes", "statistics"},
-						"description": "Type of location-based data to retrieve",
-						"default":     "asns",
-					},
-				},
-				"required":             []string{"country"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "getBGPState",
-			Description: "Get the state of BGP routes for a resource at a certain point in time, as observed by all the RIS collectors.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"resource": map[string]interface{}{
-						"type":        "string",
-						"description": "The IP address, prefix, AS, or comma-separated list of resources to query.",
-					},
-					"timestamp": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional timestamp for historical BGP data (ISO format or Unix timestamp).",
-					},
-					"rrcs": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional specific Route Collectors to query.",
-					},
-					"unix_timestamps": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Format timestamps as Unix time (default: false).",
-					},
-				},
-				"required":             []string{"resource"},
-				"additionalProperties": false,
-			},
-		},
-		{
-			Name:        "getWhatsMyIP",
-			Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
-			InputSchema: map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-			},
-		},
+	tools := []Tool{}
+
+	// Collect consolidated tool names and sort them for deterministic ordering
+	toolNames := make([]string, 0, len(consolidated.ConsolidatedSchemas))
+	for toolName := range consolidated.ConsolidatedSchemas {
+		toolNames = append(toolNames, toolName)
 	}
+	sort.Strings(toolNames)
+
+	// Add consolidated tools from the centralized definitions in sorted order
+	for _, toolName := range toolNames {
+		schema := consolidated.ConsolidatedSchemas[toolName]
+		description, exists := consolidated.ConsolidatedToolDescriptions[toolName]
+		if !exists {
+			// Fallback if description is missing (shouldn't happen, but be defensive)
+			description = "Consolidated tool for RIPEstat operations"
+		}
+		tools = append(tools, Tool{
+			Name:        toolName,
+			Description: description,
+			InputSchema: schema,
+		})
+	}
+
+	// Add non-consolidated tools (e.g., getWhatsMyIP)
+	tools = append(tools, Tool{
+		Name:        "getWhatsMyIP",
+		Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+	})
 
 	return &ToolsListResult{Tools: tools}
 }
