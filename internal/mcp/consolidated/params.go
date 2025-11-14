@@ -2,7 +2,6 @@ package consolidated
 
 import "fmt"
 
-// extractRequiredString extracts and validates a required string parameter.
 func extractRequiredString(params map[string]interface{}, key string) (string, error) {
 	value, ok := params[key].(string)
 	if !ok || value == "" {
@@ -11,7 +10,6 @@ func extractRequiredString(params map[string]interface{}, key string) (string, e
 	return value, nil
 }
 
-// extractOptionalString extracts an optional string parameter with default.
 func extractOptionalString(params map[string]interface{}, key, defaultValue string) string {
 	if value, ok := params[key].(string); ok && value != "" {
 		return value
@@ -19,7 +17,6 @@ func extractOptionalString(params map[string]interface{}, key, defaultValue stri
 	return defaultValue
 }
 
-// convertToStringSlice converts interface{} parameter to []string.
 func convertToStringSlice(param interface{}, paramName string) ([]string, error) {
 	if param == nil {
 		return nil, nil
@@ -43,7 +40,6 @@ func convertToStringSlice(param interface{}, paramName string) ([]string, error)
 	}
 }
 
-// extractStringSliceWithDefault extracts a string slice parameter with a default value.
 func extractStringSliceWithDefault(params map[string]interface{}, key string, defaultValue []string) ([]string, error) {
 	param, ok := params[key]
 	if !ok {
@@ -62,7 +58,6 @@ func extractStringSliceWithDefault(params map[string]interface{}, key string, de
 	return result, nil
 }
 
-// toOperations converts a string slice to Operation slice.
 func toOperations(strings []string) []Operation {
 	operations := make([]Operation, len(strings))
 	for i, s := range strings {

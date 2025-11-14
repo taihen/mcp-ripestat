@@ -1,6 +1,5 @@
 package consolidated
 
-// ConsolidatedToolDescriptions contains the descriptions for all consolidated tools.
 var ConsolidatedToolDescriptions = map[string]string{
 	"investigateResource":  "Comprehensive investigation of IP addresses, prefixes, or ASNs with intelligent routing to relevant endpoints based on resource type and requested operations.",
 	"analyzeRouting":       "BGP and routing analysis with timeframe support for consistency checks, path optimization, updates monitoring, and looking glass data.",
@@ -10,7 +9,6 @@ var ConsolidatedToolDescriptions = map[string]string{
 	"searchByLocation":     "Geographic analysis and location-based resource discovery for ASNs, prefixes, and statistics by country.",
 }
 
-// ConsolidatedSchemas contains the JSON schemas for all consolidated tools.
 var ConsolidatedSchemas = map[string]map[string]interface{}{
 	"investigateResource": {
 		"type": "object",

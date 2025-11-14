@@ -2,7 +2,6 @@ package consolidated
 
 import "fmt"
 
-// paramToOperationMap defines mappings from parameter values to operations.
 var paramToOperationMap = map[string]map[string]Operation{
 	"analysis": {
 		AnalysisConsistency:      OpConsistency,
@@ -28,7 +27,6 @@ var paramToOperationMap = map[string]map[string]Operation{
 	},
 }
 
-// mapStringsToOperations converts string values to Operations using a mapping.
 func mapStringsToOperations(values []string, mappingKey string) ([]Operation, error) {
 	mapping, exists := paramToOperationMap[mappingKey]
 	if !exists {
@@ -43,7 +41,6 @@ func mapStringsToOperations(values []string, mappingKey string) ([]Operation, er
 		if !exists {
 			return nil, fmt.Errorf("unsupported %s value: %s", mappingKey, value)
 		}
-		// Deduplicate operations (e.g., multiple security checks map to same operation)
 		if !seen[op] {
 			operations = append(operations, op)
 			seen[op] = true

@@ -95,7 +95,6 @@ func TestMapStringsToOperations(t *testing.T) {
 				t.Errorf("mapStringsToOperations() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			// Handle nil vs empty slice comparison
 			if len(got) == 0 && len(tt.want) == 0 {
 				return
 			}
@@ -107,7 +106,6 @@ func TestMapStringsToOperations(t *testing.T) {
 }
 
 func TestParamToOperationMapCompleteness(t *testing.T) {
-	// Verify all constants are in the mapping
 	t.Run("analysis constants", func(t *testing.T) {
 		mapping := paramToOperationMap["analysis"]
 		constants := []string{

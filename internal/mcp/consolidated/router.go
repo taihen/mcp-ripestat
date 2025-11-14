@@ -75,12 +75,37 @@ func RouteOperations(resource *DetectedResource, operations []Operation) (*Route
 		}
 	}
 
-	result.Dependencies = buildDependencies(result.Endpoints, resource.Type)
+	for {
+		result.Dependencies = buildDependencies(result.Endpoints)
+		added := addMissingDependencyEndpoints(&result.Endpoints, result.Dependencies, endpointSet)
+		if !added {
+			break
+		}
+	}
 
 	return result, nil
 }
 
-func buildDependencies(endpoints []string, _ ResourceType) map[string][]string {
+func addMissingDependencyEndpoints(endpoints *[]string, dependencies map[string][]string, endpointSet map[string]bool) bool {
+	requiredDeps := make(map[string]bool)
+
+	for _, deps := range dependencies {
+		for _, dep := range deps {
+			if !endpointSet[dep] {
+				requiredDeps[dep] = true
+			}
+		}
+	}
+
+	for dep := range requiredDeps {
+		*endpoints = append(*endpoints, dep)
+		endpointSet[dep] = true
+	}
+
+	return len(requiredDeps) > 0
+}
+
+func buildDependencies(endpoints []string) map[string][]string {
 	dependencies := make(map[string][]string)
 
 	endpointSet := make(map[string]bool)
@@ -88,19 +113,19 @@ func buildDependencies(endpoints []string, _ ResourceType) map[string][]string {
 		endpointSet[endpoint] = true
 	}
 
-	if endpointSet["getRPKIValidation"] && endpointSet["getNetworkInfo"] {
+	if endpointSet["getRPKIValidation"] {
 		dependencies["getRPKIValidation"] = []string{"getNetworkInfo"}
 	}
 
-	if endpointSet["getBGPUpdates"] && endpointSet["getRoutingStatus"] {
+	if endpointSet["getBGPUpdates"] {
 		dependencies["getBGPUpdates"] = []string{"getRoutingStatus"}
 	}
 
-	if endpointSet["getAddressSpaceHierarchy"] && endpointSet["getNetworkInfo"] {
+	if endpointSet["getAddressSpaceHierarchy"] {
 		dependencies["getAddressSpaceHierarchy"] = []string{"getNetworkInfo"}
 	}
 
-	if endpointSet["getRelatedPrefixes"] && endpointSet["getPrefixOverview"] {
+	if endpointSet["getRelatedPrefixes"] {
 		dependencies["getRelatedPrefixes"] = []string{"getPrefixOverview"}
 	}
 

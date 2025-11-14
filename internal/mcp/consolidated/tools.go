@@ -3,6 +3,7 @@ package consolidated
 import (
 	"context"
 	"fmt"
+	"reflect"
 )
 
 type ToolExecutor interface {
@@ -226,12 +227,12 @@ func (ct *Tools) ExecuteIndividualEndpoint(ctx context.Context, endpoint string,
 
 func translateDepthToEndpointParams(endpoint string, depth string) map[string]interface{} {
 	params := make(map[string]interface{})
-	
+
 	lodEndpoints := map[string]bool{
 		"getASNNeighbours": true,
 		"getCountryASNs":   true,
 	}
-	
+
 	if lodEndpoints[endpoint] {
 		var lod int
 		switch depth {
@@ -244,7 +245,7 @@ func translateDepthToEndpointParams(endpoint string, depth string) map[string]in
 		}
 		params["lod"] = lod
 	}
-	
+
 	return params
 }
 
@@ -263,10 +264,26 @@ func (ct *Tools) executeAndAggregate(
 		Metadata:   make(map[string]interface{}),
 	}
 
-	for _, endpoint := range routes.Endpoints {
+	// Topologically sort endpoints based on dependencies
+	sortedEndpoints, err := topologicalSort(routes.Endpoints, routes.Dependencies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sort endpoints by dependencies: %w", err)
+	}
+
+	// Execute endpoints in dependency order
+	for _, endpoint := range sortedEndpoints {
 		endpointParams := translateDepthToEndpointParams(endpoint, depth)
-		
-		endpointResult, err := ct.executor.ExecuteEndpoint(ctx, endpoint, resource.Value, endpointParams)
+
+		// Extract data from dependency results and add to params
+		resourceOverride := extractDependencyData(endpoint, routes.Dependencies, result.Results, endpointParams, resource)
+
+		// Use resource override if provided, otherwise use original resource
+		resourceValue := resource.Value
+		if resourceOverride != "" {
+			resourceValue = resourceOverride
+		}
+
+		endpointResult, err := ct.executor.ExecuteEndpoint(ctx, endpoint, resourceValue, endpointParams)
 		if err != nil {
 			result.Errors[endpoint] = err.Error()
 			continue
@@ -282,4 +299,128 @@ func (ct *Tools) executeAndAggregate(
 	})
 
 	return result, nil
+}
+
+// topologicalSort sorts endpoints based on their dependencies using Kahn's algorithm.
+func topologicalSort(endpoints []string, dependencies map[string][]string) ([]string, error) {
+	// Build in-degree map
+	inDegree := make(map[string]int)
+	for _, endpoint := range endpoints {
+		inDegree[endpoint] = 0
+	}
+
+	// Calculate in-degrees
+	for endpoint, deps := range dependencies {
+		if _, exists := inDegree[endpoint]; !exists {
+			continue
+		}
+		for _, dep := range deps {
+			if _, exists := inDegree[dep]; exists {
+				inDegree[endpoint]++
+			}
+		}
+	}
+
+	// Find all endpoints with no dependencies
+	queue := make([]string, 0)
+	for endpoint, degree := range inDegree {
+		if degree == 0 {
+			queue = append(queue, endpoint)
+		}
+	}
+
+	result := make([]string, 0, len(endpoints))
+
+	// Process queue
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		result = append(result, current)
+
+		// Decrease in-degree for endpoints that depend on current
+		for endpoint, deps := range dependencies {
+			for _, dep := range deps {
+				if dep == current {
+					inDegree[endpoint]--
+					if inDegree[endpoint] == 0 {
+						queue = append(queue, endpoint)
+					}
+				}
+			}
+		}
+	}
+
+	// Check for cycles
+	if len(result) != len(endpoints) {
+		return nil, fmt.Errorf("circular dependency detected in endpoints")
+	}
+
+	return result, nil
+}
+
+// extractDependencyData extracts required data from dependency results and adds it to params.
+// Returns a resource override value if the endpoint should use a different resource (e.g., prefix instead of IP address).
+func extractDependencyData(endpoint string, dependencies map[string][]string, results map[string]interface{}, params map[string]interface{}, resource *DetectedResource) string {
+	deps, hasDeps := dependencies[endpoint]
+	if !hasDeps {
+		return ""
+	}
+
+	var resourceOverride string
+
+	for _, dep := range deps {
+		depResult, exists := results[dep]
+		if !exists {
+			continue
+		}
+
+		// Extract prefix from getNetworkInfo result for getRPKIValidation
+		if endpoint == "getRPKIValidation" && dep == "getNetworkInfo" {
+			if prefix := extractPrefixFromNetworkInfo(depResult); prefix != "" {
+				params["prefix"] = prefix
+			}
+		}
+
+		// Extract prefix from getNetworkInfo result for getAddressSpaceHierarchy when resource is IP address
+		if endpoint == "getAddressSpaceHierarchy" && dep == "getNetworkInfo" && resource.Type == IPAddress {
+			if prefix := extractPrefixFromNetworkInfo(depResult); prefix != "" {
+				resourceOverride = prefix
+			}
+		}
+
+		// Add more extraction logic here for other dependencies as needed
+	}
+
+	return resourceOverride
+}
+
+// extractPrefixFromNetworkInfo extracts the prefix field from a networkInfo response.
+func extractPrefixFromNetworkInfo(result interface{}) string {
+	// Handle map[string]interface{} (JSON unmarshaled)
+	if resultMap, ok := result.(map[string]interface{}); ok {
+		if data, ok := resultMap["data"].(map[string]interface{}); ok {
+			if prefix, ok := data["prefix"].(string); ok {
+				return prefix
+			}
+		}
+	}
+
+	// Handle structured Response type via reflection
+	resultValue := reflect.ValueOf(result)
+	if resultValue.Kind() == reflect.Ptr {
+		resultValue = resultValue.Elem()
+	}
+
+	if resultValue.Kind() == reflect.Struct {
+		// Look for Data field
+		dataField := resultValue.FieldByName("Data")
+		if dataField.IsValid() && dataField.Kind() == reflect.Struct {
+			prefixField := dataField.FieldByName("Prefix")
+			if prefixField.IsValid() && prefixField.Kind() == reflect.String {
+				return prefixField.String()
+			}
+		}
+	}
+
+	return ""
 }
