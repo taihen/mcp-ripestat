@@ -16,11 +16,11 @@ func TestTopologicalSort(t *testing.T) {
 		verifyDeps   bool // If true, verify dependency order instead of exact match
 	}{
 		{
-			name:      "no dependencies",
-			endpoints: []string{"getWhois", "getASOverview"},
+			name:         "no dependencies",
+			endpoints:    []string{"getWhois", "getASOverview"},
 			dependencies: map[string][]string{},
-			want:      []string{"getWhois", "getASOverview"},
-			wantErr:   false,
+			want:         []string{"getWhois", "getASOverview"},
+			wantErr:      false,
 		},
 		{
 			name:      "single dependency",
@@ -36,7 +36,7 @@ func TestTopologicalSort(t *testing.T) {
 			endpoints: []string{"getRPKIValidation", "getBGPUpdates", "getNetworkInfo", "getRoutingStatus"},
 			dependencies: map[string][]string{
 				"getRPKIValidation": {"getNetworkInfo"},
-				"getBGPUpdates":    {"getRoutingStatus"},
+				"getBGPUpdates":     {"getRoutingStatus"},
 			},
 			want:       nil, // Order can vary, we'll verify dependencies
 			wantErr:    false,
@@ -112,10 +112,8 @@ func TestTopologicalSort(t *testing.T) {
 						}
 					}
 				}
-			} else {
-				if !reflect.DeepEqual(got, tt.want) {
-					t.Errorf("topologicalSort() = %v, want %v", got, tt.want)
-				}
+			} else if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("topologicalSort() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -123,9 +121,9 @@ func TestTopologicalSort(t *testing.T) {
 
 func TestExtractPrefixFromNetworkInfo(t *testing.T) {
 	tests := []struct {
-		name     string
-		result   interface{}
-		want     string
+		name      string
+		result    interface{}
+		want      string
 		wantEmpty bool
 	}{
 		{
@@ -149,15 +147,15 @@ func TestExtractPrefixFromNetworkInfo(t *testing.T) {
 			wantEmpty: true,
 		},
 		{
-			name:     "nil result",
-			result:   nil,
-			want:     "",
+			name:      "nil result",
+			result:    nil,
+			want:      "",
 			wantEmpty: true,
 		},
 		{
-			name:     "non-map result",
-			result:   "string",
-			want:     "",
+			name:      "non-map result",
+			result:    "string",
+			want:      "",
 			wantEmpty: true,
 		},
 	}
@@ -177,13 +175,13 @@ func TestExtractPrefixFromNetworkInfo(t *testing.T) {
 
 func TestExtractDependencyData(t *testing.T) {
 	tests := []struct {
-		name            string
-		endpoint        string
-		dependencies    map[string][]string
-		results         map[string]interface{}
-		resource        *DetectedResource
-		wantParams      map[string]interface{}
-		wantOverride    string
+		name         string
+		endpoint     string
+		dependencies map[string][]string
+		results      map[string]interface{}
+		resource     *DetectedResource
+		wantParams   map[string]interface{}
+		wantOverride string
 	}{
 		{
 			name:     "getRPKIValidation extracts prefix",
@@ -248,10 +246,10 @@ func TestExtractDependencyData(t *testing.T) {
 			wantOverride: "",
 		},
 		{
-			name:     "no dependencies",
-			endpoint: "getWhois",
+			name:         "no dependencies",
+			endpoint:     "getWhois",
 			dependencies: map[string][]string{},
-			results: map[string]interface{}{},
+			results:      map[string]interface{}{},
 			resource: &DetectedResource{
 				Type:  IPAddress,
 				Value: "8.8.8.8",
@@ -296,7 +294,7 @@ type mockExecutor struct {
 	errors  map[string]error
 }
 
-func (m *mockExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error) {
+func (m *mockExecutor) ExecuteEndpoint(_ context.Context, endpoint string, _ string, _ map[string]interface{}) (interface{}, error) {
 	if err, ok := m.errors[endpoint]; ok {
 		return nil, err
 	}
@@ -306,7 +304,8 @@ func (m *mockExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, res
 	return nil, nil
 }
 
-func TestExecuteAndAggregate_DependencyOrder(t *testing.T) {
+func testExecuteAndAggregateHelper(t *testing.T, endpoint string, operation Operation, expectedEndpoints []string) {
+	t.Helper()
 	executor := &mockExecutor{
 		results: map[string]interface{}{
 			"getNetworkInfo": map[string]interface{}{
@@ -314,7 +313,7 @@ func TestExecuteAndAggregate_DependencyOrder(t *testing.T) {
 					"prefix": "8.8.8.0/24",
 				},
 			},
-			"getRPKIValidation": map[string]interface{}{
+			endpoint: map[string]interface{}{
 				"status": "ok",
 			},
 		},
@@ -328,69 +327,29 @@ func TestExecuteAndAggregate_DependencyOrder(t *testing.T) {
 	}
 
 	routes := &RouteResult{
-		Endpoints: []string{"getRPKIValidation", "getNetworkInfo"},
+		Endpoints: []string{endpoint, "getNetworkInfo"},
 		Dependencies: map[string][]string{
-			"getRPKIValidation": {"getNetworkInfo"},
+			endpoint: {"getNetworkInfo"},
 		},
 	}
 
 	ctx := context.Background()
-	result, err := tools.executeAndAggregate(ctx, resource, []Operation{OpSecurity}, routes, DepthBasic)
+	result, err := tools.executeAndAggregate(ctx, resource, []Operation{operation}, routes, DepthBasic)
 	if err != nil {
 		t.Fatalf("executeAndAggregate() error = %v", err)
 	}
 
-	if _, ok := result.Results["getNetworkInfo"]; !ok {
-		t.Error("executeAndAggregate() missing getNetworkInfo result")
+	for _, expectedEndpoint := range expectedEndpoints {
+		if _, ok := result.Results[expectedEndpoint]; !ok {
+			t.Errorf("executeAndAggregate() missing %s result", expectedEndpoint)
+		}
 	}
+}
 
-	if _, ok := result.Results["getRPKIValidation"]; !ok {
-		t.Error("executeAndAggregate() missing getRPKIValidation result")
-	}
-
+func TestExecuteAndAggregate_DependencyOrder(t *testing.T) {
+	testExecuteAndAggregateHelper(t, "getRPKIValidation", OpSecurity, []string{"getNetworkInfo", "getRPKIValidation"})
 }
 
 func TestExecuteAndAggregate_ResourceOverride(t *testing.T) {
-	executor := &mockExecutor{
-		results: map[string]interface{}{
-			"getNetworkInfo": map[string]interface{}{
-				"data": map[string]interface{}{
-					"prefix": "8.8.8.0/24",
-				},
-			},
-			"getAddressSpaceHierarchy": map[string]interface{}{
-				"status": "ok",
-			},
-		},
-		errors: map[string]error{},
-	}
-
-	tools := NewTools(executor)
-	resource := &DetectedResource{
-		Type:  IPAddress,
-		Value: "8.8.8.8",
-	}
-
-	routes := &RouteResult{
-		Endpoints: []string{"getAddressSpaceHierarchy", "getNetworkInfo"},
-		Dependencies: map[string][]string{
-			"getAddressSpaceHierarchy": {"getNetworkInfo"},
-		},
-	}
-
-	ctx := context.Background()
-	result, err := tools.executeAndAggregate(ctx, resource, []Operation{OpHierarchy}, routes, DepthBasic)
-	if err != nil {
-		t.Fatalf("executeAndAggregate() error = %v", err)
-	}
-
-	if _, ok := result.Results["getNetworkInfo"]; !ok {
-		t.Error("executeAndAggregate() missing getNetworkInfo result")
-	}
-
-	if _, ok := result.Results["getAddressSpaceHierarchy"]; !ok {
-		t.Error("executeAndAggregate() missing getAddressSpaceHierarchy result")
-	}
-
+	testExecuteAndAggregateHelper(t, "getAddressSpaceHierarchy", OpHierarchy, []string{"getNetworkInfo", "getAddressSpaceHierarchy"})
 }
-

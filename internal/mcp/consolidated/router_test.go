@@ -7,12 +7,12 @@ import (
 
 func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 	tests := []struct {
-		name           string
-		resource       *DetectedResource
-		operations     []Operation
-		wantEndpoints  []string
-		wantDeps       map[string][]string
-		shouldContain  []string // Endpoints that should be in the result
+		name          string
+		resource      *DetectedResource
+		operations    []Operation
+		wantEndpoints []string
+		wantDeps      map[string][]string
+		shouldContain []string // Endpoints that should be in the result
 	}{
 		{
 			name: "OpSecurity for IPAddress includes getNetworkInfo dependency",
@@ -21,7 +21,7 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 				Value:     "8.8.8.8",
 				Validated: true,
 			},
-			operations: []Operation{OpSecurity},
+			operations:    []Operation{OpSecurity},
 			shouldContain: []string{"getAbuseContactFinder", "getRPKIValidation", "getNetworkInfo"},
 			wantDeps: map[string][]string{
 				"getRPKIValidation": {"getNetworkInfo"},
@@ -34,7 +34,7 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 				Value:     "8.8.8.8",
 				Validated: true,
 			},
-			operations: []Operation{OpRouting},
+			operations:    []Operation{OpRouting},
 			shouldContain: []string{"getRoutingStatus", "getBGPUpdates"},
 			wantDeps: map[string][]string{
 				"getBGPUpdates": {"getRoutingStatus"},
@@ -47,7 +47,7 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 				Value:     "8.8.8.8",
 				Validated: true,
 			},
-			operations: []Operation{OpHierarchy},
+			operations:    []Operation{OpHierarchy},
 			shouldContain: []string{"getAddressSpaceHierarchy", "getNetworkInfo"},
 			wantDeps: map[string][]string{
 				"getAddressSpaceHierarchy": {"getNetworkInfo"},
@@ -60,7 +60,7 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 				Value:     "8.8.8.0/24",
 				Validated: true,
 			},
-			operations: []Operation{OpRelationships},
+			operations:    []Operation{OpRelationships},
 			shouldContain: []string{"getRelatedPrefixes", "getPrefixOverview"},
 			wantDeps: map[string][]string{
 				"getRelatedPrefixes": {"getPrefixOverview"},
@@ -73,7 +73,7 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 				Value:     "8.8.8.8",
 				Validated: true,
 			},
-			operations: []Operation{OpSecurity, OpHierarchy},
+			operations:    []Operation{OpSecurity, OpHierarchy},
 			shouldContain: []string{"getAbuseContactFinder", "getRPKIValidation", "getNetworkInfo", "getAddressSpaceHierarchy"},
 			wantDeps: map[string][]string{
 				"getRPKIValidation":        {"getNetworkInfo"},
@@ -130,4 +130,3 @@ func TestRouteOperations_NoDuplicateDependencyEndpoints(t *testing.T) {
 		t.Errorf("RouteOperations() getNetworkInfo appears %d times, want 1. Endpoints: %v", count, result.Endpoints)
 	}
 }
-

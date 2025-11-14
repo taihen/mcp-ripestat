@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive // package name is meaningful in context
 
 import (
 	"encoding/json"

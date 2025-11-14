@@ -14,37 +14,29 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
-
 type contextKey string
-
 
 const httpRequestKey contextKey = "http_request"
 
-
 const sessionIDKey contextKey = "session_id"
-
 
 func WithHTTPRequest(ctx context.Context, r *http.Request) context.Context {
 	return context.WithValue(ctx, httpRequestKey, r)
 }
-
 
 func HTTPRequestFromContext(ctx context.Context) (*http.Request, bool) {
 	r, ok := ctx.Value(httpRequestKey).(*http.Request)
 	return r, ok
 }
 
-
 func WithSessionID(ctx context.Context, sessionID string) context.Context {
 	return context.WithValue(ctx, sessionIDKey, sessionID)
 }
-
 
 func SessionIDFromContext(ctx context.Context) (string, bool) {
 	sessionID, ok := ctx.Value(sessionIDKey).(string)
 	return sessionID, ok
 }
-
 
 const (
 	ErrResourceRequired      = "Error: resource parameter is required"
@@ -55,7 +47,6 @@ const (
 	ErrMaxResultsNonNegative = "Error: max_results parameter must be non-negative"
 )
 
-
 func formatErrorMessage(err error) string {
 	errStr := err.Error()
 
@@ -65,7 +56,6 @@ func formatErrorMessage(err error) string {
 	return fmt.Sprintf("Error: %v", err)
 }
 
-
 func getRequiredStringParam(args map[string]interface{}, key, errorMsg string) (string, *ToolResult) {
 	value, ok := args[key].(string)
 	if !ok {
@@ -74,14 +64,12 @@ func getRequiredStringParam(args map[string]interface{}, key, errorMsg string) (
 	return value, nil
 }
 
-
 func getOptionalStringParam(args map[string]interface{}, key string) string {
 	if value, ok := args[key].(string); ok {
 		return value
 	}
 	return ""
 }
-
 
 func validateLODParam(args map[string]interface{}) (int, *ToolResult) {
 	lodStr, ok := args["lod"].(string)
@@ -96,7 +84,6 @@ func validateLODParam(args map[string]interface{}) (int, *ToolResult) {
 	return lod, nil
 }
 
-
 func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) {
 	lblStr, ok := args["look_back_limit"].(string)
 	if !ok {
@@ -109,7 +96,6 @@ func validateLookBackLimitParam(args map[string]interface{}) (int, *ToolResult) 
 	}
 	return lookBackLimit, nil
 }
-
 
 func validateMaxResultsParam(args map[string]interface{}) (int, *ToolResult) {
 	maxResultsVal, ok := args["max_results"]
@@ -142,7 +128,6 @@ func validateMaxResultsParam(args map[string]interface{}) (int, *ToolResult) {
 	return maxResults, nil
 }
 
-
 type Server struct {
 	serverName          string
 	serverVersion       string
@@ -151,7 +136,6 @@ type Server struct {
 	globallyInitialized bool
 	consolidatedTools   *consolidated.Tools
 }
-
 
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
 
@@ -165,7 +149,6 @@ func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server 
 		consolidatedTools: consolidatedTools,
 	}
 }
-
 
 func (s *Server) ProcessMessage(ctx context.Context, data []byte) (interface{}, error) {
 	slog.Debug("processing MCP message", "data", string(data))
@@ -185,7 +168,6 @@ func (s *Server) ProcessMessage(ctx context.Context, data []byte) (interface{}, 
 		return NewErrorResponse(InvalidRequest, "Invalid request", "Unknown message type", nil), nil
 	}
 }
-
 
 func (s *Server) handleRequest(ctx context.Context, req *Request) (interface{}, error) {
 	if err := req.ValidateRequest(); err != nil {
@@ -214,7 +196,6 @@ func (s *Server) handleRequest(ctx context.Context, req *Request) (interface{}, 
 	}
 }
 
-
 func (s *Server) handleNotification(_ context.Context, notif *Notification) (interface{}, error) {
 	slog.Debug("handling notification", "method", notif.Method)
 
@@ -231,7 +212,6 @@ func (s *Server) handleNotification(_ context.Context, notif *Notification) (int
 	}
 }
 
-
 func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 	var params InitializeParams
 	if req.Params != nil {
@@ -244,16 +224,13 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		}
 	}
 
-
 	isLegacyClient := params.ProtocolVersion != "" && params.ProtocolVersion < "2025-06-18"
-
 
 	slog.Info("MCP server responding to initialize request",
 		"server_name", s.serverName,
 		"version", s.serverVersion,
 		"client_protocol", params.ProtocolVersion,
 		"is_legacy", isLegacyClient)
-
 
 	if isLegacyClient {
 		s.initialized = true
@@ -264,11 +241,9 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		return NewResponse(result, req.ID), nil
 	}
 
-
 	if params.ProtocolVersion != ProtocolVersion {
 		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
 	}
-
 
 	s.initialized = true
 	slog.Info("auto-initialized server for protocol version", "version", params.ProtocolVersion)
@@ -277,7 +252,6 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 	return NewResponse(result, req.ID), nil
 }
 
-
 func (s *Server) handleInitialized(_ *Notification) (interface{}, error) {
 	slog.Debug("handling initialized notification")
 	s.initialized = true
@@ -285,18 +259,15 @@ func (s *Server) handleInitialized(_ *Notification) (interface{}, error) {
 	return nil, nil
 }
 
-
 func (s *Server) handlePing(req *Request) (interface{}, error) {
 	slog.Debug("handling ping request")
 	return NewResponse(map[string]string{}, req.ID), nil
 }
 
-
 func (s *Server) handleToolsList(req *Request) (interface{}, error) {
 	slog.Debug("handling tools/list request")
 
 	toolsList := CreateToolsList()
-
 
 	if s.disableWhatsMyIP {
 		tools := make([]Tool, 0, len(toolsList.Tools)-1)
@@ -310,7 +281,6 @@ func (s *Server) handleToolsList(req *Request) (interface{}, error) {
 
 	return NewResponse(toolsList, req.ID), nil
 }
-
 
 func (s *Server) handleToolsCall(ctx context.Context, req *Request) (interface{}, error) {
 	slog.Debug("handling tools/call request")
@@ -329,10 +299,8 @@ func (s *Server) handleToolsCall(ctx context.Context, req *Request) (interface{}
 	return NewResponse(result, req.ID), nil
 }
 
-
 func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*ToolResult, error) {
 	slog.Debug("executing tool call", "tool", params.Name)
-
 
 	args := make(map[string]interface{})
 	if params.Arguments != nil {
@@ -345,105 +313,91 @@ func (s *Server) executeToolCall(ctx context.Context, params *CallToolParams) (*
 		}
 	}
 
+	if result := s.handleConsolidatedTool(ctx, params.Name, args); result != nil {
+		return result, nil
+	}
 
-	switch params.Name {
-	case "investigateResource":
-		result, err := s.consolidatedTools.InvestigateResource(ctx, args)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-
-	case "analyzeRouting":
-		result, err := s.consolidatedTools.AnalyzeRouting(ctx, args)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-
-	case "queryRegistry":
-		result, err := s.consolidatedTools.QueryRegistry(ctx, args)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-
-	case "validateSecurity":
-		result, err := s.consolidatedTools.ValidateSecurity(ctx, args)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-
-	case "exploreRelationships":
-		result, err := s.consolidatedTools.ExploreRelationships(ctx, args)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-
-	case "searchByLocation":
-		result, err := s.consolidatedTools.SearchByLocation(ctx, args)
-		if err != nil {
-			return CreateToolResult(formatErrorMessage(err), true), nil
-		}
-		return CreateToolResultFromJSON(result), nil
-
-	case "getWhatsMyIP":
+	if params.Name == "getWhatsMyIP" {
 		if s.disableWhatsMyIP {
 			return nil, fmt.Errorf("whats-my-ip tool is disabled")
 		}
 		return s.callWhatsMyIP(ctx, args)
-
-	default:
-
-
-		if strings.HasPrefix(params.Name, "get") {
-
-			resource, ok := args["resource"].(string)
-			if !ok || resource == "" {
-				return CreateToolResult(ErrResourceRequired, true), nil
-			}
-
-
-			if params.Name == "getRPKIValidation" {
-				prefix, ok := args["prefix"].(string)
-				if !ok || prefix == "" {
-					return CreateToolResult(ErrPrefixRequired, true), nil
-				}
-			}
-			if params.Name == "getASNNeighbours" {
-				_, lodResult := validateLODParam(args)
-				if lodResult != nil {
-					return lodResult, nil
-				}
-			}
-			if params.Name == "getLookingGlass" {
-				_, lblResult := validateLookBackLimitParam(args)
-				if lblResult != nil {
-					return lblResult, nil
-				}
-			}
-			if params.Name == "getRoutingHistory" {
-				_, maxResultsResult := validateMaxResultsParam(args)
-				if maxResultsResult != nil {
-					return maxResultsResult, nil
-				}
-			}
-
-
-			result, err := s.consolidatedTools.ExecuteIndividualEndpoint(ctx, params.Name, args)
-			if err != nil {
-				return CreateToolResult(formatErrorMessage(err), true), nil
-			}
-			return CreateToolResultFromJSON(result), nil
-		}
-
-		return nil, fmt.Errorf("unknown tool: %s", params.Name)
 	}
+
+	if strings.HasPrefix(params.Name, "get") {
+		return s.handleGetEndpoint(ctx, params.Name, args)
+	}
+
+	return nil, fmt.Errorf("unknown tool: %s", params.Name)
 }
 
+func (s *Server) handleConsolidatedTool(ctx context.Context, toolName string, args map[string]interface{}) *ToolResult {
+	var result interface{}
+	var err error
 
+	switch toolName {
+	case "investigateResource":
+		result, err = s.consolidatedTools.InvestigateResource(ctx, args)
+	case "analyzeRouting":
+		result, err = s.consolidatedTools.AnalyzeRouting(ctx, args)
+	case "queryRegistry":
+		result, err = s.consolidatedTools.QueryRegistry(ctx, args)
+	case "validateSecurity":
+		result, err = s.consolidatedTools.ValidateSecurity(ctx, args)
+	case "exploreRelationships":
+		result, err = s.consolidatedTools.ExploreRelationships(ctx, args)
+	case "searchByLocation":
+		result, err = s.consolidatedTools.SearchByLocation(ctx, args)
+	default:
+		return nil
+	}
+
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true)
+	}
+	return CreateToolResultFromJSON(result)
+}
+
+func (s *Server) handleGetEndpoint(ctx context.Context, endpointName string, args map[string]interface{}) (*ToolResult, error) {
+	resource, ok := args["resource"].(string)
+	if !ok || resource == "" {
+		return CreateToolResult(ErrResourceRequired, true), nil
+	}
+	_ = resource // resource is validated but not used directly here
+
+	if validationResult := s.validateGetEndpointParams(endpointName, args); validationResult != nil {
+		return validationResult, nil
+	}
+
+	result, err := s.consolidatedTools.ExecuteIndividualEndpoint(ctx, endpointName, args)
+	if err != nil {
+		return CreateToolResult(formatErrorMessage(err), true), nil
+	}
+	return CreateToolResultFromJSON(result), nil
+}
+
+func (s *Server) validateGetEndpointParams(endpointName string, args map[string]interface{}) *ToolResult {
+	switch endpointName {
+	case "getRPKIValidation":
+		prefix, ok := args["prefix"].(string)
+		if !ok || prefix == "" {
+			return CreateToolResult(ErrPrefixRequired, true)
+		}
+	case "getASNNeighbours":
+		if _, lodResult := validateLODParam(args); lodResult != nil {
+			return lodResult
+		}
+	case "getLookingGlass":
+		if _, lblResult := validateLookBackLimitParam(args); lblResult != nil {
+			return lblResult
+		}
+	case "getRoutingHistory":
+		if _, maxResultsResult := validateMaxResultsParam(args); maxResultsResult != nil {
+			return maxResultsResult
+		}
+	}
+	return nil
+}
 
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
 
@@ -452,14 +406,12 @@ func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
 		slog.Debug("extracted client IP from HTTP request", "client_ip", clientIP, "remote_addr", httpReq.RemoteAddr)
 
-
 		result, err := whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
 	}
-
 
 	result, err := whatsmyip.GetWhatsMyIP(ctx)
 	if err != nil {
@@ -468,7 +420,6 @@ func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*
 
 	return CreateToolResultFromJSON(result), nil
 }
-
 
 func (s *Server) ParseQueryToRequest(query url.Values) ([]byte, error) {
 	method := query.Get("method")
@@ -485,7 +436,6 @@ func (s *Server) ParseQueryToRequest(query url.Values) ([]byte, error) {
 	if request.ID == "" {
 		request.ID = "1"
 	}
-
 
 	if paramsStr := query.Get("params"); paramsStr != "" {
 		var params interface{}
