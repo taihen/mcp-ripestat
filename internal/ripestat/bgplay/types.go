@@ -6,12 +6,10 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	Resource       string          `json:"resource"`
@@ -26,7 +24,6 @@ type Data struct {
 	Targets        json.RawMessage `json:"targets,omitempty"`
 }
 
-
 type RouteRecord struct {
 	TargetPrefix string   `json:"target_prefix"`
 	SourceID     string   `json:"source_id"`
@@ -34,13 +31,11 @@ type RouteRecord struct {
 	Community    []string `json:"community"`
 }
 
-
 type Event struct {
 	Type      string           `json:"type"`
 	Timestamp types.CustomTime `json:"timestamp"`
 	Attrs     EventAttrs       `json:"attrs"`
 }
-
 
 type EventAttrs struct {
 	TargetPrefix string   `json:"target_prefix"`

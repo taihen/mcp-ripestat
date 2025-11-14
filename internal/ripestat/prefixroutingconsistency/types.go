@@ -1,16 +1,13 @@
-
 package prefixroutingconsistency
 
 import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	Resource       string     `json:"resource"`
@@ -20,7 +17,6 @@ type Data struct {
 	QueryEndTime   string     `json:"query_endtime"`
 }
 
-
 type Route struct {
 	InBGP      bool     `json:"in_bgp"`
 	InWHOIS    bool     `json:"in_whois"`
@@ -29,7 +25,6 @@ type Route struct {
 	IRRSources []string `json:"irr_sources"`
 	ASNName    string   `json:"asn_name"`
 }
-
 
 type Parameters struct {
 	Resource          string `json:"resource"`

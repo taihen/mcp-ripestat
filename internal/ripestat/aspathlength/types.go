@@ -4,12 +4,10 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	Stats     []Stat `json:"stats"`
@@ -18,7 +16,6 @@ type Data struct {
 	SortBy    string `json:"sort_by"`
 }
 
-
 type Stat struct {
 	Number     int       `json:"number"`
 	Count      int       `json:"count"`
@@ -26,7 +23,6 @@ type Stat struct {
 	Stripped   PathStats `json:"stripped"`
 	Unstripped PathStats `json:"unstripped"`
 }
-
 
 type PathStats struct {
 	Sum int     `json:"sum"`

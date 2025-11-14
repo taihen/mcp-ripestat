@@ -9,14 +9,11 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 )
 
-
 const EndpointPath = "/data/as-path-length/data.json"
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(httpClient *client.Client) *Client {
 	if httpClient == nil {
@@ -25,11 +22,9 @@ func NewClient(httpClient *client.Client) *Client {
 	return &Client{client: httpClient}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
@@ -46,7 +41,6 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 
 	return &response, nil
 }
-
 
 func GetASPathLength(ctx context.Context, resource string) (*Response, error) {
 	return DefaultClient().Get(ctx, resource)

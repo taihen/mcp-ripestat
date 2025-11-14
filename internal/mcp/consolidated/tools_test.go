@@ -362,6 +362,7 @@ func TestNewTools(t *testing.T) {
 	tools := NewTools(executor)
 	if tools == nil {
 		t.Error("NewTools() returned nil")
+		return
 	}
 	if tools.executor != executor {
 		t.Error("NewTools() executor mismatch")

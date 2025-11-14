@@ -1,16 +1,13 @@
-
 package abusecontactfinder
 
 import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	AbuseContacts    []string `json:"abuse_contacts"`
@@ -22,7 +19,6 @@ type Data struct {
 		Cache    interface{} `json:"cache"`
 	} `json:"parameters"`
 }
-
 
 type APIResponse struct {
 	Contacts  []string `json:"contacts"`

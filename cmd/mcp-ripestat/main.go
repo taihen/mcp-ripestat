@@ -22,7 +22,6 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/metrics"
 )
 
-
 var version = "dev"
 
 func main() {
@@ -68,9 +67,7 @@ func run(ctx context.Context, port string) error {
 	startTime := time.Now()
 	mux := http.NewServeMux()
 
-
 	mcpServer := mcp.NewServer("mcp-ripestat", version, false)
-
 
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		mcpHandler(w, r, mcpServer)
@@ -80,14 +77,11 @@ func run(ctx context.Context, port string) error {
 		manifestHandler(w, r)
 	})
 
-
 	mux.HandleFunc("/warmup", warmupHandler)
-
 
 	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		statusHandler(w, r, startTime)
 	})
-
 
 	mux.Handle("/debug/vars", expvar.Handler())
 	mux.HandleFunc("/metrics", metricsHandler)
@@ -108,7 +102,6 @@ func run(ctx context.Context, port string) error {
 			slog.Error("server failed to start", "err", err)
 		}
 	}()
-
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -132,13 +125,11 @@ func run(ctx context.Context, port string) error {
 	return nil
 }
 
-
 type Manifest struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
 	Functions   []Function `json:"functions"`
 }
-
 
 type Function struct {
 	Name        string      `json:"name"`
@@ -147,14 +138,12 @@ type Function struct {
 	Returns     Return      `json:"returns"`
 }
 
-
 type Parameter struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
 	Required    bool   `json:"required"`
 	Description string `json:"description"`
 }
-
 
 type Return struct {
 	Type string `json:"type"`
@@ -173,7 +162,6 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, manifest, http.StatusOK)
 }
 
-
 func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	origin := r.Header.Get("Origin")
 	protocolVersion := r.Header.Get("MCP-Protocol-Version")
@@ -183,23 +171,19 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 
 	slog.Debug("received MCP request", "method", r.Method, "remote_addr", r.RemoteAddr, "origin", origin, "protocol_version", protocolVersion)
 
-
 	if !isSupportedProtocolVersion(protocolVersion) {
 		slog.Warn("unsupported protocol version", "version", protocolVersion)
 		http.Error(w, "Unsupported protocol version", http.StatusBadRequest)
 		return
 	}
 
-
 	supportsStreamableHTTP := isProtocolVersionAtLeast(protocolVersion, "2025-06-18")
-
 
 	if !supportsStreamableHTTP {
 		slog.Debug("using simplified handling for older protocol version", "version", protocolVersion)
 		handleLegacyMCPClient(w, r, server)
 		return
 	}
-
 
 	isStreamableHTTP := false
 
@@ -227,10 +211,8 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 			return
 		}
 
-
 		sessionID := getOrCreateSession(r, w)
 		slog.Debug("session management", "session_id", sessionID)
-
 
 		switch r.Method {
 		case http.MethodPost:
@@ -256,7 +238,6 @@ func mcpHandler(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	}
 }
 
-
 func validateStreamableHTTP(w http.ResponseWriter, r *http.Request) bool {
 
 	if origin := r.Header.Get("Origin"); origin != "" {
@@ -267,7 +248,6 @@ func validateStreamableHTTP(w http.ResponseWriter, r *http.Request) bool {
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
-
 
 	protocolVersion := r.Header.Get("MCP-Protocol-Version")
 	if protocolVersion == "" {
@@ -283,16 +263,15 @@ func validateStreamableHTTP(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
-
 func isValidOrigin(origin string) bool {
 
 	allowedOrigins := []string{
-		"http:
-		"https:
-		"http:
-		"https:
-		"https:
-		"https:
+		"http://localhost",
+		"https://localhost",
+		"http://127.0.0.1",
+		"https://127.0.0.1",
+		"https://cursor.sh",
+		"https://claude.ai",
 	}
 
 	for _, allowed := range allowedOrigins {
@@ -303,7 +282,6 @@ func isValidOrigin(origin string) bool {
 
 	return false
 }
-
 
 func isSupportedProtocolVersion(version string) bool {
 	supportedVersions := []string{
@@ -320,7 +298,6 @@ func isSupportedProtocolVersion(version string) bool {
 	return false
 }
 
-
 func getOrCreateSession(r *http.Request, w http.ResponseWriter) string {
 	sessionID := r.Header.Get("MCP-Session-ID")
 	if sessionID == "" {
@@ -329,7 +306,6 @@ func getOrCreateSession(r *http.Request, w http.ResponseWriter) string {
 	}
 	return sessionID
 }
-
 
 func generateSessionID() string {
 	bytes := make([]byte, 16)
@@ -340,7 +316,6 @@ func generateSessionID() string {
 	return hex.EncodeToString(bytes)
 }
 
-
 func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server, sessionID string) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -350,10 +325,8 @@ func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server
 	}
 	defer r.Body.Close()
 
-
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
-
 
 	ctx = mcp.WithHTTPRequest(ctx, r)
 	ctx = mcp.WithSessionID(ctx, sessionID)
@@ -364,7 +337,6 @@ func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 
 	if response == nil {
 		w.WriteHeader(http.StatusNoContent)
@@ -379,15 +351,12 @@ func handleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server
 	}
 }
 
-
 func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, sessionID string) {
 	query := r.URL.Query()
 	slog.Debug("handling GET request", "query_params", query, "has_method", query.Get("method") != "")
 
-
 	if query.Get("method") == "" {
 		slog.Debug("GET request to MCP endpoint without method parameter, returning endpoint info", "query", query, "user_agent", r.Header.Get("User-Agent"))
-
 
 		response := map[string]interface{}{
 			"service":     "mcp-ripestat",
@@ -415,7 +384,6 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 		return
 	}
 
-
 	requestData, err := server.ParseQueryToRequest(query)
 	if err != nil {
 		slog.Error("failed to parse query parameters", "err", err)
@@ -423,10 +391,8 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 		return
 	}
 
-
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
-
 
 	ctx = mcp.WithHTTPRequest(ctx, r)
 	ctx = mcp.WithSessionID(ctx, sessionID)
@@ -437,7 +403,6 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 
 	if response == nil {
 		w.WriteHeader(http.StatusNoContent)
@@ -451,7 +416,6 @@ func handleMCPQuery(w http.ResponseWriter, r *http.Request, server *mcp.Server, 
 		slog.Error("failed to write MCP query response", "err", err)
 	}
 }
-
 
 func handleCORS(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
@@ -507,12 +471,10 @@ func statusHandler(w http.ResponseWriter, _ *http.Request, startTime time.Time) 
 	}
 }
 
-
 func isProtocolVersionAtLeast(version, minVersion string) bool {
 
 	return version >= minVersion
 }
-
 
 func handleLegacyMCPClient(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	origin := r.Header.Get("Origin")
@@ -521,9 +483,7 @@ func handleLegacyMCPClient(w http.ResponseWriter, r *http.Request, server *mcp.S
 		protocolVersion = "2025-03-26"
 	}
 
-
 	w.Header().Set("MCP-Protocol-Version", protocolVersion)
-
 
 	if origin != "" && isValidOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -531,22 +491,18 @@ func handleLegacyMCPClient(w http.ResponseWriter, r *http.Request, server *mcp.S
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Protocol-Version")
 	}
 
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-
 	handleSimpleMCPRequest(w, r, server)
 }
-
 
 func handleSimpleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.Server) {
 	body, err := io.ReadAll(r.Body)
@@ -557,10 +513,8 @@ func handleSimpleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.
 	}
 	defer r.Body.Close()
 
-
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
-
 
 	ctx = mcp.WithHTTPRequest(ctx, r)
 
@@ -570,7 +524,6 @@ func handleSimpleMCPRequest(w http.ResponseWriter, r *http.Request, server *mcp.
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 
 	if response == nil {
 		w.WriteHeader(http.StatusNoContent)

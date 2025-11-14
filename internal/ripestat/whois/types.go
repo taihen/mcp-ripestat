@@ -1,16 +1,13 @@
-
 package whois
 
 import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	Records     [][]Record `json:"records"`
@@ -19,7 +16,6 @@ type Data struct {
 	Resource    string     `json:"resource"`
 	QueryTime   string     `json:"query_time"`
 }
-
 
 type Record struct {
 	Key         string  `json:"key"`

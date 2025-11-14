@@ -1,16 +1,13 @@
-
 package prefixoverview
 
 import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	IsLessSpecific   bool            `json:"is_less_specific"`
@@ -25,18 +22,15 @@ type Data struct {
 	NumFilteredOut   int             `json:"num_filtered_out"`
 }
 
-
 type ASN struct {
 	ASN    int    `json:"asn"`
 	Holder string `json:"holder"`
 }
 
-
 type RelatedPrefix struct {
 	Resource string `json:"resource"`
 	Type     string `json:"type"`
 }
-
 
 type Block struct {
 	Resource string `json:"resource"`

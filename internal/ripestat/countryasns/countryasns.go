@@ -1,4 +1,3 @@
-
 package countryasns
 
 import (
@@ -12,15 +11,12 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/country-asns/data.json"
 )
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -30,16 +26,13 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
 
-
 type GetOptions struct {
 	LOD int
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string, opts *GetOptions) (*Response, error) {
 	if resource == "" {
@@ -63,7 +56,6 @@ func (c *Client) Get(ctx context.Context, resource string, opts *GetOptions) (*R
 
 	return &response, nil
 }
-
 
 func GetCountryASNs(ctx context.Context, resource string, opts *GetOptions) (*Response, error) {
 	return DefaultClient().Get(ctx, resource, opts)

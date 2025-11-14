@@ -1,4 +1,3 @@
-
 package abusecontactfinder
 
 import (
@@ -11,15 +10,12 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/abuse-contact-finder/data.json"
 )
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -29,11 +25,9 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string) (*APIResponse, error) {
 	if resource == "" {
@@ -48,12 +42,10 @@ func (c *Client) Get(ctx context.Context, resource string) (*APIResponse, error)
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get abuse contact information: %w", err))
 	}
 
-
 	apiResponse := &APIResponse{
 		Contacts:  response.Data.AbuseContacts,
 		FetchedAt: response.Time,
 	}
-
 
 	if apiResponse.Contacts == nil {
 		apiResponse.Contacts = []string{}
@@ -61,7 +53,6 @@ func (c *Client) Get(ctx context.Context, resource string) (*APIResponse, error)
 
 	return apiResponse, nil
 }
-
 
 func GetAbuseContactFinder(ctx context.Context, resource string) (*APIResponse, error) {
 	return DefaultClient().Get(ctx, resource)

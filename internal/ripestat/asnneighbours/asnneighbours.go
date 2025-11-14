@@ -1,4 +1,3 @@
-
 package asnneighbours
 
 import (
@@ -14,18 +13,15 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/asn-neighbours/data.json"
 
 	CacheTTL = 15 * time.Minute
 )
 
-
 type cacheEntry struct {
 	response  *APIResponse
 	timestamp time.Time
 }
-
 
 type cacheKey struct {
 	resource  string
@@ -33,13 +29,11 @@ type cacheKey struct {
 	lod       int
 }
 
-
 type Client struct {
 	client *client.Client
 	cache  map[cacheKey]*cacheEntry
 	mutex  sync.RWMutex
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -52,11 +46,9 @@ func NewClient(c *client.Client) *Client {
 	}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string, lod int, queryTime string) (*APIResponse, error) {
 	if resource == "" {
@@ -66,7 +58,6 @@ func (c *Client) Get(ctx context.Context, resource string, lod int, queryTime st
 	if lod < 0 || lod > 1 {
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("lod parameter must be 0 or 1"))
 	}
-
 
 	key := cacheKey{
 		resource:  resource,
@@ -91,7 +82,6 @@ func (c *Client) Get(ctx context.Context, resource string, lod int, queryTime st
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get ASN neighbours: %w", err))
 	}
 
-
 	apiResponse := &APIResponse{
 		Resource:        response.Data.Resource,
 		QueryTime:       response.Data.QueryStartTime,
@@ -100,17 +90,14 @@ func (c *Client) Get(ctx context.Context, resource string, lod int, queryTime st
 		FetchedAt:       response.Time,
 	}
 
-
 	if apiResponse.Neighbours == nil {
 		apiResponse.Neighbours = []Neighbour{}
 	}
-
 
 	c.setCached(key, apiResponse)
 
 	return apiResponse, nil
 }
-
 
 func (c *Client) getCached(key cacheKey) *APIResponse {
 	c.mutex.RLock()
@@ -121,7 +108,6 @@ func (c *Client) getCached(key cacheKey) *APIResponse {
 		return nil
 	}
 
-
 	if time.Since(entry.timestamp) > CacheTTL {
 
 		delete(c.cache, key)
@@ -130,7 +116,6 @@ func (c *Client) getCached(key cacheKey) *APIResponse {
 
 	return entry.response
 }
-
 
 func (c *Client) setCached(key cacheKey, response *APIResponse) {
 	c.mutex.Lock()
@@ -141,7 +126,6 @@ func (c *Client) setCached(key cacheKey, response *APIResponse) {
 		timestamp: time.Now(),
 	}
 }
-
 
 func (c *Client) clearExpiredCache() {
 	c.mutex.Lock()
@@ -154,7 +138,6 @@ func (c *Client) clearExpiredCache() {
 		}
 	}
 }
-
 
 func GetASNNeighbours(ctx context.Context, resource string, lod int, queryTime string) (*APIResponse, error) {
 	return DefaultClient().Get(ctx, resource, lod, queryTime)

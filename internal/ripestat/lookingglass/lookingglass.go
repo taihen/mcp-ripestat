@@ -1,4 +1,3 @@
-
 package lookingglass
 
 import (
@@ -12,18 +11,14 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/looking-glass/data.json"
-
 
 	MaxLookBackLimit = 48 * 60 * 60
 )
 
-
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -33,11 +28,9 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string, lookBackLimit int) (*APIResponse, error) {
 	if resource == "" {
@@ -63,12 +56,10 @@ func (c *Client) Get(ctx context.Context, resource string, lookBackLimit int) (*
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get looking glass information: %w", err))
 	}
 
-
 	apiResponse := &APIResponse{
 		RRCs:      response.Data.RRCs,
 		FetchedAt: response.Time,
 	}
-
 
 	if apiResponse.RRCs == nil {
 		apiResponse.RRCs = []RRC{}
@@ -76,7 +67,6 @@ func (c *Client) Get(ctx context.Context, resource string, lookBackLimit int) (*
 
 	return apiResponse, nil
 }
-
 
 func GetLookingGlass(ctx context.Context, resource string, lookBackLimit int) (*APIResponse, error) {
 	return DefaultClient().Get(ctx, resource, lookBackLimit)

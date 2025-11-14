@@ -2,6 +2,7 @@ package consolidated
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
@@ -85,7 +86,6 @@ func TestDirectExecutor_HandleRoutingHistory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 
 			_, err := executor.ExecuteEndpoint(ctx, "getRoutingHistory", "8.8.8.0/24", tt.params)
 
@@ -191,7 +191,7 @@ func TestDirectExecutor_HandleASNNeighbours(t *testing.T) {
 	}
 }
 
-func TestDirectExecutor_HandleLookingGlass(t *testing.T) {
+func testEndpointWithIntParam(t *testing.T, endpointName, resource, paramName string, paramValue int) {
 	executor := NewDirectExecutor()
 	ctx := context.Background()
 
@@ -204,89 +204,48 @@ func TestDirectExecutor_HandleLookingGlass(t *testing.T) {
 			params: map[string]interface{}{},
 		},
 		{
-			name: "with look_back_limit as int",
+			name: "with " + paramName + " as int",
 			params: map[string]interface{}{
-				"look_back_limit": 10,
+				paramName: paramValue,
 			},
 		},
 		{
-			name: "with look_back_limit as string",
+			name: "with " + paramName + " as string",
 			params: map[string]interface{}{
-				"look_back_limit": "10",
+				paramName: fmt.Sprintf("%d", paramValue),
 			},
 		},
 		{
-			name: "with look_back_limit as float64",
+			name: "with " + paramName + " as float64",
 			params: map[string]interface{}{
-				"look_back_limit": 10.0,
+				paramName: float64(paramValue),
 			},
 		},
 		{
-			name: "with look_back_limit as int64",
+			name: "with " + paramName + " as int64",
 			params: map[string]interface{}{
-				"look_back_limit": int64(10),
+				paramName: int64(paramValue),
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := executor.ExecuteEndpoint(ctx, "getLookingGlass", "8.8.8.8", tt.params)
+			_, err := executor.ExecuteEndpoint(ctx, endpointName, resource, tt.params)
 
-			if err != nil && err.Error() == "unknown endpoint: getLookingGlass" {
-				t.Errorf("ExecuteEndpoint() should handle getLookingGlass")
+			if err != nil && err.Error() == "unknown endpoint: "+endpointName {
+				t.Errorf("ExecuteEndpoint() should handle %s", endpointName)
 			}
 		})
 	}
 }
 
+func TestDirectExecutor_HandleLookingGlass(t *testing.T) {
+	testEndpointWithIntParam(t, "getLookingGlass", "8.8.8.8", "look_back_limit", 10)
+}
+
 func TestDirectExecutor_HandleCountryASNs(t *testing.T) {
-	executor := NewDirectExecutor()
-	ctx := context.Background()
-
-	tests := []struct {
-		name   string
-		params map[string]interface{}
-	}{
-		{
-			name:   "no optional params",
-			params: map[string]interface{}{},
-		},
-		{
-			name: "with lod as int",
-			params: map[string]interface{}{
-				"lod": 1,
-			},
-		},
-		{
-			name: "with lod as string",
-			params: map[string]interface{}{
-				"lod": "1",
-			},
-		},
-		{
-			name: "with lod as float64",
-			params: map[string]interface{}{
-				"lod": 1.0,
-			},
-		},
-		{
-			name: "with lod as int64",
-			params: map[string]interface{}{
-				"lod": int64(1),
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := executor.ExecuteEndpoint(ctx, "getCountryASNs", "US", tt.params)
-
-			if err != nil && err.Error() == "unknown endpoint: getCountryASNs" {
-				t.Errorf("ExecuteEndpoint() should handle getCountryASNs")
-			}
-		})
-	}
+	testEndpointWithIntParam(t, "getCountryASNs", "US", "lod", 1)
 }
 
 func TestDirectExecutor_HandleBGPState(t *testing.T) {
@@ -342,28 +301,28 @@ func TestDirectExecutor_HandleBGPState(t *testing.T) {
 
 func TestGetOptionalStringParam(t *testing.T) {
 	tests := []struct {
-		name     string
-		params   map[string]interface{}
-		key      string
-		want     string
+		name   string
+		params map[string]interface{}
+		key    string
+		want   string
 	}{
 		{
-			name:     "existing string parameter",
-			params:   map[string]interface{}{"key": "value"},
-			key:      "key",
-			want:     "value",
+			name:   "existing string parameter",
+			params: map[string]interface{}{"key": "value"},
+			key:    "key",
+			want:   "value",
 		},
 		{
-			name:     "missing parameter",
-			params:   map[string]interface{}{},
-			key:      "key",
-			want:     "",
+			name:   "missing parameter",
+			params: map[string]interface{}{},
+			key:    "key",
+			want:   "",
 		},
 		{
-			name:     "non-string parameter",
-			params:   map[string]interface{}{"key": 123},
-			key:      "key",
-			want:     "",
+			name:   "non-string parameter",
+			params: map[string]interface{}{"key": 123},
+			key:    "key",
+			want:   "",
 		},
 	}
 
@@ -437,4 +396,3 @@ func TestGetOptionalIntParam(t *testing.T) {
 		})
 	}
 }
-

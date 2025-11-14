@@ -1,4 +1,3 @@
-
 package rpkivalidation
 
 import (
@@ -11,15 +10,12 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/rpki-validation/data.json"
 )
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -29,11 +25,9 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource, prefix string) (*APIResponse, error) {
 	if resource == "" {
@@ -53,7 +47,6 @@ func (c *Client) Get(ctx context.Context, resource, prefix string) (*APIResponse
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get RPKI validation status: %w", err))
 	}
 
-
 	apiResponse := &APIResponse{
 		Status:         response.Data.Status,
 		Validator:      response.Data.Validator,
@@ -63,14 +56,12 @@ func (c *Client) Get(ctx context.Context, resource, prefix string) (*APIResponse
 		FetchedAt:      response.Time,
 	}
 
-
 	if apiResponse.ValidatingROAs == nil {
 		apiResponse.ValidatingROAs = []ValidatingROA{}
 	}
 
 	return apiResponse, nil
 }
-
 
 func GetRPKIValidation(ctx context.Context, resource, prefix string) (*APIResponse, error) {
 	return DefaultClient().Get(ctx, resource, prefix)

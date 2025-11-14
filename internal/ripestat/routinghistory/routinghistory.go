@@ -9,17 +9,13 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 )
 
-
 type Client struct {
 	client *client.Client
 }
 
-
 func New(c *client.Client) *Client {
 	return &Client{client: c}
 }
-
-
 
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
@@ -38,7 +34,6 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 
 	return &response, nil
 }
-
 
 func (c *Client) GetWithOptions(ctx context.Context, resource, startTime, endTime string, maxResults int) (*Response, error) {
 	if resource == "" {
@@ -70,16 +65,13 @@ func (c *Client) GetWithOptions(ctx context.Context, resource, startTime, endTim
 	return &response, nil
 }
 
-
 func DefaultClient() *Client {
 	return New(client.DefaultClient())
 }
 
-
 func GetRoutingHistory(ctx context.Context, resource string) (*Response, error) {
 	return DefaultClient().Get(ctx, resource)
 }
-
 
 func GetRoutingHistoryWithOptions(ctx context.Context, resource, startTime, endTime string, maxResults int) (*Response, error) {
 	return DefaultClient().GetWithOptions(ctx, resource, startTime, endTime, maxResults)

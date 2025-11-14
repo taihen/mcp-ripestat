@@ -1,5 +1,3 @@
-
-
 package rpkihistory
 
 import (
@@ -12,15 +10,12 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/rpki-history/data.json"
 )
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -29,11 +24,9 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
@@ -50,7 +43,6 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 
 	return &response, nil
 }
-
 
 func GetRPKIHistory(ctx context.Context, resource string) (*Response, error) {
 	return DefaultClient().Get(ctx, resource)

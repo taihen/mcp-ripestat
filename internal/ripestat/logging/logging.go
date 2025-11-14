@@ -1,4 +1,3 @@
-
 package logging
 
 import (
@@ -9,11 +8,9 @@ import (
 	"sync"
 )
 
-
 type LogLevel int
 
 const (
-
 	LogLevelDebug LogLevel = iota
 
 	LogLevelInfo
@@ -24,7 +21,6 @@ const (
 
 	LogLevelNone
 )
-
 
 func (l LogLevel) String() string {
 	switch l {
@@ -43,7 +39,6 @@ func (l LogLevel) String() string {
 	}
 }
 
-
 type Logger struct {
 	mu       sync.Mutex
 	level    LogLevel
@@ -53,8 +48,6 @@ type Logger struct {
 	errorLog *log.Logger
 	writer   io.Writer
 }
-
-
 
 func NewLogger(level LogLevel, writer io.Writer) *Logger {
 	if writer == nil {
@@ -71,13 +64,11 @@ func NewLogger(level LogLevel, writer io.Writer) *Logger {
 	}
 }
 
-
 func (l *Logger) SetLevel(level LogLevel) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.level = level
 }
-
 
 func (l *Logger) GetLevel() LogLevel {
 	l.mu.Lock()
@@ -85,7 +76,6 @@ func (l *Logger) GetLevel() LogLevel {
 
 	return l.level
 }
-
 
 func (l *Logger) Debug(format string, v ...interface{}) {
 	if l.GetLevel() <= LogLevelDebug {
@@ -95,7 +85,6 @@ func (l *Logger) Debug(format string, v ...interface{}) {
 	}
 }
 
-
 func (l *Logger) Info(format string, v ...interface{}) {
 	if l.GetLevel() <= LogLevelInfo {
 		l.mu.Lock()
@@ -103,7 +92,6 @@ func (l *Logger) Info(format string, v ...interface{}) {
 		l.infoLog.Printf(format, v...)
 	}
 }
-
 
 func (l *Logger) Warning(format string, v ...interface{}) {
 	if l.GetLevel() <= LogLevelWarning {
@@ -113,7 +101,6 @@ func (l *Logger) Warning(format string, v ...interface{}) {
 	}
 }
 
-
 func (l *Logger) Error(format string, v ...interface{}) {
 	if l.GetLevel() <= LogLevelError {
 		l.mu.Lock()
@@ -122,29 +109,23 @@ func (l *Logger) Error(format string, v ...interface{}) {
 	}
 }
 
-
 var DefaultLogger = NewLogger(LogLevelInfo, nil)
-
 
 func SetDefaultLogLevel(level LogLevel) {
 	DefaultLogger.SetLevel(level)
 }
 
-
 func Debug(format string, v ...interface{}) {
 	DefaultLogger.Debug(format, v...)
 }
-
 
 func Info(format string, v ...interface{}) {
 	DefaultLogger.Info(format, v...)
 }
 
-
 func Warning(format string, v ...interface{}) {
 	DefaultLogger.Warning(format, v...)
 }
-
 
 func Error(format string, v ...interface{}) {
 	DefaultLogger.Error(format, v...)

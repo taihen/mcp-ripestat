@@ -1,16 +1,13 @@
-
 package addressspacehierarchy
 
 import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/types"
 )
 
-
 type Response struct {
 	types.BaseResponse
 	Data Data `json:"data"`
 }
-
 
 type Data struct {
 	RIR          string         `json:"rir"`
@@ -21,7 +18,6 @@ type Data struct {
 	QueryTime    string         `json:"query_time"`
 	Parameters   Parameters     `json:"parameters"`
 }
-
 
 type AddressEntry struct {
 	Inetnum      string `json:"inetnum"`
@@ -39,7 +35,6 @@ type AddressEntry struct {
 	LastModified string `json:"last-modified,omitempty"`
 	Source       string `json:"source,omitempty"`
 }
-
 
 type Parameters struct {
 	Resource string      `json:"resource"`

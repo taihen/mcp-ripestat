@@ -1,4 +1,3 @@
-
 package metrics
 
 import (
@@ -7,39 +6,31 @@ import (
 	"time"
 )
 
-
 type Metrics struct {
-
 	RequestsTotal    *expvar.Map
 	RequestsInFlight *expvar.Int
 	RequestDuration  *expvar.Map
-
 
 	CacheHits           *expvar.Int
 	CacheMisses         *expvar.Int
 	CacheTotalEntries   *expvar.Int
 	CacheExpiredEntries *expvar.Int
 
-
 	RateLimitWaits    *expvar.Int
 	RateLimitTimeouts *expvar.Int
-
 
 	DailyRequestCount *expvar.Int
 	RequestCounter    *expvar.Map
 
-
 	inFlightCount  int64
 	dailyResetTime time.Time
 }
-
 
 var globalMetrics *Metrics
 
 func init() {
 	globalMetrics = NewMetrics()
 }
-
 
 func NewMetrics() *Metrics {
 	m := &Metrics{
@@ -60,21 +51,15 @@ func NewMetrics() *Metrics {
 	return m
 }
 
-
-
-
 func RecordRequest(endpoint, status string) {
 	key := endpoint + "_" + status
 	globalMetrics.RequestsTotal.Add(key, 1)
 
-
 	recordDailyRequest()
 }
 
-
 func recordDailyRequest() {
 	now := time.Now()
-
 
 	if now.After(globalMetrics.dailyResetTime) {
 		globalMetrics.DailyRequestCount.Set(0)
@@ -83,63 +68,51 @@ func recordDailyRequest() {
 
 	globalMetrics.DailyRequestCount.Add(1)
 
-
 	dateKey := now.Format("2006-01-02")
 	globalMetrics.RequestCounter.Add(dateKey, 1)
 }
-
 
 func StartRequest() {
 	atomic.AddInt64(&globalMetrics.inFlightCount, 1)
 	globalMetrics.RequestsInFlight.Set(atomic.LoadInt64(&globalMetrics.inFlightCount))
 }
 
-
 func EndRequest(endpoint string, duration time.Duration) {
 	atomic.AddInt64(&globalMetrics.inFlightCount, -1)
 	globalMetrics.RequestsInFlight.Set(atomic.LoadInt64(&globalMetrics.inFlightCount))
-
 
 	durationMs := float64(duration.Nanoseconds()) / 1e6
 	globalMetrics.RequestDuration.Add(endpoint, int64(durationMs))
 }
 
-
 func RecordCacheHit() {
 	globalMetrics.CacheHits.Add(1)
 }
 
-
 func RecordCacheMiss() {
 	globalMetrics.CacheMisses.Add(1)
 }
-
 
 func UpdateCacheStats(total, expired int) {
 	globalMetrics.CacheTotalEntries.Set(int64(total))
 	globalMetrics.CacheExpiredEntries.Set(int64(expired))
 }
 
-
 func RecordRateLimitWait() {
 	globalMetrics.RateLimitWaits.Add(1)
 }
-
 
 func RecordRateLimitTimeout() {
 	globalMetrics.RateLimitTimeouts.Add(1)
 }
 
-
 func GetMetrics() *Metrics {
 	return globalMetrics
 }
 
-
 func GetInFlightCount() int64 {
 	return atomic.LoadInt64(&globalMetrics.inFlightCount)
 }
-
 
 func GetDailyRequestCount() int64 {
 
@@ -151,7 +124,6 @@ func GetDailyRequestCount() int64 {
 
 	return globalMetrics.DailyRequestCount.Value()
 }
-
 
 func Summary() map[string]interface{} {
 	return map[string]interface{}{

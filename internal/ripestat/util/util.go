@@ -1,4 +1,4 @@
-
+//nolint:revive // util is a common package name for utility functions
 package util
 
 import (
@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 )
-
 
 func IsValidIPv4(ip string) bool {
 	if ip == "" {
@@ -20,10 +19,8 @@ func IsValidIPv4(ip string) bool {
 		return false
 	}
 
-
 	return parsedIP.To4() != nil
 }
-
 
 func IsValidIPv6(ip string) bool {
 	if ip == "" {
@@ -35,15 +32,12 @@ func IsValidIPv6(ip string) bool {
 		return false
 	}
 
-
 	return parsedIP.To4() == nil
 }
-
 
 func IsValidIP(ip string) bool {
 	return IsValidIPv4(ip) || IsValidIPv6(ip)
 }
-
 
 func IsValidCIDR(cidr string) bool {
 	if cidr == "" {
@@ -55,36 +49,27 @@ func IsValidCIDR(cidr string) bool {
 	return err == nil
 }
 
-
-
 func IsValidASN(asn string) bool {
 	if asn == "" {
 		return false
 	}
 
-
 	asn = strings.TrimPrefix(strings.ToUpper(asn), "AS")
-
 
 	asnRegex := regexp.MustCompile(`^[0-9]+$`)
 
 	return asnRegex.MatchString(asn)
 }
 
-
 func FormatASN(asn string) string {
 	if asn == "" {
 		return ""
 	}
 
-
 	asn = strings.TrimPrefix(strings.ToUpper(asn), "AS")
-
 
 	return "AS" + asn
 }
-
-
 
 func FormatTime(t time.Time, layout string) string {
 	if layout == "" {
@@ -94,8 +79,6 @@ func FormatTime(t time.Time, layout string) string {
 	return t.Format(layout)
 }
 
-
-
 func ParseTime(s string, layout string) (time.Time, error) {
 	if layout == "" {
 		layout = time.RFC3339
@@ -104,7 +87,6 @@ func ParseTime(s string, layout string) (time.Time, error) {
 	return time.Parse(layout, s)
 }
 
-
 func TruncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -112,8 +94,6 @@ func TruncateString(s string, maxLen int) string {
 
 	return s[:maxLen-3] + "..."
 }
-
-
 
 func JoinStrings(strs []string, sep string) string {
 	var nonEmpty []string
@@ -126,7 +106,6 @@ func JoinStrings(strs []string, sep string) string {
 
 	return strings.Join(nonEmpty, sep)
 }
-
 
 func SplitAndTrim(s string, sep string) []string {
 	if s == "" {
@@ -147,7 +126,6 @@ func SplitAndTrim(s string, sep string) []string {
 	return result
 }
 
-
 func MapToString(m map[string]interface{}) string {
 	if len(m) == 0 {
 		return "{}"
@@ -161,7 +139,6 @@ func MapToString(m map[string]interface{}) string {
 	return "{" + strings.Join(parts, ", ") + "}"
 }
 
-
 func StringSliceContains(slice []string, s string) bool {
 	for _, item := range slice {
 		if item == s {
@@ -171,7 +148,6 @@ func StringSliceContains(slice []string, s string) bool {
 
 	return false
 }
-
 
 func StringSliceEquals(a, b []string) bool {
 	if len(a) != len(b) {
@@ -186,7 +162,6 @@ func StringSliceEquals(a, b []string) bool {
 
 	return true
 }
-
 
 func RemoveDuplicates(slice []string) []string {
 	if len(slice) <= 1 {

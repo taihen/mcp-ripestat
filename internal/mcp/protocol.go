@@ -8,9 +8,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 )
 
-
 const ProtocolVersion = "2025-06-18"
-
 
 type InitializeParams struct {
 	ProtocolVersion string      `json:"protocolVersion"`
@@ -18,25 +16,21 @@ type InitializeParams struct {
 	ClientInfo      ClientInfo  `json:"clientInfo"`
 }
 
-
 type ClientInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
-
 
 type ServerInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-
 type InitializeResult struct {
 	ProtocolVersion string      `json:"protocolVersion"`
 	Capabilities    interface{} `json:"capabilities"`
 	ServerInfo      ServerInfo  `json:"serverInfo"`
 }
-
 
 type Capabilities struct {
 	Tools     *ToolsCapability     `json:"tools,omitempty"`
@@ -47,41 +41,33 @@ type Capabilities struct {
 	Transport *TransportCapability `json:"transport,omitempty"`
 }
 
-
 type ToolsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
 }
-
 
 type ResourcesCapability struct {
 	Subscribe   bool `json:"subscribe,omitempty"`
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-
 type PromptsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-
 type LoggingCapability struct{}
-
 
 type RootsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-
 type TransportCapability struct {
 	HTTP *HTTPTransportCapability `json:"http,omitempty"`
 }
-
 
 type HTTPTransportCapability struct {
 	Streamable bool     `json:"streamable"`
 	Methods    []string `json:"methods"`
 }
-
 
 type Tool struct {
 	Name        string      `json:"name"`
@@ -89,11 +75,9 @@ type Tool struct {
 	InputSchema interface{} `json:"inputSchema"`
 }
 
-
 type ToolsListResult struct {
 	Tools []Tool `json:"tools"`
 }
-
 
 type CallToolParams struct {
 	Name      string      `json:"name"`
@@ -101,18 +85,15 @@ type CallToolParams struct {
 	Meta      interface{} `json:"_meta,omitempty"`
 }
 
-
 type ToolResult struct {
 	Content []ToolContent `json:"content"`
 	IsError bool          `json:"isError,omitempty"`
 }
 
-
 type ToolContent struct {
 	Type string `json:"type"`
 	Text string `json:"text"`
 }
-
 
 func CreateInitializeResult(serverName, serverVersion string) *InitializeResult {
 	return &InitializeResult{
@@ -137,7 +118,6 @@ func CreateInitializeResult(serverName, serverVersion string) *InitializeResult 
 	}
 }
 
-
 func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeResult {
 	return &InitializeResult{
 		ProtocolVersion: "2025-03-26",
@@ -147,7 +127,6 @@ func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeR
 			Prompts:   &PromptsCapability{ListChanged: false},
 			Logging:   &LoggingCapability{},
 			Roots:     &RootsCapability{ListChanged: false},
-
 		},
 		ServerInfo: ServerInfo{
 			Name:    serverName,
@@ -156,17 +135,14 @@ func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeR
 	}
 }
 
-
 func CreateToolsList() *ToolsListResult {
 	tools := []Tool{}
-
 
 	toolNames := make([]string, 0, len(consolidated.ConsolidatedSchemas))
 	for toolName := range consolidated.ConsolidatedSchemas {
 		toolNames = append(toolNames, toolName)
 	}
 	sort.Strings(toolNames)
-
 
 	for _, toolName := range toolNames {
 		schema := consolidated.ConsolidatedSchemas[toolName]
@@ -182,7 +158,6 @@ func CreateToolsList() *ToolsListResult {
 		})
 	}
 
-
 	tools = append(tools, Tool{
 		Name:        "getWhatsMyIP",
 		Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
@@ -194,7 +169,6 @@ func CreateToolsList() *ToolsListResult {
 
 	return &ToolsListResult{Tools: tools}
 }
-
 
 func ParseCallToolParams(params interface{}) (*CallToolParams, error) {
 	jsonData, err := json.Marshal(params)
@@ -210,7 +184,6 @@ func ParseCallToolParams(params interface{}) (*CallToolParams, error) {
 	return &callParams, nil
 }
 
-
 func CreateToolResult(text string, isError bool) *ToolResult {
 	return &ToolResult{
 		Content: []ToolContent{
@@ -222,7 +195,6 @@ func CreateToolResult(text string, isError bool) *ToolResult {
 		IsError: isError,
 	}
 }
-
 
 func CreateToolResultFromJSON(data interface{}) *ToolResult {
 	jsonData, err := json.MarshalIndent(data, "", "  ")

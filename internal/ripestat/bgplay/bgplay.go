@@ -9,17 +9,13 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/errors"
 )
 
-
 type Client struct {
 	client *client.Client
 }
 
-
 func New(c *client.Client) *Client {
 	return &Client{client: c}
 }
-
-
 
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
@@ -39,11 +35,9 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	return &response, nil
 }
 
-
 func DefaultClient() *Client {
 	return New(client.DefaultClient())
 }
-
 
 func GetBGPlay(ctx context.Context, resource string) (*Response, error) {
 	return DefaultClient().Get(ctx, resource)

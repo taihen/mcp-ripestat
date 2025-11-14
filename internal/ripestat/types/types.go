@@ -1,11 +1,9 @@
-
 package types
 
 import (
 	"strings"
 	"time"
 )
-
 
 type BaseResponse struct {
 	Messages       []interface{} `json:"messages"`
@@ -23,29 +21,23 @@ type BaseResponse struct {
 	Time           string        `json:"time"`
 }
 
-
 type CustomTime struct {
 	time.Time
 }
-
 
 func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 
 	s := strings.Trim(string(data), "\"")
 
-
 	if s == "" || s == "null" {
 		return nil
 	}
-
 
 	t, err := time.Parse(time.RFC3339, s)
 	if err == nil {
 		ct.Time = t
 		return nil
 	}
-
-
 
 	formats := []string{
 		"2006-01-02T15:04:05",
@@ -59,7 +51,6 @@ func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 	}
-
 
 	return err
 }

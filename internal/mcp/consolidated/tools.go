@@ -264,19 +264,15 @@ func (ct *Tools) executeAndAggregate(
 		Metadata:   make(map[string]interface{}),
 	}
 
-
 	sortedEndpoints, err := topologicalSort(routes.Endpoints, routes.Dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sort endpoints by dependencies: %w", err)
 	}
 
-
 	for _, endpoint := range sortedEndpoints {
 		endpointParams := translateDepthToEndpointParams(endpoint, depth)
 
-
 		resourceOverride := extractDependencyData(endpoint, routes.Dependencies, result.Results, endpointParams, resource)
-
 
 		resourceValue := resource.Value
 		if resourceOverride != "" {
@@ -301,14 +297,12 @@ func (ct *Tools) executeAndAggregate(
 	return result, nil
 }
 
-
 func topologicalSort(endpoints []string, dependencies map[string][]string) ([]string, error) {
 
 	inDegree := make(map[string]int)
 	for _, endpoint := range endpoints {
 		inDegree[endpoint] = 0
 	}
-
 
 	for endpoint, deps := range dependencies {
 		if _, exists := inDegree[endpoint]; !exists {
@@ -321,7 +315,6 @@ func topologicalSort(endpoints []string, dependencies map[string][]string) ([]st
 		}
 	}
 
-
 	queue := make([]string, 0)
 	for endpoint, degree := range inDegree {
 		if degree == 0 {
@@ -331,12 +324,10 @@ func topologicalSort(endpoints []string, dependencies map[string][]string) ([]st
 
 	result := make([]string, 0, len(endpoints))
 
-
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
 		result = append(result, current)
-
 
 		for endpoint, deps := range dependencies {
 			for _, dep := range deps {
@@ -350,15 +341,12 @@ func topologicalSort(endpoints []string, dependencies map[string][]string) ([]st
 		}
 	}
 
-
 	if len(result) != len(endpoints) {
 		return nil, fmt.Errorf("circular dependency detected in endpoints")
 	}
 
 	return result, nil
 }
-
-
 
 func extractDependencyData(endpoint string, dependencies map[string][]string, results map[string]interface{}, params map[string]interface{}, resource *DetectedResource) string {
 	deps, hasDeps := dependencies[endpoint]
@@ -374,13 +362,11 @@ func extractDependencyData(endpoint string, dependencies map[string][]string, re
 			continue
 		}
 
-
 		if endpoint == "getRPKIValidation" && dep == "getNetworkInfo" {
 			if prefix := extractPrefixFromNetworkInfo(depResult); prefix != "" {
 				params["prefix"] = prefix
 			}
 		}
-
 
 		if endpoint == "getAddressSpaceHierarchy" && dep == "getNetworkInfo" && resource.Type == IPAddress {
 			if prefix := extractPrefixFromNetworkInfo(depResult); prefix != "" {
@@ -388,12 +374,10 @@ func extractDependencyData(endpoint string, dependencies map[string][]string, re
 			}
 		}
 
-
 	}
 
 	return resourceOverride
 }
-
 
 func extractPrefixFromNetworkInfo(result interface{}) string {
 
@@ -404,7 +388,6 @@ func extractPrefixFromNetworkInfo(result interface{}) string {
 			}
 		}
 	}
-
 
 	resultValue := reflect.ValueOf(result)
 	if resultValue.Kind() == reflect.Ptr {

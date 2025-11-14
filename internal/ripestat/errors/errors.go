@@ -1,11 +1,9 @@
-
 package errors
 
 import (
 	"fmt"
 	"net/http"
 )
-
 
 var (
 	ErrInvalidParameter = NewError("invalid parameter", http.StatusBadRequest)
@@ -16,13 +14,11 @@ var (
 	ErrTimeout          = NewError("request timed out", http.StatusGatewayTimeout)
 )
 
-
 type Error struct {
 	Message    string
 	StatusCode int
 	Err        error
 }
-
 
 func NewError(message string, statusCode int) *Error {
 	return &Error{
@@ -30,7 +26,6 @@ func NewError(message string, statusCode int) *Error {
 		StatusCode: statusCode,
 	}
 }
-
 
 func (e *Error) WithError(err error) *Error {
 	if err == nil {
@@ -44,7 +39,6 @@ func (e *Error) WithError(err error) *Error {
 	}
 }
 
-
 func (e *Error) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %v", e.Message, e.Err)
@@ -53,11 +47,9 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-
 func (e *Error) Unwrap() error {
 	return e.Err
 }
-
 
 func FromHTTPResponse(resp *http.Response, defaultMessage string) error {
 	var baseErr *Error

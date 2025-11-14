@@ -1,4 +1,3 @@
-
 package cache
 
 import (
@@ -11,19 +10,16 @@ import (
 	"time"
 )
 
-
 type Cache struct {
 	data sync.Map
 	ttls map[string]time.Duration
 	mu   sync.RWMutex
 }
 
-
 type entry struct {
 	data      interface{}
 	expiresAt time.Time
 }
-
 
 var DefaultTTLs = map[string]time.Duration{
 	"whois":                24 * time.Hour,
@@ -42,18 +38,15 @@ var DefaultTTLs = map[string]time.Duration{
 	"whats-my-ip":          5 * time.Minute,
 }
 
-
 func New() *Cache {
 	return NewWithTTLs(DefaultTTLs)
 }
-
 
 func NewWithTTLs(ttls map[string]time.Duration) *Cache {
 	return &Cache{
 		ttls: ttls,
 	}
 }
-
 
 func generateKey(endpoint string, params url.Values) string {
 
@@ -62,11 +55,9 @@ func generateKey(endpoint string, params url.Values) string {
 		key += "?" + params.Encode()
 	}
 
-
 	hash := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(hash[:])
 }
-
 
 func getEndpointType(endpoint string) string {
 
@@ -74,10 +65,8 @@ func getEndpointType(endpoint string) string {
 		return endpoint[6:]
 	}
 
-
 	return endpoint
 }
-
 
 func (c *Cache) Get(_ context.Context, endpoint string, params url.Values) (interface{}, bool) {
 	key := generateKey(endpoint, params)
@@ -94,7 +83,6 @@ func (c *Cache) Get(_ context.Context, endpoint string, params url.Values) (inte
 
 	return nil, false
 }
-
 
 func (c *Cache) Set(_ context.Context, endpoint string, params url.Values, data interface{}) {
 	key := generateKey(endpoint, params)
@@ -117,12 +105,10 @@ func (c *Cache) Set(_ context.Context, endpoint string, params url.Values, data 
 	c.data.Store(key, entry)
 }
 
-
 func (c *Cache) Delete(endpoint string, params url.Values) {
 	key := generateKey(endpoint, params)
 	c.data.Delete(key)
 }
-
 
 func (c *Cache) Clear() {
 	c.data.Range(func(key, _ interface{}) bool {
@@ -130,7 +116,6 @@ func (c *Cache) Clear() {
 		return true
 	})
 }
-
 
 func (c *Cache) Stats() Stats {
 	var total, expired int
@@ -153,13 +138,11 @@ func (c *Cache) Stats() Stats {
 	}
 }
 
-
 type Stats struct {
 	TotalEntries   int `json:"total_entries"`
 	ExpiredEntries int `json:"expired_entries"`
 	ActiveEntries  int `json:"active_entries"`
 }
-
 
 func (c *Cache) CleanupExpired() int {
 	var removed int
@@ -178,13 +161,11 @@ func (c *Cache) CleanupExpired() int {
 	return removed
 }
 
-
 func (c *Cache) SetTTL(endpointType string, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.ttls[endpointType] = ttl
 }
-
 
 func (c *Cache) GetTTL(endpointType string) (time.Duration, bool) {
 	c.mu.RLock()
@@ -192,7 +173,6 @@ func (c *Cache) GetTTL(endpointType string) (time.Duration, bool) {
 	ttl, exists := c.ttls[endpointType]
 	return ttl, exists
 }
-
 
 func (c *Cache) String() string {
 	stats := c.Stats()

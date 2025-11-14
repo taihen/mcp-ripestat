@@ -35,18 +35,15 @@ type UpdateAttributes struct {
 	Community    []string `json:"community,omitempty"`
 }
 
-
 type CustomTime struct {
 	time.Time
 }
-
 
 func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 	var timeStr string
 	if err := json.Unmarshal(data, &timeStr); err != nil {
 		return err
 	}
-
 
 	formats := []string{
 		"2006-01-02T15:04:05",

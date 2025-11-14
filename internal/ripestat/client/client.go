@@ -1,4 +1,3 @@
-
 package client
 
 import (
@@ -16,9 +15,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/metrics"
 )
 
-
 var ripeLimiter = make(chan struct{}, 7)
-
 
 func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 
@@ -29,35 +26,25 @@ func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 		MaxConnsPerHost:     cfg.MaxConnsPerHost,
 		IdleConnTimeout:     cfg.IdleConnTimeout,
 
-
 		DisableCompression: false,
 		DisableKeepAlives:  false,
-
 
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: cfg.Timeout,
 		ExpectContinueTimeout: 1 * time.Second,
 
-
 		ForceAttemptHTTP2: cfg.ForceHTTP2,
-
-
-
-
 	}
 
 	return &http.Client{
 		Transport: transport,
 		Timeout:   cfg.Timeout,
-
 	}
 }
-
 
 type HTTPDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
-
 
 type Client struct {
 	BaseURL     string
@@ -69,15 +56,11 @@ type Client struct {
 	Cache       *cache.Cache
 }
 
-
 type RetryConfig struct {
 	RetryCount       int
 	RetryWaitTime    time.Duration
 	MaxRetryWaitTime time.Duration
 }
-
-
-
 
 func New(baseURL string, httpClient HTTPDoer) *Client {
 	if baseURL == "" {
@@ -103,7 +86,6 @@ func New(baseURL string, httpClient HTTPDoer) *Client {
 	}
 }
 
-
 func NewWithConfig(cfg *config.Config, httpClient HTTPDoer) *Client {
 	if cfg == nil {
 		cfg = config.DefaultConfig()
@@ -128,11 +110,9 @@ func NewWithConfig(cfg *config.Config, httpClient HTTPDoer) *Client {
 	}
 }
 
-
 func DefaultClient() *Client {
 	return NewWithConfig(config.DefaultConfig(), nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*http.Response, error) {
 	u, err := url.Parse(c.BaseURL + endpoint)
@@ -144,7 +124,6 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 	if params == nil {
 		params = url.Values{}
 	}
-
 
 	if c.SourceApp != "" {
 		params.Set("sourceapp", c.SourceApp)
@@ -160,11 +139,9 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("failed to create request: %w", err))
 	}
 
-
 	if c.UserAgent != "" {
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
-
 
 	start := time.Now()
 	resp, err := c.HTTPClient.Do(req)
@@ -175,7 +152,6 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("request failed: %w", err))
 	}
 
-
 	if duration > 10*time.Second {
 		c.Logger.Warning("Slow request to %s took %v", u.String(), duration)
 	}
@@ -185,17 +161,14 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 	return resp, nil
 }
 
-
 func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values, target interface{}) error {
 	start := time.Now()
 	endpointType := extractEndpointType(endpoint)
-
 
 	if c.Cache != nil {
 		if cached, found := c.Cache.Get(ctx, endpoint, params); found {
 			c.Logger.Debug("Cache hit for endpoint %s", endpoint)
 			metrics.RecordCacheHit()
-
 
 			if err := copyInterface(cached, target); err != nil {
 				c.Logger.Warning("Failed to copy cached data: %v", err)
@@ -209,7 +182,6 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 
 	metrics.RecordCacheMiss()
 
-
 	select {
 	case ripeLimiter <- struct{}{}:
 		metrics.RecordRateLimitWait()
@@ -220,7 +192,6 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	}
 
 	c.Logger.Debug("Cache miss for endpoint %s, making API request", endpoint)
-
 
 	metrics.StartRequest()
 	defer func() {
@@ -250,7 +221,6 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 		return errors.ErrServerError.WithError(fmt.Errorf("failed to decode response: %w", err))
 	}
 
-
 	if c.Cache != nil {
 		c.Cache.Set(ctx, endpoint, params, target)
 		c.Logger.Debug("Cached response for endpoint %s", endpoint)
@@ -261,17 +231,14 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	return nil
 }
 
-
 func extractEndpointType(endpoint string) string {
 
 	if len(endpoint) > 6 && endpoint[:6] == "/data/" {
 		return endpoint[6:]
 	}
 
-
 	return endpoint
 }
-
 
 func copyInterface(source, target interface{}) error {
 	data, err := json.Marshal(source)

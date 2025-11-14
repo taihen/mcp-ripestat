@@ -1,4 +1,3 @@
-
 package bgpstate
 
 import (
@@ -11,15 +10,12 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/bgp-state/data.json"
 )
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -29,11 +25,9 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 type Options struct {
 	Resource       string `json:"resource"`
@@ -41,7 +35,6 @@ type Options struct {
 	RRCs           string `json:"rrcs,omitempty"`
 	UnixTimestamps bool   `json:"unix_timestamps,omitempty"`
 }
-
 
 func (c *Client) Get(ctx context.Context, opts Options) (*Response, error) {
 	if opts.Resource == "" {

@@ -1,4 +1,3 @@
-
 package networkinfo
 
 import (
@@ -11,15 +10,12 @@ import (
 )
 
 const (
-
 	EndpointPath = "/data/network-info/data.json"
 )
-
 
 type Client struct {
 	client *client.Client
 }
-
 
 func NewClient(c *client.Client) *Client {
 	if c == nil {
@@ -29,11 +25,9 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
-
 
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
@@ -48,7 +42,6 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 		return nil, errors.ErrServerError.WithError(fmt.Errorf("failed to get network information: %w", err))
 	}
 
-
 	for i, asn := range response.Data.ASNs {
 		if _, ok := asn.(string); !ok {
 
@@ -58,7 +51,6 @@ func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 
 	return &response, nil
 }
-
 
 func GetNetworkInfo(ctx context.Context, resource string) (*Response, error) {
 	return DefaultClient().Get(ctx, resource)
