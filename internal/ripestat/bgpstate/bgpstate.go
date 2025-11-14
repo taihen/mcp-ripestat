@@ -1,4 +1,3 @@
-// Package bgpstate provides access to the RIPEstat bgp-state API.
 package bgpstate
 
 import (
@@ -11,16 +10,13 @@ import (
 )
 
 const (
-	// EndpointPath is the path to the RIPEstat data API for BGP state information.
 	EndpointPath = "/data/bgp-state/data.json"
 )
 
-// Client provides methods to interact with the RIPEstat bgp-state API.
 type Client struct {
 	client *client.Client
 }
 
-// NewClient creates a new Client for the RIPEstat bgp-state API.
 func NewClient(c *client.Client) *Client {
 	if c == nil {
 		c = client.DefaultClient()
@@ -29,12 +25,10 @@ func NewClient(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
-// DefaultClient returns a new Client with default settings.
 func DefaultClient() *Client {
 	return NewClient(nil)
 }
 
-// Options represents parameters for BGP State API requests.
 type Options struct {
 	Resource       string `json:"resource"`
 	Timestamp      string `json:"timestamp,omitempty"`
@@ -42,7 +36,6 @@ type Options struct {
 	UnixTimestamps bool   `json:"unix_timestamps,omitempty"`
 }
 
-// Get fetches BGP state information for the specified resource.
 func (c *Client) Get(ctx context.Context, opts Options) (*Response, error) {
 	if opts.Resource == "" {
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))

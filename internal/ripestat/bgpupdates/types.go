@@ -35,25 +35,22 @@ type UpdateAttributes struct {
 	Community    []string `json:"community,omitempty"`
 }
 
-// CustomTime handles the custom timestamp format used by the BGP Updates API.
 type CustomTime struct {
 	time.Time
 }
 
-// UnmarshalJSON implements json.Unmarshaler for CustomTime.
 func (ct *CustomTime) UnmarshalJSON(data []byte) error {
 	var timeStr string
 	if err := json.Unmarshal(data, &timeStr); err != nil {
 		return err
 	}
 
-	// Try multiple time formats that the API might return
 	formats := []string{
-		"2006-01-02T15:04:05",      // Most common format without timezone
-		"2006-01-02T15:04:05Z",     // With Z timezone
-		"2006-01-02T15:04:05.000Z", // With milliseconds and Z timezone
-		time.RFC3339,               // Standard RFC3339 format
-		time.RFC3339Nano,           // RFC3339 with nanoseconds
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05.000Z",
+		time.RFC3339,
+		time.RFC3339Nano,
 	}
 
 	for _, format := range formats {

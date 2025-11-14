@@ -1,4 +1,4 @@
-# 🌊 RIPEstat Investigation Flows
+# RIPEstat Investigation Flows
 
 Below you will find example prompts for the `mcp-ripestat` server.
 
@@ -7,9 +7,26 @@ Below you will find example prompts for the `mcp-ripestat` server.
 > `mcp-ripestat`. They help prioritize new features based on real-world
 > investigation scenarios.
 
-## 🛠 Available Tools
+## Available Tools
 
-The current implementation provides these RIPEstat API endpoints:
+This MCP server provides **7 directly accessible tools**:
+
+### Direct User-Facing Tools
+
+- **investigateResource** - Primary investigation tool with auto-detection and intelligent routing
+- **analyzeRouting** - BGP and routing analysis with timeframe support (includes BGP state via `looking-glass` analysis)
+- **queryRegistry** - Registry and administrative data lookup
+- **validateSecurity** - Security and compliance checks (RPKI, abuse contacts)
+- **exploreRelationships** - Network topology and relationships
+- **searchByLocation** - Geographic analysis by country
+- **getWhatsMyIP** - Utility tool to get caller's public IP address
+
+> [!IMPORTANT]
+> **Only these 7 tools are directly callable**. All other endpoints listed below are **only accessible through the consolidated tools** and cannot be called directly.
+
+### Underlying RIPEstat Endpoints (Internal Implementation)
+
+The consolidated tools automatically route to these RIPEstat API endpoints internally. These endpoints are **not directly accessible** - they are called automatically by the consolidated tools based on resource type and requested operations:
 
 **Core Network Analysis:**
 
@@ -33,7 +50,7 @@ The current implementation provides these RIPEstat API endpoints:
 - `getBGPlay` - BGP routing events and timeline for IP addresses/prefixes
 - `getBGPUpdates` - BGP update activity and routing changes for IP addresses/prefixes
 - `getASPathLength` - AS path length statistics and distribution data for route optimization analysis
-- `getBGPState` - BGP routing table state for IP addresses/prefixes as observed by RIS collectors
+- `getBGPState` - BGP routing table state for IP addresses/prefixes as observed by RIS collectors (available via `analyzeRouting` with `analysis: ["looking-glass"]`)
 
 **Security & Compliance:**
 
@@ -51,7 +68,7 @@ The current implementation provides these RIPEstat API endpoints:
 
 ---
 
-## 📊 Basic Prompts by Input Type
+## Basic Prompts by Input Type
 
 ### IP Address Queries
 
@@ -63,8 +80,8 @@ The current implementation provides these RIPEstat API endpoints:
 "Show allocation history for 8.8.8.8"
 "Show BGP play data for 8.8.8.8"
 "What's the network ownership of 2001:db8::1?"
-"Get BGP state for IP 1.1.1.1"
-"Show current BGP routing table for 8.8.8.8"
+"Analyze routing for 1.1.1.1 with looking glass data"
+"Show current BGP routing table for 8.8.8.8 using looking glass analysis"
 ```
 
 ### IP Prefix Queries
@@ -78,9 +95,9 @@ The current implementation provides these RIPEstat API endpoints:
 "Show allocation history for 193.0.0.0/21"
 "Find related prefixes connected to 193.0.0.0/21"
 "Find the network owner of 198.51.100.0/24"
-"Get current BGP state for prefix 8.8.8.0/24"
-"Show BGP routing table entries for 193.0.0.0/21"
-"What's the BGP state for 104.16.0.0/13 as seen by RIS collectors?"
+"Analyze routing for 8.8.8.0/24 with looking glass to see current BGP state"
+"Show BGP routing table entries for 193.0.0.0/21 using looking glass analysis"
+"What's the BGP state for 104.16.0.0/13 as seen by RIS collectors? Use looking glass analysis"
 ```
 
 ### Autonomous System (ASN) Queries
@@ -147,9 +164,22 @@ The current implementation provides these RIPEstat API endpoints:
 "Get my real client IP address (bypassing proxies/load balancers)"
 ```
 
+### BGP State & Looking Glass Queries
+
+```shell
+"Analyze routing for 8.8.8.8 with looking glass analysis"
+"Get BGP routing table state for prefix 193.0.0.0/21 using looking glass"
+"Show me the BGP state for 1.1.1.1 as observed by RIS collectors"
+"Analyze routing with looking glass data for 104.16.0.0/13"
+"Get current BGP routing table entries for 8.8.8.0/24 from RIPE collectors"
+```
+
+> [!TIP]
+> BGP state queries are handled through the `analyzeRouting` tool with `analysis: ["looking-glass"]`. The server automatically routes these requests to both `getLookingGlass` and `getBGPState` endpoints for complete BGP visibility data.
+
 ---
 
-## 🔗 Advanced Chained Prompts
+## Advanced Chained Prompts
 
 ### Security Analysis Chains
 
@@ -227,8 +257,8 @@ and verify routing stability over the past week."
 ### Geopolitical Analysis Chains
 
 ```shell
-“List every routed ASN registered in 🇷🇺 Russia and the countries where their
-prefixes are actually being announced from.”
+"List every routed ASN registered in Russia and the countries where their
+prefixes are actually being announced from."
 
 “Which ASNs that appear in OFAC-sanctioned countries are transiting traffic
 through EU IXPs?"
@@ -236,7 +266,7 @@ through EU IXPs?"
 
 ---
 
-## 🌐 Multi-MCP Server Integration
+## Multi-MCP Server Integration
 
 Combine `mcp-ripestat` with other MCP servers for comprehensive investigations:
 
@@ -255,14 +285,17 @@ check routing legitimacy, and find appropriate abuse contacts."
 
 ---
 
-## 💡 Tips and Hints
+## Tips and Hints
 
 ### Tool selection
 
-- If your client supports explicit tool selection, prefix the prompt.
+- **Use consolidated tools**: Always use the 7 available tools (`investigateResource`, `analyzeRouting`, `queryRegistry`, `validateSecurity`, `exploreRelationships`, `searchByLocation`, `getWhatsMyIP`)
+- **Do not call individual endpoints directly**: Endpoints like `getNetworkInfo`, `getASOverview`, etc. are internal implementation details and cannot be called directly
+- If your client supports explicit tool selection, use the consolidated tool names:
 
 ```shell
-@ripestat announced_prefixes AS61138 starttime=2025-06-24T00:00Z
+@ripestat investigateResource resource="AS61138" operations=["overview", "routing"]
+@ripestat analyzeRouting resource="8.8.8.8" analysis=["looking-glass"]
 ```
 
 ### Query Optimization
@@ -281,14 +314,126 @@ check routing legitimacy, and find appropriate abuse contacts."
 
 ### Advanced Techniques
 
-- **Historical snapshots**: Compare current state with specific past dates using `query_time`
-- **Regional analysis**: Request BGP data from specific RIPE RRC collectors
-- **Bulk operations**: Process multiple prefixes or ASNs in a single investigation
-- **Cross-validation**: Use multiple tools to verify the same information from different angles
+#### Multi-Operation Investigations
 
-### Integration Strategies
+Use `investigateResource` with multiple operations to gather related data in a single call:
 
-- **Start with RIPEstat**: Use network discovery as foundation for other MCP server queries
-- **Chain efficiently**: Pass RIPEstat results (IP ranges, ASNs) as input to other servers
-- **Correlate data**: Match timestamps between different data sources for event correlation
-- **Automate workflows**: Create repeatable investigation patterns for common use cases
+```shell
+"Investigate 8.8.8.8 with overview, routing, security, and history operations"
+"Get comprehensive analysis of AS15169 including overview, neighbors, and relationships"
+"Analyze prefix 193.0.0.0/21 with routing, security, hierarchy, and history"
+```
+
+**Operations available**: `overview`, `routing`, `security`, `history`, `neighbors`, `relationships`, `hierarchy`
+
+**Depth control**: Use `depth` parameter (`basic`, `detailed`, `comprehensive`) to control the level of detail returned.
+
+#### Timeframe-Based Routing Analysis
+
+Use `analyzeRouting` with timeframe parameters to analyze routing changes over time:
+
+```shell
+"Analyze routing consistency for 8.8.8.0/24 over the past week"
+"Get routing updates for AS15169 in the last month"
+"Show BGP path optimization for 193.0.0.0/21 over the past day"
+```
+
+**Timeframes**: `current`, `1d`, `1w`, `1m`
+
+**Analysis types**: `consistency`, `path-optimization`, `updates`, `looking-glass`
+
+#### Comprehensive Security Audits
+
+Combine `validateSecurity` with `investigateResource` for security assessments:
+
+```shell
+"Validate security for 8.8.8.0/24 with RPKI, abuse contacts, and BGP hijacking checks"
+"Check security compliance for AS15169 including all validation checks"
+```
+
+**Security checks**: `rpki`, `abuse-contacts`, `bgp-hijacking`
+
+#### Relationship Exploration Strategies
+
+Use `exploreRelationships` with different scopes to map network topology:
+
+```shell
+"Explore direct neighbors for AS15169"
+"Show extended relationships for 193.0.0.0/21 including announced prefixes and related networks"
+"Get all relationship types for AS3333 with extended scope"
+```
+
+**Relationship types**: `neighbors`, `announced-prefixes`, `related-networks`
+
+**Scope options**: `direct` (immediate relationships) or `extended` (broader network view)
+
+#### Registry Data Retrieval
+
+Use `queryRegistry` with format control for administrative data:
+
+```shell
+"Get detailed WHOIS information for 8.8.8.8"
+"Query registry for 193.0.0.0/21 with allocation history and hierarchy"
+"Retrieve comprehensive registry data for AS15169 including contacts"
+```
+
+**Data types**: `whois`, `allocation-history`, `hierarchy`, `contacts`
+
+**Format options**: `summary` (default) or `detailed` (more comprehensive)
+
+#### Geographic Analysis
+
+Use `searchByLocation` for country-based network analysis:
+
+```shell
+"Show all ASNs registered in the Netherlands"
+"Get prefix statistics for Germany"
+"List all prefixes announced from Switzerland"
+```
+
+**Location types**: `asns`, `prefixes`, `statistics`
+
+#### Cross-Validation Techniques
+
+Combine multiple tools to verify information from different perspectives:
+
+```shell
+"Compare routing status from analyzeRouting with registry data from queryRegistry for 8.8.8.0/24"
+"Validate security findings against relationship data for AS15169"
+"Cross-check network ownership from investigateResource with geographic data from searchByLocation"
+```
+
+#### Tool Chaining Strategies
+
+Chain tools efficiently by using outputs from one tool as inputs to another:
+
+```shell
+"First get all ASNs for country US, then investigate routing for each major ASN"
+"Find all prefixes announced by AS15169, then validate security for each prefix"
+"Get neighbors for AS3333, then explore relationships for each neighbor"
+```
+
+#### BGP State and Looking Glass Analysis
+
+Access BGP routing table state through `analyzeRouting`:
+
+```shell
+"Analyze routing for 8.8.8.8 with looking glass to see current BGP state"
+"Get BGP routing table entries for 193.0.0.0/21 using looking glass analysis"
+"Show BGP state from RIS collectors for prefix 104.16.0.0/13"
+```
+
+**Note**: `looking-glass` analysis automatically retrieves both `getLookingGlass` and `getBGPState` data for complete BGP visibility.
+
+#### Efficient Resource Detection
+
+The server automatically detects resource types - no need to specify:
+
+```shell
+"Investigate 8.8.8.8"        # Automatically detected as IP address
+"Analyze 193.0.0.0/21"      # Automatically detected as IP prefix
+"Query registry for AS15169" # Automatically detected as ASN
+"Search by location US"      # Automatically detected as country code
+```
+
+**Supported formats**: IP addresses (IPv4/IPv6), CIDR prefixes, ASNs (with or without "AS" prefix), ISO country codes (2-letter)
