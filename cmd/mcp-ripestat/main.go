@@ -153,12 +153,12 @@ func manifestHandler(w http.ResponseWriter, r *http.Request) {
 		Description: "A server for the RIPEstat Data API, providing network information for IP addresses and prefixes.",
 		Functions:   functions,
 	}
-	writeJSON(w, manifest, http.StatusOK)
+	writeJSON(w, manifest)
 }
 
-func writeJSON(w http.ResponseWriter, v interface{}, statusCode int) {
+func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
+	w.WriteHeader(http.StatusOK)
 
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {

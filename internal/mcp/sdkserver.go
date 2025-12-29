@@ -136,7 +136,7 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 }
 
 // handleGetWhatsMyIP handles the getWhatsMyIP tool call.
-func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Try to extract client IP from HTTP request context
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
@@ -190,7 +190,7 @@ func createToolResultFromJSON(data interface{}) (*mcp.CallToolResult, error) {
 // NewStreamableHTTPHandler creates an HTTP handler for the MCP server with
 // custom middleware for CORS, origin validation, and HTTP context passing.
 func (s *SDKServer) NewStreamableHTTPHandler() http.Handler {
-	sdkHandler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
+	sdkHandler := mcp.NewStreamableHTTPHandler(func(_ *http.Request) *mcp.Server {
 		return s.mcpServer
 	}, &mcp.StreamableHTTPOptions{
 		JSONResponse: true, // Return JSON instead of SSE for simpler client compatibility
@@ -206,7 +206,7 @@ type httpHandler struct {
 	sdkHandler http.Handler
 }
 
-// Allowed origins for CORS
+// Allowed origins for CORS.
 var allowedOrigins = []string{
 	"http://localhost",
 	"https://localhost",
@@ -288,7 +288,7 @@ func (h *httpHandler) handleCORS(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *httpHandler) handleEndpointInfo(w http.ResponseWriter, r *http.Request) {
+func (h *httpHandler) handleEndpointInfo(w http.ResponseWriter, _ *http.Request) {
 	response := map[string]interface{}{
 		"service":     "mcp-ripestat",
 		"protocol":    "MCP",
@@ -315,4 +315,3 @@ func (h *httpHandler) handleEndpointInfo(w http.ResponseWriter, r *http.Request)
 		slog.Error("failed to write endpoint info response", "err", err)
 	}
 }
-

@@ -75,7 +75,7 @@ func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
 	data := map[string]string{"key": "value"}
 
-	writeJSON(w, data, http.StatusOK)
+	writeJSON(w, data)
 
 	resp := w.Result()
 
@@ -173,7 +173,7 @@ func TestWriteJSON_EncodingError(t *testing.T) {
 	// Create a value that cannot be marshaled to JSON (channel)
 	invalidValue := make(chan int)
 
-	writeJSON(w, invalidValue, http.StatusOK)
+	writeJSON(w, invalidValue)
 
 	// The function should still set the status code and content type
 	if w.Code != http.StatusOK {
@@ -267,7 +267,7 @@ func TestWriteJSON_EncoderFail(_ *testing.T) {
 	// Create a ResponseWriter that will fail on Write
 	w := &failingResponseWriter{}
 
-	writeJSON(w, map[string]string{"key": "value"}, http.StatusOK)
+	writeJSON(w, map[string]string{"key": "value"})
 
 	// The function should handle the error gracefully (it logs but doesn't return error)
 	// We just verify it doesn't panic
