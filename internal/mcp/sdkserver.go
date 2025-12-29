@@ -152,7 +152,7 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 			}, nil
 		}
 
-		return createToolResultFromJSON(result)
+		return createToolResultFromJSON(result), nil
 	}
 }
 
@@ -182,7 +182,7 @@ func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolReque
 				IsError: true,
 			}, nil
 		}
-		return createToolResultFromJSON(result)
+		return createToolResultFromJSON(result), nil
 	}
 
 	// Fallback to server's IP
@@ -193,7 +193,7 @@ func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolReque
 			IsError: true,
 		}, nil
 	}
-	return createToolResultFromJSON(result)
+	return createToolResultFromJSON(result), nil
 }
 
 // formatToolError formats an error for tool output.
@@ -206,18 +206,18 @@ func formatToolError(err error) string {
 }
 
 // createToolResultFromJSON creates a CallToolResult from a JSON-serializable value.
-func createToolResultFromJSON(data interface{}) (*mcp.CallToolResult, error) {
+func createToolResultFromJSON(data interface{}) *mcp.CallToolResult {
 	jsonData, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Error marshaling result: %v", err)}},
 			IsError: true,
-		}, nil
+		}
 	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: string(jsonData)}},
-	}, nil
+	}
 }
 
 // NewStreamableHTTPHandler creates an HTTP handler for the MCP server with

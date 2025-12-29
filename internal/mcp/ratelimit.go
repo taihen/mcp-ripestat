@@ -39,9 +39,7 @@ type clientBucket struct {
 
 // DefaultRateLimitConfig returns the default rate limit configuration.
 // It can be overridden via environment variables:
-// - RATE_LIMIT_ENABLED: "true" or "false" (default: "true")
-// - RATE_LIMIT_RPS: requests per second (default: 10)
-// - RATE_LIMIT_BURST: burst size (default: 20)
+// RATE_LIMIT_ENABLED, RATE_LIMIT_RPS, and RATE_LIMIT_BURST.
 func DefaultRateLimitConfig() RateLimitConfig {
 	config := RateLimitConfig{
 		RequestsPerSecond: 10,
@@ -172,4 +170,3 @@ func extractClientIPForRateLimit(r *http.Request) string {
 	}
 	return r.RemoteAddr
 }
-

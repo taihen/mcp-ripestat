@@ -84,8 +84,8 @@ func NewWithOptions(ttls map[string]time.Duration, maxEntries int) *Cache {
 // getMaxEntriesFromEnv reads the max entries from environment variable.
 func getMaxEntriesFromEnv() int {
 	if maxStr := os.Getenv("CACHE_MAX_ENTRIES"); maxStr != "" {
-		if max, err := strconv.Atoi(maxStr); err == nil && max > 0 {
-			return max
+		if maxVal, err := strconv.Atoi(maxStr); err == nil && maxVal > 0 {
+			return maxVal
 		}
 	}
 	return DefaultMaxEntries
@@ -261,15 +261,15 @@ func (c *Cache) GetTTL(endpointType string) (time.Duration, bool) {
 
 // SetMaxEntries updates the maximum number of cache entries.
 // Entries will be evicted if the new limit is smaller than current size.
-func (c *Cache) SetMaxEntries(max int) {
-	if max <= 0 {
+func (c *Cache) SetMaxEntries(maxEntries int) {
+	if maxEntries <= 0 {
 		return
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.maxEntries = max
+	c.maxEntries = maxEntries
 
 	// Evict entries if over the new limit
 	for c.lruList.Len() > c.maxEntries {
@@ -308,4 +308,3 @@ func (c *Cache) removeElementLocked(elem *list.Element) {
 		delete(c.data, e.key)
 	}
 }
-
