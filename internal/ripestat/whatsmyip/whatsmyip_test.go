@@ -328,3 +328,99 @@ func TestIsValidIP(t *testing.T) {
 		})
 	}
 }
+
+func TestProxyConfig_IsTrustedProxy(t *testing.T) {
+	config := DefaultProxyConfig()
+
+	tests := []struct {
+		ip       string
+		expected bool
+	}{
+		{"10.0.0.1", true},        // Private range
+		{"172.16.0.1", true},      // Private range
+		{"192.168.1.1", true},     // Private range
+		{"127.0.0.1", true},       // Loopback
+		{"8.8.8.8", false},        // Public IP
+		{"203.0.113.1", false},    // Documentation range (public)
+		{"::1", true},             // IPv6 loopback
+		{"fc00::1", true},         // IPv6 private
+		{"2001:db8::1", false},    // IPv6 documentation (public)
+		{"invalid", false},        // Invalid IP
+		{"", false},               // Empty
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ip, func(t *testing.T) {
+			result := config.IsTrustedProxy(tt.ip)
+			if result != tt.expected {
+				t.Errorf("IsTrustedProxy(%q) = %v, expected %v", tt.ip, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestProxyConfig_NilConfig(t *testing.T) {
+	var config *ProxyConfig
+	if config.IsTrustedProxy("10.0.0.1") {
+		t.Error("Expected nil config to return false")
+	}
+}
+
+func TestExtractClientIPWithConfig(t *testing.T) {
+	// Create a config that trusts 10.0.0.0/8
+	config := DefaultProxyConfig()
+
+	t.Run("trusts XFF from trusted proxy", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "10.0.0.1:12345" // Trusted proxy
+		req.Header.Set("X-Forwarded-For", "203.0.113.50")
+
+		ip := ExtractClientIPWithConfig(req, config)
+		if ip != "203.0.113.50" {
+			t.Errorf("Expected 203.0.113.50, got %s", ip)
+		}
+	})
+
+	t.Run("ignores XFF from untrusted source", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "8.8.8.8:12345" // Not a trusted proxy
+		req.Header.Set("X-Forwarded-For", "203.0.113.50")
+
+		ip := ExtractClientIPWithConfig(req, config)
+		if ip != "8.8.8.8" {
+			t.Errorf("Expected 8.8.8.8 (direct connection), got %s", ip)
+		}
+	})
+
+	t.Run("uses RemoteAddr when no config", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = "10.0.0.1:12345"
+		req.Header.Set("X-Forwarded-For", "203.0.113.50")
+
+		ip := ExtractClientIPWithConfig(req, nil)
+		if ip != "10.0.0.1" {
+			t.Errorf("Expected 10.0.0.1, got %s", ip)
+		}
+	})
+}
+
+func TestExtractRemoteIP(t *testing.T) {
+	tests := []struct {
+		remoteAddr string
+		expected   string
+	}{
+		{"192.168.1.1:12345", "192.168.1.1"},
+		{"192.168.1.1", "192.168.1.1"},
+		{"[::1]:12345", "::1"},
+		{"::1", "::1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.remoteAddr, func(t *testing.T) {
+			result := extractRemoteIP(tt.remoteAddr)
+			if result != tt.expected {
+				t.Errorf("extractRemoteIP(%q) = %q, expected %q", tt.remoteAddr, result, tt.expected)
+			}
+		})
+	}
+}
