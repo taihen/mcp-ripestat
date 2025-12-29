@@ -46,6 +46,6 @@ implemented before Sprint 9 - depending on the needs of the project.
 | 29     | `sprint-29` | v2.13.0 | AS Path Length                                                  | `as-path-length`             | Completed |
 | 30     | `sprint-30` | v2.14.0 | AS Routing Consistency                                          | `as-routing-consistency`     | Completed |
 | 31     | `sprint-31` | TBD     | Sign packages                                                   | N/A                          | Planned   |
-| 32     | `sprint-32` | TBD     | Instead of own MCP implementaions use mcp-go if oauth is merged | N/A                          | Planned   |
+| 32     | `sprint-32` | v4.0.0  | Migration to official MCP Go SDK                                | N/A                          | Completed |
 | 33     | `sprint-33` | v2.17.0 | BGP State                                                       | `bgp-state`                  | Completed |
-| 34     | `sprint-34` | v3.0.0  | MCP Tool Consolidation - Intelligent Routing Architecture       | N/A                          | Planned   |
+| 34     | `sprint-34` | v3.0.0  | MCP Tool Consolidation - Intelligent Routing Architecture       | N/A                          | Completed   |

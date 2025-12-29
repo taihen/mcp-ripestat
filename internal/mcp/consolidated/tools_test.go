@@ -19,8 +19,9 @@ func TestTopologicalSort(t *testing.T) {
 			name:         "no dependencies",
 			endpoints:    []string{"getWhois", "getASOverview"},
 			dependencies: map[string][]string{},
-			want:         []string{"getWhois", "getASOverview"},
+			want:         nil,
 			wantErr:      false,
+			verifyDeps:   true, // Order is not deterministic when there are no dependencies
 		},
 		{
 			name:      "single dependency",

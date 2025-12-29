@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"io"
 	"net/http"
@@ -103,30 +102,6 @@ func TestWriteJSON(t *testing.T) {
 
 	if result["key"] != "value" {
 		t.Errorf("Expected result[\"key\"] to be 'value', got %q", result["key"])
-	}
-}
-
-func TestWriteJSONError(t *testing.T) {
-	w := httptest.NewRecorder()
-	writeJSONError(w, "test error", http.StatusBadRequest)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
-	}
-
-	contentType := w.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Errorf("Expected Content-Type to be 'application/json', got %q", contentType)
-	}
-
-	var response map[string]string
-	err := json.Unmarshal(w.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	if response["error"] != "test error" {
-		t.Errorf("Expected error message to be 'test error', got %q", response["error"])
 	}
 }
 
@@ -345,140 +320,6 @@ func TestRun_InvalidPort(t *testing.T) {
 	}
 }
 
-func TestMCPHandler(t *testing.T) {
-	server := mcp.NewServer("test-server", version, false)
-
-	// Test initialize request
-	initReq := mcp.NewRequest("initialize", map[string]interface{}{
-		"protocolVersion": "2025-03-26",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo": map[string]interface{}{
-			"name":    "test-client",
-			"version": version,
-		},
-	}, 1)
-
-	reqBody, err := json.Marshal(initReq)
-	if err != nil {
-		t.Fatalf("Failed to marshal request: %v", err)
-	}
-
-	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	mcpHandler(w, req, server)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
-	}
-
-	if resp.Header.Get("Content-Type") != "application/json" {
-		t.Errorf("Expected Content-Type application/json, got %s", resp.Header.Get("Content-Type"))
-	}
-}
-
-func TestMCPHandler_Notification(t *testing.T) {
-	server := mcp.NewServer("test-server", version, false)
-
-	// Test initialized notification
-	notif := mcp.NewNotification("initialized", nil)
-
-	reqBody, err := json.Marshal(notif)
-	if err != nil {
-		t.Fatalf("Failed to marshal notification: %v", err)
-	}
-
-	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	mcpHandler(w, req, server)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		t.Errorf("Expected status code 204 for notification, got %d", resp.StatusCode)
-	}
-}
-
-func TestMCPHandler_InvalidJSON(t *testing.T) {
-	server := mcp.NewServer("test-server", version, false)
-
-	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte("{invalid json}")))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	mcpHandler(w, req, server)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200 even for invalid JSON, got %d", resp.StatusCode)
-	}
-
-	// Should return a JSON-RPC error response
-	var response mcp.Response
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("Failed to decode error response: %v", err)
-	}
-
-	if response.Error == nil {
-		t.Error("Expected error response for invalid JSON")
-	}
-
-	if response.Error.Code != mcp.ParseError {
-		t.Errorf("Expected ParseError code %d, got %d", mcp.ParseError, response.Error.Code)
-	}
-}
-
-func TestMCPHandler_MethodNotAllowed(t *testing.T) {
-	server := mcp.NewServer("test-server", version, false)
-
-	// Use PUT method which is not supported
-	req := httptest.NewRequest("PUT", "/mcp", nil)
-	w := httptest.NewRecorder()
-
-	mcpHandler(w, req, server)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status code 405, got %d", resp.StatusCode)
-	}
-}
-
-func TestMCPHandler_ReadBodyError(t *testing.T) {
-	server := mcp.NewServer("test-server", version, false)
-
-	// Create a request with a body that will cause a read error
-	req := httptest.NewRequest("POST", "/mcp", &errorReader{})
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	mcpHandler(w, req, server)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status code 400, got %d", resp.StatusCode)
-	}
-}
-
-// errorReader is a helper type that always returns an error when read.
-type errorReader struct{}
-
-func (e *errorReader) Read(_ []byte) (n int, err error) {
-	return 0, errors.New("read error")
-}
-
 func TestWarmupHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/warmup", nil)
 	w := httptest.NewRecorder()
@@ -591,92 +432,6 @@ func TestStatusHandler(t *testing.T) {
 	}
 }
 
-func TestMCPHandler_ExtendedTimeout(t *testing.T) {
-	server := mcp.NewServer("test-server", version, false)
-
-	// Create a request that should have extended timeout
-	initRequest := mcp.NewRequest("initialize", map[string]interface{}{
-		"protocolVersion": "2025-03-26",
-		"capabilities": map[string]interface{}{
-			"roots": map[string]interface{}{
-				"listChanged": true,
-			},
-		},
-		"clientInfo": map[string]interface{}{
-			"name":    "test-client",
-			"version": version,
-		},
-	}, "1")
-
-	requestData, err := json.Marshal(initRequest)
-	if err != nil {
-		t.Fatalf("Failed to marshal request: %v", err)
-	}
-
-	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(requestData))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// Track start time to verify timeout behavior
-	start := time.Now()
-
-	mcpHandler(w, req, server)
-
-	elapsed := time.Since(start)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
-	}
-
-	// Verify the request completed quickly (not hitting timeout)
-	if elapsed > 5*time.Second {
-		t.Errorf("Request took too long, might indicate timeout issues: %v", elapsed)
-	}
-
-	// Verify response structure
-	var response mcp.Response
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if response.Error != nil {
-		t.Errorf("Expected successful response, got error: %v", response.Error)
-	}
-
-	if response.Result == nil {
-		t.Error("Expected result in response")
-	}
-}
-
-func TestMCPHandler_ServerError(t *testing.T) {
-	// Test error condition by using nil server pointer
-	req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte(`{"jsonrpc": "2.0", "method": "initialize", "id": 1}`)))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	// This should trigger the server.ProcessMessage error path
-	defer func() {
-		if r := recover(); r != nil {
-			// Expected panic due to nil server
-			t.Log("Expected panic due to nil server:", r)
-		}
-	}()
-
-	server := mcp.NewServer("test", version, false)
-	mcpHandler(w, req, server)
-
-	// If we get here, check for proper error handling
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
-	}
-}
-
 // Test error paths for handlers to increase coverage.
 func TestHandlerErrorPaths(t *testing.T) {
 	t.Run("basic_test", func(t *testing.T) {
@@ -755,4 +510,159 @@ func TestMCPEndpointIntegration(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSDKServerMCPHandler tests the SDK-based MCP handler.
+func TestSDKServerMCPHandler(t *testing.T) {
+	server := mcp.NewSDKServer("test-server", "1.0.0", false)
+	handler := server.NewStreamableHTTPHandler()
+
+	t.Run("Initialize", func(t *testing.T) {
+		initReq := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"method":  "initialize",
+			"params": map[string]interface{}{
+				"protocolVersion": "2025-06-18",
+				"capabilities":    map[string]interface{}{},
+				"clientInfo": map[string]interface{}{
+					"name":    "test-client",
+					"version": "1.0.0",
+				},
+			},
+		}
+
+		reqBody, err := json.Marshal(initReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal request: %v", err)
+		}
+
+		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			t.Errorf("Expected status code 200, got %d. Body: %s", resp.StatusCode, string(body))
+		}
+	})
+
+	t.Run("UnsupportedProtocolVersion", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte(`{}`)))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("MCP-Protocol-Version", "2024-01-01")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("Expected status code 400 for unsupported protocol, got %d", resp.StatusCode)
+		}
+	})
+
+	t.Run("InvalidOrigin", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte(`{}`)))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "https://malicious.com")
+		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusForbidden {
+			t.Errorf("Expected status code 403 for invalid origin, got %d", resp.StatusCode)
+		}
+	})
+
+	t.Run("ValidOrigin", func(t *testing.T) {
+		initReq := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"method":  "initialize",
+			"params":  map[string]interface{}{},
+		}
+
+		reqBody, _ := json.Marshal(initReq)
+
+		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		req.Header.Set("Origin", "http://localhost:3000")
+		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			t.Errorf("Expected status code 200 for valid origin, got %d. Body: %s", resp.StatusCode, string(body))
+		}
+
+		// Check CORS header is set
+		if resp.Header.Get("Access-Control-Allow-Origin") != "http://localhost:3000" {
+			t.Errorf("Expected Access-Control-Allow-Origin header to be 'http://localhost:3000', got %s", resp.Header.Get("Access-Control-Allow-Origin"))
+		}
+	})
+
+	t.Run("CORSPreflight", func(t *testing.T) {
+		req := httptest.NewRequest("OPTIONS", "/mcp", nil)
+		req.Header.Set("Origin", "http://localhost:3000")
+		req.Header.Set("Access-Control-Request-Method", "POST")
+		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status code 200 for OPTIONS, got %d", resp.StatusCode)
+		}
+
+		if resp.Header.Get("Access-Control-Allow-Methods") == "" {
+			t.Error("Expected Access-Control-Allow-Methods header")
+		}
+	})
+
+	t.Run("EndpointInfo", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/mcp", nil)
+		req.Header.Set("Origin", "http://localhost:3000")
+		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status code 200 for endpoint info, got %d", resp.StatusCode)
+		}
+
+		var response map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if response["service"] != "mcp-ripestat" {
+			t.Errorf("Expected service 'mcp-ripestat', got %v", response["service"])
+		}
+	})
 }
