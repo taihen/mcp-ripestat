@@ -6,21 +6,25 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
-// supportedProtocolVersion is the only MCP protocol version supported by this server.
-const supportedProtocolVersion = "2025-06-18"
+// supportedProtocolVersion uses the protocol version constant from protocol.go.
+// This ensures consistency across the codebase.
+var supportedProtocolVersion = ProtocolVersion
 
 // SDKServer wraps the official MCP SDK server with RIPEstat-specific functionality.
 type SDKServer struct {
 	mcpServer         *mcp.Server
 	consolidatedTools *consolidated.Tools
 	disableWhatsMyIP  bool
+	rateLimiter       *RateLimiter
 }
 
 // NewSDKServer creates a new MCP server using the official SDK.
@@ -41,6 +45,7 @@ func NewSDKServer(serverName, serverVersion string, disableWhatsMyIP bool) *SDKS
 		mcpServer:         mcpServer,
 		consolidatedTools: consolidatedTools,
 		disableWhatsMyIP:  disableWhatsMyIP,
+		rateLimiter:       NewRateLimiter(DefaultRateLimitConfig()),
 	}
 
 	s.registerTools()
@@ -94,7 +99,19 @@ func (s *SDKServer) registerTools() {
 
 // createConsolidatedToolHandler creates a handler for consolidated tools.
 func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandler {
-	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req *mcp.CallToolRequest) (callResult *mcp.CallToolResult, callErr error) {
+		// Recover from panics to prevent server crash
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("panic in tool handler", "tool", toolName, "panic", r)
+				callResult = &mcp.CallToolResult{
+					Content: []mcp.Content{&mcp.TextContent{Text: "Error: internal error occurred"}},
+					IsError: true,
+				}
+				callErr = nil
+			}
+		}()
+
 		args := make(map[string]interface{})
 		if len(req.Params.Arguments) > 0 {
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
@@ -140,7 +157,19 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 }
 
 // handleGetWhatsMyIP handles the getWhatsMyIP tool call.
-func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (callResult *mcp.CallToolResult, callErr error) {
+	// Recover from panics to prevent server crash
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("panic in getWhatsMyIP handler", "panic", r)
+			callResult = &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: "Error: internal error occurred"}},
+				IsError: true,
+			}
+			callErr = nil
+		}
+	}()
+
 	// Try to extract client IP from HTTP request context
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
@@ -201,17 +230,19 @@ func (s *SDKServer) NewStreamableHTTPHandler() http.Handler {
 	})
 
 	return &httpHandler{
-		sdkHandler: sdkHandler,
+		sdkHandler:  sdkHandler,
+		rateLimiter: s.rateLimiter,
 	}
 }
 
 // httpHandler wraps the SDK handler with custom middleware.
 type httpHandler struct {
-	sdkHandler http.Handler
+	sdkHandler  http.Handler
+	rateLimiter *RateLimiter
 }
 
-// Allowed origins for CORS.
-var allowedOrigins = []string{
+// Default allowed origins for CORS.
+var defaultAllowedOrigins = []string{
 	"http://localhost",
 	"https://localhost",
 	"http://127.0.0.1",
@@ -220,9 +251,36 @@ var allowedOrigins = []string{
 	"https://claude.ai",
 }
 
+var (
+	allowedOrigins     []string
+	allowedOriginsOnce sync.Once
+)
+
+// getAllowedOrigins returns the list of allowed CORS origins.
+// It reads from the CORS_ALLOWED_ORIGINS environment variable (comma-separated)
+// and merges with the default origins.
+func getAllowedOrigins() []string {
+	allowedOriginsOnce.Do(func() {
+		// Start with defaults
+		allowedOrigins = make([]string, len(defaultAllowedOrigins))
+		copy(allowedOrigins, defaultAllowedOrigins)
+
+		// Add any origins from environment variable
+		if envOrigins := os.Getenv("CORS_ALLOWED_ORIGINS"); envOrigins != "" {
+			for _, origin := range strings.Split(envOrigins, ",") {
+				origin = strings.TrimSpace(origin)
+				if origin != "" {
+					allowedOrigins = append(allowedOrigins, origin)
+				}
+			}
+		}
+	})
+	return allowedOrigins
+}
+
 // isValidOrigin checks if the origin is in the allowed list.
 func isValidOrigin(origin string) bool {
-	for _, allowed := range allowedOrigins {
+	for _, allowed := range getAllowedOrigins() {
 		if strings.HasPrefix(origin, allowed) {
 			return true
 		}
@@ -231,6 +289,16 @@ func isValidOrigin(origin string) bool {
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Apply rate limiting
+	if h.rateLimiter != nil {
+		clientIP := extractClientIPForRateLimit(r)
+		if !h.rateLimiter.Allow(clientIP) {
+			slog.Warn("rate limit exceeded", "client_ip", clientIP)
+			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+			return
+		}
+	}
+
 	origin := r.Header.Get("Origin")
 	protocolVersion := r.Header.Get("MCP-Protocol-Version")
 
@@ -296,7 +364,7 @@ func (h *httpHandler) handleEndpointInfo(w http.ResponseWriter, _ *http.Request)
 	response := map[string]interface{}{
 		"service":     "mcp-ripestat",
 		"protocol":    "MCP",
-		"version":     "2025-06-18",
+		"version":     ProtocolVersion,
 		"methods":     []string{"POST", "GET", "DELETE"},
 		"description": "RIPEstat Data API MCP Server",
 		"endpoints": map[string]interface{}{

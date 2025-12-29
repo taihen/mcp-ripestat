@@ -270,6 +270,20 @@ func (ct *Tools) executeAndAggregate(
 	}
 
 	for _, endpoint := range sortedEndpoints {
+		// Check for context cancellation before each endpoint call
+		if ctx.Err() != nil {
+			result.Errors[endpoint] = ctx.Err().Error()
+			// Mark remaining endpoints as cancelled
+			for _, remaining := range sortedEndpoints {
+				if _, exists := result.Results[remaining]; !exists {
+					if _, hasError := result.Errors[remaining]; !hasError {
+						result.Errors[remaining] = "cancelled"
+					}
+				}
+			}
+			break
+		}
+
 		endpointParams := translateDepthToEndpointParams(endpoint, depth)
 
 		resourceOverride := extractDependencyData(endpoint, routes.Dependencies, result.Results, endpointParams, resource)

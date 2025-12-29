@@ -143,22 +143,84 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		req.Header.Set("User-Agent", c.UserAgent)
 	}
 
-	start := time.Now()
-	resp, err := c.HTTPClient.Do(req)
-	duration := time.Since(start)
+	// Execute request with retry logic
+	return c.doWithRetry(ctx, req)
+}
 
-	if err != nil {
-		c.Logger.Error("Request failed after %v: %v", duration, err)
-		return nil, errors.ErrServerError.WithError(fmt.Errorf("request failed: %w", err))
+// doWithRetry executes the HTTP request with exponential backoff retry logic.
+func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+	var lastErr error
+	retryCount := 0
+	if c.RetryConfig != nil {
+		retryCount = c.RetryConfig.RetryCount
 	}
 
-	if duration > 10*time.Second {
-		c.Logger.Warning("Slow request to %s took %v", u.String(), duration)
+	waitTime := c.RetryConfig.RetryWaitTime
+	maxWait := c.RetryConfig.MaxRetryWaitTime
+
+	for attempt := 0; attempt <= retryCount; attempt++ {
+		// Check context cancellation before each attempt
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		start := time.Now()
+		resp, err := c.HTTPClient.Do(req)
+		duration := time.Since(start)
+
+		if err == nil {
+			if duration > 10*time.Second {
+				c.Logger.Warning("Slow request to %s took %v", req.URL.String(), duration)
+			}
+
+			// Check if we should retry based on status code
+			if !isRetryableStatusCode(resp.StatusCode) {
+				c.Logger.Debug("Request to %s completed in %v with status: %d", req.URL.String(), duration, resp.StatusCode)
+				return resp, nil
+			}
+
+			// Retryable status code - close body and retry
+			_ = resp.Body.Close()
+			lastErr = fmt.Errorf("received retryable status code: %d", resp.StatusCode)
+			c.Logger.Warning("Retryable status code %d, attempt %d/%d", resp.StatusCode, attempt+1, retryCount+1)
+		} else {
+			lastErr = err
+			c.Logger.Warning("Request failed (attempt %d/%d): %v", attempt+1, retryCount+1, err)
+		}
+
+		// Don't sleep after the last attempt
+		if attempt < retryCount {
+			// Wait before retrying with exponential backoff
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(waitTime):
+			}
+
+			// Exponential backoff: double the wait time, up to max
+			waitTime *= 2
+			if waitTime > maxWait {
+				waitTime = maxWait
+			}
+		}
 	}
 
-	c.Logger.Debug("Request to %s completed in %v with status: %d", u.String(), duration, resp.StatusCode)
+	c.Logger.Error("Request failed after %d attempts: %v", retryCount+1, lastErr)
+	return nil, errors.ErrServerError.WithError(fmt.Errorf("request failed after %d attempts: %w", retryCount+1, lastErr))
+}
 
-	return resp, nil
+// isRetryableStatusCode returns true if the status code indicates a transient error
+// that may succeed on retry.
+func isRetryableStatusCode(statusCode int) bool {
+	switch statusCode {
+	case http.StatusTooManyRequests,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values, target interface{}) error {
