@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
 // RateLimiter implements a per-client token bucket rate limiter.
@@ -148,25 +150,7 @@ func RateLimitMiddleware(limiter *RateLimiter, next http.Handler) http.Handler {
 }
 
 // extractClientIPForRateLimit extracts the client IP for rate limiting purposes.
-// It checks X-Forwarded-For first (assuming trusted proxy), then falls back to RemoteAddr.
+// It securely extracts the client IP by trusting proxy headers only from configured trusted proxies.
 func extractClientIPForRateLimit(r *http.Request) string {
-	// For rate limiting, we use a simpler extraction that assumes
-	// the request is coming through a trusted proxy if X-Forwarded-For is present
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP in the chain
-		for i := 0; i < len(xff); i++ {
-			if xff[i] == ',' {
-				return xff[:i]
-			}
-		}
-		return xff
-	}
-
-	// Fall back to RemoteAddr
-	for i := len(r.RemoteAddr) - 1; i >= 0; i-- {
-		if r.RemoteAddr[i] == ':' {
-			return r.RemoteAddr[:i]
-		}
-	}
-	return r.RemoteAddr
+	return whatsmyip.ExtractClientIP(r)
 }

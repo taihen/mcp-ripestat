@@ -92,15 +92,14 @@ func (s *SDKServer) registerTools() {
 				Description: "Get the caller's public IP address. Respects X-Forwarded-For headers when behind a proxy.",
 				InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
 			},
-			s.handleGetWhatsMyIP,
+			withPanicRecovery(s.handleGetWhatsMyIP, "getWhatsMyIP"),
 		)
 	}
 }
 
-// createConsolidatedToolHandler creates a handler for consolidated tools.
-func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandler {
+// withPanicRecovery wraps a tool handler with panic recovery to prevent server crashes.
+func withPanicRecovery(handler mcp.ToolHandler, toolName string) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (callResult *mcp.CallToolResult, callErr error) {
-		// Recover from panics to prevent server crash
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("panic in tool handler", "tool", toolName, "panic", r)
@@ -111,7 +110,13 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 				callErr = nil
 			}
 		}()
+		return handler(ctx, req)
+	}
+}
 
+// createConsolidatedToolHandler creates a handler for consolidated tools.
+func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandler {
+	handler := func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := make(map[string]interface{})
 		if len(req.Params.Arguments) > 0 {
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
@@ -154,22 +159,11 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 
 		return createToolResultFromJSON(result), nil
 	}
+	return withPanicRecovery(handler, toolName)
 }
 
 // handleGetWhatsMyIP handles the getWhatsMyIP tool call.
-func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (callResult *mcp.CallToolResult, callErr error) {
-	// Recover from panics to prevent server crash
-	defer func() {
-		if r := recover(); r != nil {
-			slog.Error("panic in getWhatsMyIP handler", "panic", r)
-			callResult = &mcp.CallToolResult{
-				Content: []mcp.Content{&mcp.TextContent{Text: "Error: internal error occurred"}},
-				IsError: true,
-			}
-			callErr = nil
-		}
-	}()
-
+func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Try to extract client IP from HTTP request context
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
 		clientIP := whatsmyip.ExtractClientIP(httpReq)

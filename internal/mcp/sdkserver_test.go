@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestNewSDKServer(t *testing.T) {
@@ -129,6 +131,45 @@ func TestSDKServerCreateToolResultFromJSON(t *testing.T) {
 		result := createToolResultFromJSON(data)
 		if !result.IsError {
 			t.Error("Expected IsError to be true for unmarshallable data")
+		}
+	})
+}
+
+func TestWithPanicRecovery(t *testing.T) {
+	t.Run("passes through normal handler", func(t *testing.T) {
+		handler := func(_ context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: "success"}},
+			}, nil
+		}
+
+		wrapped := withPanicRecovery(handler, "testTool")
+		result, err := wrapped(context.Background(), &mcp.CallToolRequest{})
+
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if result.IsError {
+			t.Error("Expected IsError to be false")
+		}
+	})
+
+	t.Run("recovers from panic", func(t *testing.T) {
+		handler := func(_ context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			panic("test panic")
+		}
+
+		wrapped := withPanicRecovery(handler, "testTool")
+		result, err := wrapped(context.Background(), &mcp.CallToolRequest{})
+
+		if err != nil {
+			t.Errorf("Expected no error after recovery, got %v", err)
+		}
+		if result == nil {
+			t.Fatal("Expected result after recovery")
+		}
+		if !result.IsError {
+			t.Error("Expected IsError to be true after panic recovery")
 		}
 	})
 }
