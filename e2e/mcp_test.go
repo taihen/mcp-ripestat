@@ -273,7 +273,7 @@ func TestMCPProtocol(t *testing.T) {
 				t.Fatal("Expected error for nonexistent method")
 			}
 			if response.Error.Code != mcp.MethodNotFound {
-				t.Logf("Got error code %d (expected %d)", response.Error.Code, mcp.MethodNotFound)
+				t.Errorf("Got error code %d (expected %d)", response.Error.Code, mcp.MethodNotFound)
 			}
 		} else if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("Expected status 200 or 400 for unknown method, got %d", resp.StatusCode)
@@ -312,7 +312,7 @@ func TestMCPProtocol(t *testing.T) {
 			}
 
 			if response.Error.Code != mcp.ParseError {
-				t.Logf("Got error code %d (expected %d)", response.Error.Code, mcp.ParseError)
+				t.Errorf("Got error code %d (expected %d)", response.Error.Code, mcp.ParseError)
 			}
 		} else if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("Expected status 200 or 400 for invalid JSON, got %d", resp.StatusCode)
@@ -364,6 +364,7 @@ func sendMCPRequestWithHeaders(t *testing.T, url string, req *mcp.Request, heade
 		resp.Body.Close()
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	resp.Body.Close()
 
 	return resp, &response
 }

@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
+
+// supportedProtocolVersion is the only MCP protocol version supported by this server.
+const supportedProtocolVersion = "2025-06-18"
 
 // SDKServer wraps the official MCP SDK server with RIPEstat-specific functionality.
 type SDKServer struct {
@@ -166,7 +170,7 @@ func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolReque
 // formatToolError formats an error for tool output.
 func formatToolError(err error) string {
 	errStr := err.Error()
-	if len(errStr) > 6 && errStr[:6] == "Error:" {
+	if strings.HasPrefix(errStr, "Error: ") {
 		return errStr
 	}
 	return fmt.Sprintf("Error: %v", err)
@@ -219,7 +223,7 @@ var allowedOrigins = []string{
 // isValidOrigin checks if the origin is in the allowed list.
 func isValidOrigin(origin string) bool {
 	for _, allowed := range allowedOrigins {
-		if len(origin) >= len(allowed) && origin[:len(allowed)] == allowed {
+		if strings.HasPrefix(origin, allowed) {
 			return true
 		}
 	}
@@ -232,13 +236,13 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Default to the only supported protocol version
 	if protocolVersion == "" {
-		protocolVersion = "2025-06-18"
+		protocolVersion = supportedProtocolVersion
 	}
 
-	// Only support 2025-06-18 protocol version
-	if protocolVersion != "2025-06-18" {
+	// Only support the specified protocol version
+	if protocolVersion != supportedProtocolVersion {
 		slog.Warn("unsupported protocol version", "version", protocolVersion)
-		http.Error(w, "Unsupported protocol version. Only 2025-06-18 is supported.", http.StatusBadRequest)
+		http.Error(w, "Unsupported protocol version. Only "+supportedProtocolVersion+" is supported.", http.StatusBadRequest)
 		return
 	}
 
