@@ -124,7 +124,7 @@ func TestWriteJSONError_EncoderFail(_ *testing.T) {
 	data := map[string]string{"key": "value"}
 
 	// This should not panic
-	writeJSON(w, data, http.StatusOK)
+	writeJSON(w, data)
 }
 
 // errorWriter is a mock http.ResponseWriter that fails on Write.

@@ -92,7 +92,7 @@ across multiple concurrent sessions.
 - Make
 
 > [!INFO]
-> No External Dependencies: This project uses only Go standard library.
+> This project uses the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) for protocol handling.
 
 ```bash
 # Clone the repository
