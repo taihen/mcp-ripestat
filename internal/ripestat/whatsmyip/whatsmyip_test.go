@@ -336,17 +336,17 @@ func TestProxyConfig_IsTrustedProxy(t *testing.T) {
 		ip       string
 		expected bool
 	}{
-		{"10.0.0.1", true},        // Private range
-		{"172.16.0.1", true},      // Private range
-		{"192.168.1.1", true},     // Private range
-		{"127.0.0.1", true},       // Loopback
-		{"8.8.8.8", false},        // Public IP
-		{"203.0.113.1", false},    // Documentation range (public)
-		{"::1", true},             // IPv6 loopback
-		{"fc00::1", true},         // IPv6 private
-		{"2001:db8::1", false},    // IPv6 documentation (public)
-		{"invalid", false},        // Invalid IP
-		{"", false},               // Empty
+		{"10.0.0.1", true},     // Private range
+		{"172.16.0.1", true},   // Private range
+		{"192.168.1.1", true},  // Private range
+		{"127.0.0.1", true},    // Loopback
+		{"8.8.8.8", false},     // Public IP
+		{"203.0.113.1", false}, // Documentation range (public)
+		{"::1", true},          // IPv6 loopback
+		{"fc00::1", true},      // IPv6 private
+		{"2001:db8::1", false}, // IPv6 documentation (public)
+		{"invalid", false},     // Invalid IP
+		{"", false},            // Empty
 	}
 
 	for _, tt := range tests {
