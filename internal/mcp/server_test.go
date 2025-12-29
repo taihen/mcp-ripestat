@@ -22,8 +22,8 @@ func TestNewServer(t *testing.T) {
 	if server.disableWhatsMyIP != false {
 		t.Errorf("Expected disableWhatsMyIP to be false, got %v", server.disableWhatsMyIP)
 	}
-	if server.initialized != false {
-		t.Errorf("Expected initialized to be false, got %v", server.initialized)
+	if server.IsInitializedForTest() {
+		t.Errorf("Expected initialized to be false, got true")
 	}
 }
 
@@ -107,14 +107,14 @@ func TestProcessMessage_Initialized(t *testing.T) {
 		t.Errorf("Expected nil result for notification, got %v", result)
 	}
 
-	if !server.initialized {
+	if !server.IsInitializedForTest() {
 		t.Error("Expected server to be initialized")
 	}
 }
 
 func TestProcessMessage_ToolsList(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
-	server.initialized = true
+	server.SetInitializedForTest(true)
 	ctx := context.Background()
 
 	toolsListRequest := `{
@@ -154,7 +154,7 @@ func TestProcessMessage_ToolsList(t *testing.T) {
 
 func TestProcessMessage_ToolsListWithWhatsMyIPDisabled(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", true)
-	server.initialized = true
+	server.SetInitializedForTest(true)
 	ctx := context.Background()
 
 	toolsListRequest := `{
@@ -371,7 +371,7 @@ func TestValidateRequest_Integration(t *testing.T) {
 
 func TestProcessMessage_ToolsCall_InvalidParams(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
-	server.initialized = true
+	server.SetInitializedForTest(true)
 	ctx := context.Background()
 
 	toolsCallRequest := `{
@@ -892,7 +892,7 @@ func TestExecuteToolCall_ArgumentUnmarshalingError(t *testing.T) {
 
 func TestHandleToolsCall_ToolExecutionError(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
-	server.initialized = true
+	server.SetInitializedForTest(true)
 	ctx := context.Background()
 
 	toolsCallRequest := `{

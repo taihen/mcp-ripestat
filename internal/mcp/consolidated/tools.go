@@ -269,7 +269,16 @@ func (ct *Tools) executeAndAggregate(
 		return nil, fmt.Errorf("failed to sort endpoints by dependencies: %w", err)
 	}
 
-	for _, endpoint := range sortedEndpoints {
+	for i, endpoint := range sortedEndpoints {
+		// Check for context cancellation before each endpoint call
+		if ctx.Err() != nil {
+			// Mark this and all remaining endpoints as cancelled
+			for _, remaining := range sortedEndpoints[i:] {
+				result.Errors[remaining] = "cancelled"
+			}
+			break
+		}
+
 		endpointParams := translateDepthToEndpointParams(endpoint, depth)
 
 		resourceOverride := extractDependencyData(endpoint, routes.Dependencies, result.Results, endpointParams, resource)

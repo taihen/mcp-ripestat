@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
@@ -129,12 +130,15 @@ func validateMaxResultsParam(args map[string]interface{}) (int, *ToolResult) {
 }
 
 type Server struct {
-	serverName          string
-	serverVersion       string
+	serverName        string
+	serverVersion     string
+	disableWhatsMyIP  bool
+	consolidatedTools *consolidated.Tools
+
+	// mu protects the initialization state fields
+	mu                  sync.RWMutex
 	initialized         bool
-	disableWhatsMyIP    bool
 	globallyInitialized bool
-	consolidatedTools   *consolidated.Tools
 }
 
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
@@ -148,6 +152,43 @@ func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server 
 		disableWhatsMyIP:  disableWhatsMyIP,
 		consolidatedTools: consolidatedTools,
 	}
+}
+
+// isInitialized returns true if the server has been initialized.
+// This method is thread-safe.
+func (s *Server) isInitialized() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.initialized || s.globallyInitialized
+}
+
+// setInitialized sets the initialized state.
+// This method is thread-safe.
+func (s *Server) setInitialized(initialized bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.initialized = initialized
+}
+
+// setGloballyInitialized sets both initialized and globallyInitialized states.
+// This method is thread-safe.
+func (s *Server) setGloballyInitialized(initialized bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.initialized = initialized
+	s.globallyInitialized = initialized
+}
+
+// SetInitializedForTest sets the initialized state for testing purposes.
+// This method is thread-safe.
+func (s *Server) SetInitializedForTest(initialized bool) {
+	s.setInitialized(initialized)
+}
+
+// IsInitializedForTest returns the initialized state for testing purposes.
+// This method is thread-safe.
+func (s *Server) IsInitializedForTest() bool {
+	return s.isInitialized()
 }
 
 func (s *Server) ProcessMessage(ctx context.Context, data []byte) (interface{}, error) {
@@ -180,12 +221,12 @@ func (s *Server) handleRequest(ctx context.Context, req *Request) (interface{}, 
 	case "initialize":
 		return s.handleInitialize(req)
 	case "tools/list":
-		if !s.initialized && !s.globallyInitialized {
+		if !s.isInitialized() {
 			return NewErrorResponse(InitializationError, "Server not initialized", "Initialize first", req.ID), nil
 		}
 		return s.handleToolsList(req)
 	case "tools/call":
-		if !s.initialized && !s.globallyInitialized {
+		if !s.isInitialized() {
 			return NewErrorResponse(InitializationError, "Server not initialized", "Initialize first", req.ID), nil
 		}
 		return s.handleToolsCall(ctx, req)
@@ -233,8 +274,7 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		"is_legacy", isLegacyClient)
 
 	if isLegacyClient {
-		s.initialized = true
-		s.globallyInitialized = true
+		s.setGloballyInitialized(true)
 		slog.Info("auto-initialized server for legacy protocol version", "version", params.ProtocolVersion)
 
 		result := CreateLegacyInitializeResult(s.serverName, s.serverVersion)
@@ -245,7 +285,7 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
 	}
 
-	s.initialized = true
+	s.setInitialized(true)
 	slog.Info("auto-initialized server for protocol version", "version", params.ProtocolVersion)
 
 	result := CreateInitializeResult(s.serverName, s.serverVersion)
@@ -254,7 +294,7 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 
 func (s *Server) handleInitialized(_ *Notification) (interface{}, error) {
 	slog.Debug("handling initialized notification")
-	s.initialized = true
+	s.setInitialized(true)
 	slog.Info("MCP server initialized successfully")
 	return nil, nil
 }

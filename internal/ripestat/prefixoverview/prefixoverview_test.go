@@ -79,7 +79,7 @@ func TestClient_Get_Success(t *testing.T) {
 
 func TestClient_Get_HTTPError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusBadGateway)
+		w.WriteHeader(http.StatusBadRequest)
 	}))
 	defer ts.Close()
 
@@ -91,7 +91,7 @@ func TestClient_Get_HTTPError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "HTTP status: 502") {
+	if !strings.Contains(err.Error(), "HTTP status: 400") {
 		t.Errorf("expected status code error, got %v", err)
 	}
 }

@@ -443,3 +443,116 @@ func indexOf(s, substr string) int {
 	}
 	return -1
 }
+
+func TestNewWithOptions(t *testing.T) {
+	ttls := map[string]time.Duration{
+		"test": 1 * time.Minute,
+	}
+	cache := NewWithOptions(ttls, 50)
+	if cache == nil {
+		t.Fatal("Expected cache to be non-nil")
+	}
+	if cache.GetMaxEntries() != 50 {
+		t.Errorf("Expected max entries to be 50, got %d", cache.GetMaxEntries())
+	}
+
+	// Test with invalid max entries (should default)
+	cache2 := NewWithOptions(ttls, 0)
+	if cache2.GetMaxEntries() != DefaultMaxEntries {
+		t.Errorf("Expected default max entries for 0 input")
+	}
+
+	cache3 := NewWithOptions(ttls, -1)
+	if cache3.GetMaxEntries() != DefaultMaxEntries {
+		t.Errorf("Expected default max entries for negative input")
+	}
+}
+
+func TestCache_SetMaxEntries(t *testing.T) {
+	cache := NewWithOptions(DefaultTTLs, 100)
+	ctx := context.Background()
+
+	// Add some entries
+	for i := 0; i < 10; i++ {
+		params := url.Values{"i": {string(rune('0' + i))}}
+		cache.Set(ctx, "/test", params, map[string]int{"value": i})
+	}
+
+	// Reduce max entries - should evict oldest
+	cache.SetMaxEntries(5)
+	if cache.GetMaxEntries() != 5 {
+		t.Errorf("Expected max entries to be 5, got %d", cache.GetMaxEntries())
+	}
+
+	stats := cache.Stats()
+	if stats.TotalEntries > 5 {
+		t.Errorf("Expected at most 5 entries after reducing max, got %d", stats.TotalEntries)
+	}
+
+	// Setting to 0 or negative should be no-op
+	cache.SetMaxEntries(0)
+	if cache.GetMaxEntries() != 5 {
+		t.Error("Expected SetMaxEntries(0) to be no-op")
+	}
+
+	cache.SetMaxEntries(-1)
+	if cache.GetMaxEntries() != 5 {
+		t.Error("Expected SetMaxEntries(-1) to be no-op")
+	}
+}
+
+func TestCache_LRUEviction(t *testing.T) {
+	cache := NewWithOptions(DefaultTTLs, 3)
+	ctx := context.Background()
+
+	// Add 3 entries
+	cache.Set(ctx, "/test", url.Values{"k": {"1"}}, "value1")
+	cache.Set(ctx, "/test", url.Values{"k": {"2"}}, "value2")
+	cache.Set(ctx, "/test", url.Values{"k": {"3"}}, "value3")
+
+	// Access entry 1 to make it recently used
+	cache.Get(ctx, "/test", url.Values{"k": {"1"}})
+
+	// Add 4th entry - should evict entry 2 (least recently used)
+	cache.Set(ctx, "/test", url.Values{"k": {"4"}}, "value4")
+
+	// Entry 2 should be evicted
+	_, found := cache.Get(ctx, "/test", url.Values{"k": {"2"}})
+	if found {
+		t.Error("Expected entry 2 to be evicted")
+	}
+
+	// Entry 1 should still exist (was accessed recently)
+	_, found = cache.Get(ctx, "/test", url.Values{"k": {"1"}})
+	if !found {
+		t.Error("Expected entry 1 to still exist")
+	}
+}
+
+func TestCache_UpdateExistingEntry(t *testing.T) {
+	cache := NewWithOptions(DefaultTTLs, 3)
+	ctx := context.Background()
+
+	params := url.Values{"k": {"1"}}
+
+	// Set initial value
+	cache.Set(ctx, "/test", params, "initial")
+
+	// Update with new value
+	cache.Set(ctx, "/test", params, "updated")
+
+	// Should get updated value
+	data, found := cache.Get(ctx, "/test", params)
+	if !found {
+		t.Fatal("Expected to find entry")
+	}
+	if data != "updated" {
+		t.Errorf("Expected 'updated', got %v", data)
+	}
+
+	// Should still only have 1 entry
+	stats := cache.Stats()
+	if stats.TotalEntries != 1 {
+		t.Errorf("Expected 1 entry after update, got %d", stats.TotalEntries)
+	}
+}
