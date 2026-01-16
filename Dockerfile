@@ -1,4 +1,4 @@
-FROM golang:1.25.5-alpine AS builder
+FROM golang:1.26rc2-alpine AS builder
 WORKDIR /app
 COPY go.mod ./
 # There are no dependencies in go.mod, so we don't need to run `go mod download` here.
