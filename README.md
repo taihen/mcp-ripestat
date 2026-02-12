@@ -164,12 +164,55 @@ To use this MCP server locally, simply copy and paste the
 [MCP client configuration](./mcp.json) into your MCP client
 
 - **Cursor**: macOS/Linux: `~/.cursor/mcp.json`
-- **Claude Code**: `claude mcp add --transport http ripestat https://localhost:8080/mcp`
+- **Claude Code (local server)**: `claude mcp add --transport http ripestat http://localhost:8080/mcp`
+- **Codex CLI (local server)**: `codex mcp add ripestat --url http://localhost:8080/mcp`
 
 ### Demo Server
 
 A demo MCP server is running at `https://mcp-ripestat.taihen.org/mcp`. Feel
 free to try it out, but there are no uptime promises.
+
+#### Add Demo Server from CLI
+
+Use user scope to make the server available across projects.
+
+**Claude Code:**
+
+```bash
+claude mcp add-json ripestat --scope user '{"type":"http","url":"https://mcp-ripestat.taihen.org/mcp"}'
+```
+
+**Codex CLI:**
+
+```bash
+codex mcp add ripestat --url https://mcp-ripestat.taihen.org/mcp
+```
+
+Verify configuration:
+
+```bash
+claude mcp list
+codex mcp list
+```
+
+#### Using the Demo Server with Codex Config File
+
+Codex reads MCP server definitions from `~/.codex/config.toml` (global) or
+`.codex/config.toml` (project-local), not from `mcp-demo.json`.
+
+Add this server entry:
+
+```toml
+[mcp_servers.ripestat]
+url = "https://mcp-ripestat.taihen.org/mcp"
+```
+
+Then restart Codex and run `/mcp` to verify that `ripestat` is connected.
+
+You can now ask prompts such as:
+
+- `Investigate 8.8.8.8 and summarize ownership, routing, and abuse contacts.`
+- `Analyze routing for AS3333 and show key anomalies.`
 
 ## Testing
 
