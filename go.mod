@@ -1,6 +1,6 @@
 module github.com/taihen/mcp-ripestat
 
-go 1.24.4
+go 1.26.1
 
 require github.com/modelcontextprotocol/go-sdk v1.4.0
 

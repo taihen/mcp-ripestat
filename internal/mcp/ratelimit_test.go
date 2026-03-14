@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -205,7 +206,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 	middleware := RateLimitMiddleware(limiter, handler)
 
 	t.Run("allows first request", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 		req.RemoteAddr = "192.168.1.100:12345"
 		w := httptest.NewRecorder()
 
@@ -217,7 +218,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 	})
 
 	t.Run("blocks rate limited request", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 		req.RemoteAddr = "192.168.1.100:12345"
 		w := httptest.NewRecorder()
 
@@ -249,7 +250,7 @@ func TestExtractClientIPForRateLimit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequestWithContext(context.Background(), "GET", "/test", nil)
 			req.RemoteAddr = tt.remoteAddr
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)

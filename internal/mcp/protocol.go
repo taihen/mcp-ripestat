@@ -3,7 +3,8 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 )
@@ -136,13 +137,9 @@ func CreateLegacyInitializeResult(serverName, serverVersion string) *InitializeR
 }
 
 func CreateToolsList() *ToolsListResult {
-	tools := []Tool{}
-
-	toolNames := make([]string, 0, len(consolidated.ConsolidatedSchemas))
-	for toolName := range consolidated.ConsolidatedSchemas {
-		toolNames = append(toolNames, toolName)
-	}
-	sort.Strings(toolNames)
+	toolNames := slices.Collect(maps.Keys(consolidated.ConsolidatedSchemas))
+	slices.Sort(toolNames)
+	tools := make([]Tool, 0, len(toolNames)+1)
 
 	for _, toolName := range toolNames {
 		schema := consolidated.ConsolidatedSchemas[toolName]

@@ -182,7 +182,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	handler := server.NewStreamableHTTPHandler()
 
 	t.Run("unsupported protocol version", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/mcp", nil)
 		req.Header.Set("MCP-Protocol-Version", "2024-01-01")
 		w := httptest.NewRecorder()
 
@@ -197,7 +197,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	})
 
 	t.Run("CORS preflight request", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodOptions, "/mcp", nil)
 		req.Header.Set("Origin", "http://localhost:3000")
 		w := httptest.NewRecorder()
 
@@ -215,7 +215,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	})
 
 	t.Run("invalid origin rejected", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/mcp", nil)
 		req.Header.Set("Origin", "https://evil.com")
 		w := httptest.NewRecorder()
 
@@ -227,7 +227,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	})
 
 	t.Run("valid origin accepted", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","method":"ping","id":1}`))
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/mcp", strings.NewReader(`{"jsonrpc":"2.0","method":"ping","id":1}`))
 		req.Header.Set("Origin", "http://localhost:3000")
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -240,7 +240,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	})
 
 	t.Run("GET without method returns endpoint info", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/mcp", nil)
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)
@@ -259,7 +259,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	})
 
 	t.Run("protocol version header is set", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/mcp", nil)
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)
@@ -270,7 +270,7 @@ func TestHTTPHandler_ServeHTTP(t *testing.T) {
 	})
 
 	t.Run("default protocol version when not specified", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/mcp", nil)
 		// No MCP-Protocol-Version header set
 		w := httptest.NewRecorder()
 
@@ -288,7 +288,7 @@ func TestHTTPHandler_HandleCORS(t *testing.T) {
 	handler := server.NewStreamableHTTPHandler()
 
 	t.Run("CORS with valid origin", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodOptions, "/mcp", nil)
 		req.Header.Set("Origin", "https://cursor.sh")
 		w := httptest.NewRecorder()
 
@@ -309,7 +309,7 @@ func TestHTTPHandler_HandleCORS(t *testing.T) {
 	})
 
 	t.Run("CORS with invalid origin", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodOptions, "/mcp", nil)
 		req.Header.Set("Origin", "https://evil.com")
 		w := httptest.NewRecorder()
 
@@ -325,7 +325,7 @@ func TestHTTPHandler_HandleCORS(t *testing.T) {
 	})
 
 	t.Run("CORS without origin", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodOptions, "/mcp", nil)
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)
@@ -340,7 +340,7 @@ func TestHTTPHandler_HandleEndpointInfo(t *testing.T) {
 	server := NewSDKServer("test-server", "1.0.0", false)
 	handler := server.NewStreamableHTTPHandler()
 
-	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/mcp", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -390,7 +390,7 @@ func TestNewStreamableHTTPHandler(t *testing.T) {
 
 func TestHTTPRequestContext(t *testing.T) {
 	t.Run("WithHTTPRequest and HTTPRequestFromContext", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", nil)
 		ctx := WithHTTPRequest(context.Background(), req)
 
 		extractedReq, ok := HTTPRequestFromContext(ctx)

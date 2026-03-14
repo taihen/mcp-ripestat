@@ -18,7 +18,7 @@ import (
 )
 
 func TestManifestHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/.well-known/mcp/manifest.json", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/.well-known/mcp/manifest.json", nil)
 	w := httptest.NewRecorder()
 
 	manifestHandler(w, req)
@@ -56,7 +56,7 @@ func TestManifestHandler(t *testing.T) {
 }
 
 func TestManifestHandler_Integration(t *testing.T) {
-	req := httptest.NewRequest("GET", "/.well-known/mcp/manifest.json", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/.well-known/mcp/manifest.json", nil)
 	w := httptest.NewRecorder()
 
 	manifestHandler(w, req)
@@ -325,7 +325,8 @@ func TestRun_InvalidPort(t *testing.T) {
 }
 
 func TestRun_PortAlreadyInUse(t *testing.T) {
-	listener, err := net.Listen("tcp", ":0")
+	//nolint:gosec // test intentionally binds an ephemeral port to simulate conflict.
+	listener, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", ":0")
 	if err != nil {
 		t.Fatalf("failed to allocate test listener: %v", err)
 	}
@@ -351,7 +352,7 @@ func TestRun_PortAlreadyInUse(t *testing.T) {
 }
 
 func TestWarmupHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/warmup", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/warmup", nil)
 	w := httptest.NewRecorder()
 
 	warmupHandler(w, req)
@@ -397,7 +398,7 @@ func TestWarmupHandler(t *testing.T) {
 
 func TestStatusHandler(t *testing.T) {
 	startTime := time.Now()
-	req := httptest.NewRequest("GET", "/status", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/status", nil)
 	w := httptest.NewRecorder()
 
 	statusHandler(w, req, startTime)
@@ -485,7 +486,7 @@ func TestMCPEndpointIntegration(t *testing.T) {
 
 	for _, ep := range endpoints {
 		t.Run(ep.path, func(t *testing.T) {
-			req := httptest.NewRequest("GET", ep.path, nil)
+			req := httptest.NewRequestWithContext(context.Background(), "GET", ep.path, nil)
 			w := httptest.NewRecorder()
 
 			// Simulate the mux routing by calling the handler directly
@@ -567,7 +568,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 			t.Fatalf("Failed to marshal request: %v", err)
 		}
 
-		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/mcp", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json, text/event-stream")
 		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
@@ -585,7 +586,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 	})
 
 	t.Run("UnsupportedProtocolVersion", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte(`{}`)))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/mcp", bytes.NewBuffer([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("MCP-Protocol-Version", "2024-01-01")
 		w := httptest.NewRecorder()
@@ -601,7 +602,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 	})
 
 	t.Run("InvalidOrigin", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer([]byte(`{}`)))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/mcp", bytes.NewBuffer([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Origin", "https://malicious.com")
 		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
@@ -627,7 +628,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 
 		reqBody, _ := json.Marshal(initReq)
 
-		req := httptest.NewRequest("POST", "/mcp", bytes.NewBuffer(reqBody))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "/mcp", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json, text/event-stream")
 		req.Header.Set("Origin", "http://localhost:3000")
@@ -651,7 +652,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 	})
 
 	t.Run("CORSPreflight", func(t *testing.T) {
-		req := httptest.NewRequest("OPTIONS", "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "OPTIONS", "/mcp", nil)
 		req.Header.Set("Origin", "http://localhost:3000")
 		req.Header.Set("Access-Control-Request-Method", "POST")
 		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
@@ -672,7 +673,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 	})
 
 	t.Run("EndpointInfo", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/mcp", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/mcp", nil)
 		req.Header.Set("Origin", "http://localhost:3000")
 		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
 		w := httptest.NewRecorder()

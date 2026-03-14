@@ -21,8 +21,8 @@ func TestGetBGPState_EmptyResource(t *testing.T) {
 		t.Error("Expected error for empty resource parameter")
 	}
 
-	var targetErr *ripestaterrors.Error
-	if !errors.As(err, &targetErr) {
+	targetErr, ok := errors.AsType[*ripestaterrors.Error](err)
+	if !ok {
 		t.Errorf("Expected RIPEstat error, got %T", err)
 	} else if targetErr.Message != ripestaterrors.ErrInvalidParameter.Message {
 		t.Errorf("Expected InvalidParameter error, got %v", targetErr.Message)

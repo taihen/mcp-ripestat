@@ -115,8 +115,8 @@ func TestClient_Get(t *testing.T) {
 				}
 
 				if tt.errType != nil {
-					var targetErr *ripestaterrors.Error
-					if !errors.As(err, &targetErr) {
+					targetErr, ok := errors.AsType[*ripestaterrors.Error](err)
+					if !ok {
 						t.Errorf("Get() error type = %T, want *ripestaterrors.Error", err)
 						return
 					}

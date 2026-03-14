@@ -82,8 +82,8 @@ func TestClient_Get_EmptyResource(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for empty resource, got nil")
 	}
-	var targetErr *ripestaterrors.Error
-	if !errors.As(err, &targetErr) {
+	targetErr, ok := errors.AsType[*ripestaterrors.Error](err)
+	if !ok {
 		t.Errorf("Expected ripestaterrors.Error, got %T", err)
 	} else if targetErr.Message != ripestaterrors.ErrInvalidParameter.Message {
 		t.Errorf("Expected InvalidParameter error, got %v", targetErr.Message)
@@ -109,8 +109,8 @@ func TestClient_Get_ServerError(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for server error, got nil")
 	}
-	var targetErr *ripestaterrors.Error
-	if !errors.As(err, &targetErr) {
+	targetErr, ok := errors.AsType[*ripestaterrors.Error](err)
+	if !ok {
 		t.Errorf("Expected ripestaterrors.Error, got %T", err)
 	} else if targetErr.Message != ripestaterrors.ErrServerError.Message {
 		t.Errorf("Expected ServerError, got %v", targetErr.Message)
@@ -137,8 +137,8 @@ func TestClient_Get_InvalidJSON(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for invalid JSON, got nil")
 	}
-	var targetErr *ripestaterrors.Error
-	if !errors.As(err, &targetErr) {
+	targetErr, ok := errors.AsType[*ripestaterrors.Error](err)
+	if !ok {
 		t.Errorf("Expected ripestaterrors.Error, got %T", err)
 	} else if targetErr.Message != ripestaterrors.ErrServerError.Message {
 		t.Errorf("Expected ServerError, got %v", targetErr.Message)
@@ -166,8 +166,8 @@ func TestGetBGPUpdates_EmptyResource(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for empty resource, got nil")
 	}
-	var targetErr *ripestaterrors.Error
-	if !errors.As(err, &targetErr) {
+	targetErr, ok := errors.AsType[*ripestaterrors.Error](err)
+	if !ok {
 		t.Errorf("Expected ripestaterrors.Error, got %T", err)
 	} else if targetErr.Message != ripestaterrors.ErrInvalidParameter.Message {
 		t.Errorf("Expected InvalidParameter error, got %v", targetErr.Message)

@@ -261,7 +261,7 @@ func TestExtractClientIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 			req.RemoteAddr = tt.remoteAddr
 
 			for key, value := range tt.headers {
@@ -371,7 +371,7 @@ func TestExtractClientIPWithConfig(t *testing.T) {
 	config := DefaultProxyConfig()
 
 	t.Run("trusts XFF from trusted proxy", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		req.RemoteAddr = "10.0.0.1:12345" // Trusted proxy
 		req.Header.Set("X-Forwarded-For", "203.0.113.50")
 
@@ -382,7 +382,7 @@ func TestExtractClientIPWithConfig(t *testing.T) {
 	})
 
 	t.Run("ignores XFF from untrusted source", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		req.RemoteAddr = "8.8.8.8:12345" // Not a trusted proxy
 		req.Header.Set("X-Forwarded-For", "203.0.113.50")
 
@@ -393,7 +393,7 @@ func TestExtractClientIPWithConfig(t *testing.T) {
 	})
 
 	t.Run("uses RemoteAddr when no config", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
 		req.RemoteAddr = "10.0.0.1:12345"
 		req.Header.Set("X-Forwarded-For", "203.0.113.50")
 
