@@ -97,14 +97,6 @@ Implementation status of all RIPEstat Data API endpoints in the MCP server.
 
 - 16 endpoints total, 0 implemented
 
-## Next Sprint Priorities
-
-1. **Sprint 21**: bgp-updates (Critical)
-2. **Sprint 27**: related-prefixes (Critical)
-3. **Sprint 28**: allocation-history (Critical)
-4. **Sprint 29**: as-path-length (High)
-5. **Sprint 30**: as-routing-consistency (High)
-
 ## Coverage Goals
 
 **Short-term**: Achieve 100% coverage of critical endpoints.

@@ -56,9 +56,9 @@ This MCP server provides intelligent access to RIPEstat Data API through **7 dir
 > [!NOTE]
 > Only these 7 tools are directly callable. Individual RIPEstat endpoints (like `getNetworkInfo`, `getASOverview`, etc.) are internal implementation details and are automatically called by the consolidated tools based on resource type and requested operations.
 
-**Smart Resource Detection**: Automatically identifies IP addresses, prefixes, ASNs, and country codes without requiring explicit type specification.
+**Resource Detection**: Automatically identifies IP addresses, prefixes, ASNs, and country codes without requiring explicit type specification.
 
-**Intelligent Operation Routing**: Maps semantic operations to the most relevant RIPEstat endpoints based on resource type and context.
+**Operation Routing**: Maps semantic operations to the most relevant RIPEstat endpoints based on resource type and context.
 
 See [ENDPOINT_PARITY](ENDPOINT_PARITY.md) for implementation status of underlying RIPEstat endpoints.
 
@@ -90,9 +90,6 @@ across multiple concurrent sessions.
 
 - Go 1.24.4 or higher
 - Make
-
-> [!INFO]
-> This project uses the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) for protocol handling.
 
 ```bash
 # Clone the repository
@@ -146,17 +143,6 @@ These endpoints are essential for load balancers, monitoring systems, and deploy
 • Protocol: JSON-RPC 2.0
 • Status: Recommended production endpoint (replaces REST)
 • Features: Full MCP handshake, capability negotiation, tool invocation, compatible with Cursor IDE and other MCP-compliant clients
-
-### Legacy REST API
-
-• Endpoint: All previous /\* REST paths
-• Protocol: Traditional REST over HTTP
-• Status: Removed as of v2.0.0 — breaking change
-• Features: Deprecated. All functionality has been migrated to the /mcp JSON-RPC 2.0 endpoint.
-
-> [!FAIL]
-> **BREAKING CHANGE**: All legacy REST API endpoints have been removed in
-> v2.0.0. Use the MCP JSON-RPC endpoint instead.
 
 ## MCP Client Configuration
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -274,12 +275,59 @@ func getAllowedOrigins() []string {
 
 // isValidOrigin checks if the origin is in the allowed list.
 func isValidOrigin(origin string) bool {
+	originURL, err := url.Parse(origin)
+	if err != nil || originURL.Scheme == "" || originURL.Host == "" {
+		return false
+	}
+
+	originScheme := strings.ToLower(originURL.Scheme)
+	originHost := strings.ToLower(originURL.Hostname())
+	originPort := originURL.Port()
+
 	for _, allowed := range getAllowedOrigins() {
-		if strings.HasPrefix(origin, allowed) {
+		allowedURL, parseErr := url.Parse(allowed)
+		if parseErr != nil || allowedURL.Scheme == "" || allowedURL.Host == "" {
+			continue
+		}
+
+		allowedScheme := strings.ToLower(allowedURL.Scheme)
+		allowedHost := strings.ToLower(allowedURL.Hostname())
+		allowedPort := allowedURL.Port()
+
+		if originScheme != allowedScheme || originHost != allowedHost {
+			continue
+		}
+
+		// Keep local development ergonomics: allow any port for loopback entries
+		// defined without explicit ports (e.g. http://localhost).
+		if allowedPort == "" && isLoopbackHost(allowedHost) {
+			return true
+		}
+
+		if effectivePort(originScheme, originPort) == effectivePort(allowedScheme, allowedPort) {
 			return true
 		}
 	}
 	return false
+}
+
+func isLoopbackHost(host string) bool {
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
+func effectivePort(scheme, port string) string {
+	if port != "" {
+		return port
+	}
+
+	switch scheme {
+	case "http":
+		return "80"
+	case "https":
+		return "443"
+	default:
+		return ""
+	}
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

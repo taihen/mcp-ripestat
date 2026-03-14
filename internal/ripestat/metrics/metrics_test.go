@@ -312,3 +312,35 @@ func TestConcurrentMetrics(t *testing.T) {
 		t.Errorf("Expected cache hits to be %d, got %d", initialCacheHits+int64(numGoroutines), globalMetrics.CacheHits.Value())
 	}
 }
+
+func TestDailyRequestCountConcurrentReset(t *testing.T) {
+	const numGoroutines = 50
+
+	globalMetrics.dailyMu.Lock()
+	originalResetTime := globalMetrics.dailyResetTime
+	globalMetrics.dailyResetTime = time.Now().Add(-time.Second)
+	globalMetrics.dailyMu.Unlock()
+	defer func() {
+		globalMetrics.dailyMu.Lock()
+		globalMetrics.dailyResetTime = originalResetTime
+		globalMetrics.dailyMu.Unlock()
+	}()
+
+	globalMetrics.DailyRequestCount.Set(0)
+
+	done := make(chan bool, numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			RecordRequest("daily-reset-test", "200")
+			done <- true
+		}()
+	}
+
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+
+	if got := globalMetrics.DailyRequestCount.Value(); got != int64(numGoroutines) {
+		t.Fatalf("Expected daily request count to be %d, got %d", numGoroutines, got)
+	}
+}

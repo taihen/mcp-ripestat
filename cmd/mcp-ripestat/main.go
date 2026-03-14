@@ -88,19 +88,28 @@ func run(ctx context.Context, port string) error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	serveErrCh := make(chan error, 1)
+
 	go func() {
 		slog.Info("MCP RIPEstat server starting", "addr", server.Addr)
 		err := server.ListenAndServe()
 
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server failed to start", "err", err)
+			select {
+			case serveErrCh <- err:
+			default:
+			}
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(quit)
 
 	select {
+	case err := <-serveErrCh:
+		return fmt.Errorf("server failed: %w", err)
 	case <-quit:
 		slog.Info("shutting down server...")
 	case <-ctx.Done():

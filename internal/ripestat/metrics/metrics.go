@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"expvar"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -24,6 +25,7 @@ type Metrics struct {
 
 	inFlightCount  int64
 	dailyResetTime time.Time
+	dailyMu        sync.Mutex
 }
 
 var globalMetrics *Metrics
@@ -60,6 +62,9 @@ func RecordRequest(endpoint, status string) {
 
 func recordDailyRequest() {
 	now := time.Now()
+
+	globalMetrics.dailyMu.Lock()
+	defer globalMetrics.dailyMu.Unlock()
 
 	if now.After(globalMetrics.dailyResetTime) {
 		globalMetrics.DailyRequestCount.Set(0)
@@ -117,6 +122,10 @@ func GetInFlightCount() int64 {
 func GetDailyRequestCount() int64 {
 
 	now := time.Now()
+
+	globalMetrics.dailyMu.Lock()
+	defer globalMetrics.dailyMu.Unlock()
+
 	if now.After(globalMetrics.dailyResetTime) {
 		globalMetrics.DailyRequestCount.Set(0)
 		globalMetrics.dailyResetTime = now.Add(24 * time.Hour)

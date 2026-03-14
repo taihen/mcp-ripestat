@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -308,15 +310,43 @@ func TestRun_ServerShutdownError(t *testing.T) {
 }
 
 func TestRun_InvalidPort(t *testing.T) {
-	// Test with an invalid port to see if the server handles it gracefully
+	// Test with an invalid port to verify startup failures return an error.
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	// Use a very high port number that might cause issues
+	// Use an invalid port to force ListenAndServe startup failure.
 	err := run(ctx, "99999")
-	// The function should complete without error
+	if err == nil {
+		t.Fatal("Expected run() to fail for invalid port")
+	}
+	if !strings.Contains(err.Error(), "invalid port") {
+		t.Fatalf("Expected invalid port error, got: %v", err)
+	}
+}
+
+func TestRun_PortAlreadyInUse(t *testing.T) {
+	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		t.Fatalf("run() failed: %v", err)
+		t.Fatalf("failed to allocate test listener: %v", err)
+	}
+	defer func() {
+		_ = listener.Close()
+	}()
+
+	_, port, splitErr := net.SplitHostPort(listener.Addr().String())
+	if splitErr != nil {
+		t.Fatalf("failed to get listener port: %v", splitErr)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	runErr := run(ctx, port)
+	if runErr == nil {
+		t.Fatal("Expected run() to fail when port is already in use")
+	}
+	if !strings.Contains(runErr.Error(), "address already in use") {
+		t.Fatalf("Expected address-in-use error, got: %v", runErr)
 	}
 }
 
