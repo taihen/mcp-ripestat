@@ -1296,7 +1296,7 @@ func TestParameterHelpers(t *testing.T) {
 
 func TestWithHTTPRequest(t *testing.T) {
 	ctx := context.Background()
-	req := httptest.NewRequest("GET", "http://example.com", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "http://example.com", nil)
 
 	ctxWithReq := WithHTTPRequest(ctx, req)
 
@@ -1357,7 +1357,7 @@ func TestCallWhatsMyIP_WithHTTPContext(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			req := httptest.NewRequest("POST", "http://example.com/mcp", nil)
+			req := httptest.NewRequestWithContext(context.Background(), "POST", "http://example.com/mcp", nil)
 			req.RemoteAddr = tc.remoteAddr
 
 			if tc.xForwardedFor != "" {

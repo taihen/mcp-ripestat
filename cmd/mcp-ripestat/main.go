@@ -153,6 +153,7 @@ type Return struct {
 }
 
 func manifestHandler(w http.ResponseWriter, r *http.Request) {
+	//nolint:gosec // debug logging only; request metadata is not used for decisions.
 	slog.Debug("received manifest request", "remote_addr", r.RemoteAddr)
 
 	var functions []Function

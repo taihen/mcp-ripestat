@@ -330,12 +330,24 @@ func effectivePort(scheme, port string) string {
 	}
 }
 
+func sanitizeForLog(value string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '\n', '\r', '\t':
+			return ' '
+		default:
+			return r
+		}
+	}, value)
+}
+
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Apply rate limiting
 	if h.rateLimiter != nil {
 		clientIP := extractClientIPForRateLimit(r)
 		if !h.rateLimiter.Allow(clientIP) {
-			slog.Warn("rate limit exceeded", "client_ip", clientIP)
+			//nolint:gosec // value is sanitized before structured logging.
+			slog.Warn("rate limit exceeded", "client_ip", sanitizeForLog(clientIP))
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
 		}
@@ -351,7 +363,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Only support the specified protocol version
 	if protocolVersion != supportedProtocolVersion {
-		slog.Warn("unsupported protocol version", "version", protocolVersion)
+		//nolint:gosec // value is sanitized before structured logging.
+		slog.Warn("unsupported protocol version", "version", sanitizeForLog(protocolVersion))
 		http.Error(w, "Unsupported protocol version. Only "+supportedProtocolVersion+" is supported.", http.StatusBadRequest)
 		return
 	}
@@ -368,7 +381,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Validate origin for requests with Origin header
 	if origin != "" {
 		if !isValidOrigin(origin) {
-			slog.Warn("invalid origin rejected", "origin", origin)
+			//nolint:gosec // value is sanitized before structured logging.
+			slog.Warn("invalid origin rejected", "origin", sanitizeForLog(origin))
 			http.Error(w, "Invalid origin", http.StatusForbidden)
 			return
 		}

@@ -2,6 +2,8 @@ package module
 
 import (
 	"context"
+	"maps"
+	"slices"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/cache"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
@@ -84,17 +86,9 @@ func (r *Registry) GetHandler(method string) (RPCHandler, bool) {
 }
 
 func (r *Registry) ListModules() []string {
-	names := make([]string, 0, len(r.modules))
-	for name := range r.modules {
-		names = append(names, name)
-	}
-	return names
+	return slices.Collect(maps.Keys(r.modules))
 }
 
 func (r *Registry) ListMethods() []string {
-	methods := make([]string, 0, len(r.handlers))
-	for method := range r.handlers {
-		methods = append(methods, method)
-	}
-	return methods
+	return slices.Collect(maps.Keys(r.handlers))
 }

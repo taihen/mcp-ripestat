@@ -28,7 +28,7 @@ For enhancement suggestions, create an issue with a clear description and any re
 
 ### Prerequisites
 
-- Go 1.24.4 or higher
+- Go 1.26.1 or higher
 - Make
 
 ```bash

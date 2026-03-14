@@ -107,24 +107,22 @@ func TestFromHTTPResponse(t *testing.T) {
 				t.Fatal("Expected error, got nil")
 			}
 
-			var e *Error
-			if !errors.As(err, &e) {
+			e, ok := errors.AsType[*Error](err)
+			if !ok {
 				t.Errorf("Expected error to be of type *Error")
 			}
 
-			if e, ok := err.(*Error); ok {
-				if e.StatusCode != tc.statusCode {
-					t.Errorf("Expected status code %d, got %d", tc.statusCode, e.StatusCode)
-				}
+			if e.StatusCode != tc.statusCode {
+				t.Errorf("Expected status code %d, got %d", tc.statusCode, e.StatusCode)
+			}
 
-				errStr := fmt.Sprintf("%s", err)
-				if !strings.Contains(errStr, tc.expectedErrMsg) {
-					t.Errorf("Expected error message to contain %q, got %q", tc.expectedErrMsg, err.Error())
-				}
+			errStr := fmt.Sprintf("%s", err)
+			if !strings.Contains(errStr, tc.expectedErrMsg) {
+				t.Errorf("Expected error message to contain %q, got %q", tc.expectedErrMsg, err.Error())
+			}
 
-				if !strings.Contains(errStr, fmt.Sprintf("HTTP status: %d", tc.statusCode)) {
-					t.Errorf("Expected error message to contain HTTP status, got %q", err.Error())
-				}
+			if !strings.Contains(errStr, fmt.Sprintf("HTTP status: %d", tc.statusCode)) {
+				t.Errorf("Expected error message to contain HTTP status, got %q", err.Error())
 			}
 		})
 	}
