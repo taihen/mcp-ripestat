@@ -88,7 +88,7 @@ across multiple concurrent sessions.
 
 ### Prerequisites
 
-- Go 1.26.1 or higher
+- Go 1.26.2 or higher
 - Make
 
 ```bash

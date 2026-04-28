@@ -628,7 +628,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 
 		reqBody, _ := json.Marshal(initReq)
 
-		req := httptest.NewRequestWithContext(context.Background(), "POST", "/mcp", bytes.NewBuffer(reqBody))
+		req := httptest.NewRequestWithContext(context.Background(), "POST", "http://localhost:3000/mcp", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json, text/event-stream")
 		req.Header.Set("Origin", "http://localhost:3000")

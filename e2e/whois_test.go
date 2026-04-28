@@ -90,7 +90,11 @@ func TestWhoisE2E(t *testing.T) {
 			t.Logf("Number of IRR records: %d", len(result.Data.IRRRecords))
 			t.Logf("Number of authorities: %d", len(result.Data.Authorities))
 
-			// Verify record structure if we have records
+			foundNonEmptyValue := false
+
+			// Verify record structure if we have records. Live WHOIS responses can
+			// include blank values for some keys, so require populated keys and at
+			// least one non-empty value rather than every value being filled.
 			if len(result.Data.Records) > 0 {
 				for i, recordGroup := range result.Data.Records {
 					if len(recordGroup) == 0 {
@@ -102,11 +106,15 @@ func TestWhoisE2E(t *testing.T) {
 						if record.Key == "" {
 							t.Errorf("Record group %d, record %d has empty key", i, j)
 						}
-						if record.Value == "" {
-							t.Errorf("Record group %d, record %d has empty value", i, j)
+						if record.Value != "" {
+							foundNonEmptyValue = true
 						}
 					}
 				}
+			}
+
+			if len(result.Data.Records) > 0 && !foundNonEmptyValue {
+				t.Error("Get() result.Data.Records has no non-empty values")
 			}
 
 			t.Logf("Successfully retrieved whois data for %s", tt.resource)
