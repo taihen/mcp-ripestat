@@ -225,6 +225,30 @@ make clean
 make deps
 ```
 
+## Container Images
+
+Release builds publish multi-platform container images to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/taihen/mcp-ripestat:<version>
+docker pull ghcr.io/taihen/mcp-ripestat:latest
+```
+
+Published images include BuildKit provenance and SBOM attestations. Release images
+also receive a signed GitHub Artifact Attestation for SLSA build provenance,
+attached to the image digest in GHCR.
+
+Verify the provenance attestation for a release image with GitHub CLI:
+
+```bash
+gh attestation verify oci://ghcr.io/taihen/mcp-ripestat:<version> \
+  --repo taihen/mcp-ripestat
+```
+
+The release workflow targets SLSA Build Level 2 for container images by building
+on GitHub-hosted Actions and publishing signed provenance for the resulting image
+digest.
+
 ## Contributing
 
 Contributions are welcome! Please read [contributing guidelines](CONTRIBUTING.md)

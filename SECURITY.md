@@ -46,11 +46,27 @@ Use firewall or other L3 networking to restrict access to the server.
 - Consider VPN or private network deployment
 - Monitor access logs
 
-### Dependencies
+### Dependencies and Supply Chain
 
 - Go dependencies are regularly updated
 - Automated vulnerability scanning with govulncheck
 - Container images scanned with Trivy
+- Release container images are published to `ghcr.io/taihen/mcp-ripestat`
+- Container builds generate BuildKit provenance and SBOM attestations
+- Release images receive signed GitHub Artifact Attestations for SLSA build provenance
+
+Verify a release image provenance attestation with:
+
+```bash
+gh attestation verify oci://ghcr.io/taihen/mcp-ripestat:<version> \
+  --repo taihen/mcp-ripestat
+```
+
+The release workflow targets SLSA Build Level 2 for container images. This means
+published images are built by GitHub Actions and have signed provenance bound to
+the image digest. Higher SLSA levels require additional repository and workflow
+hardening, such as protected release tags, stricter workflow review, and a
+hardened build platform.
 
 ### Development Security
 

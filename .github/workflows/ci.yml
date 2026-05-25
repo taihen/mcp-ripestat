@@ -139,6 +139,8 @@ jobs:
       contents: write
       packages: write
       pull-requests: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -166,12 +168,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push Docker image
+        id: docker_build
         if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          provenance: mode=max
+          sbom: true
           build-args: |
             VERSION=${{ steps.semantic.outputs.new_release_version }}
           tags: |
@@ -179,6 +184,13 @@ jobs:
             ghcr.io/taihen/${{ env.BINARY_NAME }}:${{ steps.semantic.outputs.new_release_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Attest Docker image provenance
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/taihen/${{ env.BINARY_NAME }}
+          subject-digest: ${{ steps.docker_build.outputs.digest }}
+          push-to-registry: true
       - name: Update release with Docker info
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
