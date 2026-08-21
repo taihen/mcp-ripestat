@@ -2,6 +2,7 @@ package consolidated
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -19,9 +20,8 @@ func TestTopologicalSort(t *testing.T) {
 			name:         "no dependencies",
 			endpoints:    []string{"getWhois", "getASOverview"},
 			dependencies: map[string][]string{},
-			want:         nil,
+			want:         []string{"getWhois", "getASOverview"},
 			wantErr:      false,
-			verifyDeps:   true, // Order is not deterministic when there are no dependencies
 		},
 		{
 			name:      "single dependency",
@@ -174,18 +174,38 @@ func TestExtractPrefixFromNetworkInfo(t *testing.T) {
 	}
 }
 
-func TestExtractDependencyData(t *testing.T) {
+func TestExtractNetworkInfoFromTypedResponse(t *testing.T) {
+	type data struct {
+		Prefix string
+		ASNs   []interface{}
+	}
+	type response struct {
+		Data data
+	}
+
+	fixture := &response{Data: data{Prefix: "8.8.8.0/24", ASNs: []interface{}{15169}}}
+	if got := extractPrefixFromNetworkInfo(fixture); got != "8.8.8.0/24" {
+		t.Errorf("extractPrefixFromNetworkInfo() = %q", got)
+	}
+	if got := extractASNsFromNetworkInfo(fixture); !reflect.DeepEqual(got, []string{"AS15169"}) {
+		t.Errorf("extractASNsFromNetworkInfo() = %v", got)
+	}
+}
+
+func TestPrepareEndpointCall(t *testing.T) {
 	tests := []struct {
 		name         string
 		endpoint     string
 		dependencies map[string][]string
 		results      map[string]interface{}
 		resource     *DetectedResource
+		params       map[string]interface{}
 		wantParams   map[string]interface{}
-		wantOverride string
+		wantResource string
+		wantErr      bool
 	}{
 		{
-			name:     "getRPKIValidation extracts prefix",
+			name:     "RPKI derives prefix and single origin ASN",
 			endpoint: "getRPKIValidation",
 			dependencies: map[string][]string{
 				"getRPKIValidation": {"getNetworkInfo"},
@@ -194,6 +214,7 @@ func TestExtractDependencyData(t *testing.T) {
 				"getNetworkInfo": map[string]interface{}{
 					"data": map[string]interface{}{
 						"prefix": "8.8.8.0/24",
+						"asns":   []interface{}{15169},
 					},
 				},
 			},
@@ -201,21 +222,23 @@ func TestExtractDependencyData(t *testing.T) {
 				Type:  IPAddress,
 				Value: "8.8.8.8",
 			},
+			params: map[string]interface{}{},
 			wantParams: map[string]interface{}{
 				"prefix": "8.8.8.0/24",
 			},
-			wantOverride: "",
+			wantResource: "AS15169",
 		},
 		{
-			name:     "getAddressSpaceHierarchy extracts prefix for IP address",
-			endpoint: "getAddressSpaceHierarchy",
+			name:     "RPKI uses explicit ASN",
+			endpoint: "getRPKIValidation",
 			dependencies: map[string][]string{
-				"getAddressSpaceHierarchy": {"getNetworkInfo"},
+				"getRPKIValidation": {"getNetworkInfo"},
 			},
 			results: map[string]interface{}{
 				"getNetworkInfo": map[string]interface{}{
 					"data": map[string]interface{}{
 						"prefix": "8.8.8.0/24",
+						"asns":   []interface{}{15169, 3356},
 					},
 				},
 			},
@@ -223,19 +246,21 @@ func TestExtractDependencyData(t *testing.T) {
 				Type:  IPAddress,
 				Value: "8.8.8.8",
 			},
-			wantParams:   map[string]interface{}{},
-			wantOverride: "8.8.8.0/24",
+			params:       map[string]interface{}{"asn": "AS3356"},
+			wantParams:   map[string]interface{}{"prefix": "8.8.8.0/24"},
+			wantResource: "AS3356",
 		},
 		{
-			name:     "getAddressSpaceHierarchy with IPPrefix does not override",
-			endpoint: "getAddressSpaceHierarchy",
+			name:     "RPKI rejects ambiguous origin",
+			endpoint: "getRPKIValidation",
 			dependencies: map[string][]string{
-				"getAddressSpaceHierarchy": {"getNetworkInfo"},
+				"getRPKIValidation": {"getNetworkInfo"},
 			},
 			results: map[string]interface{}{
 				"getNetworkInfo": map[string]interface{}{
 					"data": map[string]interface{}{
 						"prefix": "8.8.8.0/24",
+						"asns":   []interface{}{15169, 3356},
 					},
 				},
 			},
@@ -243,23 +268,52 @@ func TestExtractDependencyData(t *testing.T) {
 				Type:  IPPrefix,
 				Value: "8.8.8.0/24",
 			},
-			wantParams:   map[string]interface{}{},
-			wantOverride: "",
+			params:  map[string]interface{}{},
+			wantErr: true,
 		},
 		{
-			name:         "no dependencies",
-			endpoint:     "getWhois",
-			dependencies: map[string][]string{},
-			results:      map[string]interface{}{},
+			name:     "RPKI preserves requested more-specific prefix",
+			endpoint: "getRPKIValidation",
+			dependencies: map[string][]string{
+				"getRPKIValidation": {"getNetworkInfo"},
+			},
+			results: map[string]interface{}{
+				"getNetworkInfo": map[string]interface{}{
+					"data": map[string]interface{}{
+						"prefix": "8.8.8.0/24",
+						"asns":   []interface{}{15169},
+					},
+				},
+			},
+			resource: &DetectedResource{
+				Type:  IPPrefix,
+				Value: "8.8.8.0/25",
+			},
+			params:       map[string]interface{}{"asn": "AS15169"},
+			wantParams:   map[string]interface{}{"prefix": "8.8.8.0/25"},
+			wantResource: "AS15169",
+		},
+		{
+			name:     "hierarchy converts IP to prefix",
+			endpoint: "getAddressSpaceHierarchy",
+			dependencies: map[string][]string{
+				"getAddressSpaceHierarchy": {"getNetworkInfo"},
+			},
+			results: map[string]interface{}{
+				"getNetworkInfo": map[string]interface{}{
+					"data": map[string]interface{}{"prefix": "8.8.8.0/24"},
+				},
+			},
 			resource: &DetectedResource{
 				Type:  IPAddress,
 				Value: "8.8.8.8",
 			},
+			params:       map[string]interface{}{},
 			wantParams:   map[string]interface{}{},
-			wantOverride: "",
+			wantResource: "8.8.8.0/24",
 		},
 		{
-			name:     "dependency result not available",
+			name:     "failed dependency blocks call",
 			endpoint: "getRPKIValidation",
 			dependencies: map[string][]string{
 				"getRPKIValidation": {"getNetworkInfo"},
@@ -269,22 +323,25 @@ func TestExtractDependencyData(t *testing.T) {
 				Type:  IPAddress,
 				Value: "8.8.8.8",
 			},
-			wantParams:   map[string]interface{}{},
-			wantOverride: "",
+			params:  map[string]interface{}{},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := make(map[string]interface{})
-			override := extractDependencyData(tt.endpoint, tt.dependencies, tt.results, params, tt.resource)
-
-			if override != tt.wantOverride {
-				t.Errorf("extractDependencyData() override = %v, want %v", override, tt.wantOverride)
+			gotResource, err := prepareEndpointCall(tt.endpoint, tt.dependencies, tt.results, tt.params, tt.resource)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("prepareEndpointCall() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
-			if !reflect.DeepEqual(params, tt.wantParams) {
-				t.Errorf("extractDependencyData() params = %v, want %v", params, tt.wantParams)
+			if tt.wantErr {
+				return
+			}
+			if gotResource != tt.wantResource {
+				t.Errorf("prepareEndpointCall() resource = %v, want %v", gotResource, tt.wantResource)
+			}
+			if !reflect.DeepEqual(tt.params, tt.wantParams) {
+				t.Errorf("prepareEndpointCall() params = %v, want %v", tt.params, tt.wantParams)
 			}
 		})
 	}
@@ -293,9 +350,17 @@ func TestExtractDependencyData(t *testing.T) {
 type mockExecutor struct {
 	results map[string]interface{}
 	errors  map[string]error
+	calls   []executorCall
 }
 
-func (m *mockExecutor) ExecuteEndpoint(_ context.Context, endpoint string, _ string, _ map[string]interface{}) (interface{}, error) {
+type executorCall struct {
+	endpoint string
+	resource string
+	params   map[string]interface{}
+}
+
+func (m *mockExecutor) ExecuteEndpoint(_ context.Context, endpoint, resource string, params map[string]interface{}) (interface{}, error) {
+	m.calls = append(m.calls, executorCall{endpoint: endpoint, resource: resource, params: copyParams(params)})
 	if err, ok := m.errors[endpoint]; ok {
 		return nil, err
 	}
@@ -312,6 +377,7 @@ func testExecuteAndAggregateHelper(t *testing.T, endpoint string, operation Oper
 			"getNetworkInfo": map[string]interface{}{
 				"data": map[string]interface{}{
 					"prefix": "8.8.8.0/24",
+					"asns":   []interface{}{15169},
 				},
 			},
 			endpoint: map[string]interface{}{
@@ -335,7 +401,7 @@ func testExecuteAndAggregateHelper(t *testing.T, endpoint string, operation Oper
 	}
 
 	ctx := context.Background()
-	result, err := tools.executeAndAggregate(ctx, resource, []Operation{operation}, routes, DepthBasic)
+	result, err := tools.executeAndAggregate(ctx, resource, []Operation{operation}, routes, DepthBasic, nil)
 	if err != nil {
 		t.Fatalf("executeAndAggregate() error = %v", err)
 	}
@@ -461,9 +527,19 @@ func TestTools_AnalyzeRouting(t *testing.T) {
 			name: "valid params with timeframe",
 			params: map[string]interface{}{
 				"resource":  "8.8.8.0/24",
-				"timeframe": Timeframe1Week,
+				"analysis":  []string{AnalysisUpdates},
+				"timeframe": TimeframeCurrent,
 			},
 			expectError: false,
+		},
+		{
+			name: "historical timeframe without temporal analysis",
+			params: map[string]interface{}{
+				"resource":  "8.8.8.0/24",
+				"analysis":  []string{AnalysisConsistency},
+				"timeframe": Timeframe1Day,
+			},
+			expectError: true,
 		},
 		{
 			name: "missing resource",
@@ -531,12 +607,12 @@ func TestTools_QueryRegistry(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "valid params with format detailed",
+			name: "unimplemented detailed format",
 			params: map[string]interface{}{
 				"resource": "8.8.8.8",
 				"format":   FormatDetailed,
 			},
-			expectError: false,
+			expectError: true,
 		},
 		{
 			name: "missing resource",
@@ -602,6 +678,15 @@ func TestTools_ValidateSecurity(t *testing.T) {
 			},
 			expectError: true,
 		},
+		{
+			name: "asn without RPKI check",
+			params: map[string]interface{}{
+				"resource": "8.8.8.0/24",
+				"checks":   []string{SecurityCheckAbuseContacts},
+				"asn":      "AS15169",
+			},
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -620,6 +705,244 @@ func TestTools_ValidateSecurity(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateSecurity_ExecutionContract(t *testing.T) {
+	newExecutor := func() *mockExecutor {
+		return &mockExecutor{
+			results: map[string]interface{}{
+				"getNetworkInfo": map[string]interface{}{
+					"data": map[string]interface{}{
+						"prefix": "8.8.8.0/24",
+						"asns":   []interface{}{15169, 3356},
+					},
+				},
+				"getRPKIValidation":           map[string]interface{}{"status": "valid"},
+				"getRPKIHistory":              map[string]interface{}{"status": "ok"},
+				"getAbuseContactFinder":       map[string]interface{}{"contacts": []string{"abuse@example.net"}},
+				"getRoutingStatus":            map[string]interface{}{"status": "ok"},
+				"getPrefixRoutingConsistency": map[string]interface{}{"status": "ok"},
+				"getBGPUpdates":               map[string]interface{}{"status": "ok"},
+			},
+			errors: map[string]error{},
+		}
+	}
+
+	t.Run("RPKI forwards ASN and derived prefix without unrelated checks", func(t *testing.T) {
+		executor := newExecutor()
+		tools := NewTools(executor)
+		result, err := tools.ValidateSecurity(context.Background(), map[string]interface{}{
+			"resource": "8.8.8.0/24",
+			"checks":   []string{SecurityCheckRPKI},
+			"asn":      "AS15169",
+		})
+		if err != nil {
+			t.Fatalf("ValidateSecurity() error = %v", err)
+		}
+		if len(result.Errors) != 0 {
+			t.Fatalf("ValidateSecurity() endpoint errors = %v", result.Errors)
+		}
+
+		assertCalledEndpoints(t, executor.calls, "getNetworkInfo", "getRPKIValidation", "getRPKIHistory")
+		call := requireCall(t, executor.calls, "getRPKIValidation")
+		if call.resource != "AS15169" {
+			t.Errorf("RPKI resource = %q, want AS15169", call.resource)
+		}
+		if got := call.params["prefix"]; got != "8.8.8.0/24" {
+			t.Errorf("RPKI prefix = %v, want 8.8.8.0/24", got)
+		}
+		if _, ok := call.params["asn"]; ok {
+			t.Error("RPKI ASN must be carried as the endpoint resource, not duplicated in params")
+		}
+	})
+
+	t.Run("abuse contacts does not trigger RPKI or hijacking endpoints", func(t *testing.T) {
+		executor := newExecutor()
+		tools := NewTools(executor)
+		_, err := tools.ValidateSecurity(context.Background(), map[string]interface{}{
+			"resource": "8.8.8.0/24",
+			"checks":   []string{SecurityCheckAbuseContacts},
+		})
+		if err != nil {
+			t.Fatalf("ValidateSecurity() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getAbuseContactFinder")
+	})
+
+	t.Run("BGP hijacking uses only routing anomaly signals", func(t *testing.T) {
+		executor := newExecutor()
+		tools := NewTools(executor)
+		_, err := tools.ValidateSecurity(context.Background(), map[string]interface{}{
+			"resource": "8.8.8.0/24",
+			"checks":   []string{SecurityCheckBGPHijacking},
+		})
+		if err != nil {
+			t.Fatalf("ValidateSecurity() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getRoutingStatus", "getPrefixRoutingConsistency", "getBGPUpdates")
+	})
+
+	t.Run("ASN RPKI is rejected instead of returning history", func(t *testing.T) {
+		executor := newExecutor()
+		tools := NewTools(executor)
+		_, err := tools.ValidateSecurity(context.Background(), map[string]interface{}{
+			"resource": "AS15169",
+			"checks":   []string{SecurityCheckRPKI},
+		})
+		if err == nil {
+			t.Fatal("ValidateSecurity() expected ASN RPKI to be rejected")
+		}
+		if len(executor.calls) != 0 {
+			t.Errorf("ValidateSecurity() made calls before rejecting ASN RPKI: %v", executor.calls)
+		}
+	})
+
+	t.Run("ASN defaults avoid unsupported RPKI", func(t *testing.T) {
+		executor := newExecutor()
+		executor.results["getASRoutingConsistency"] = map[string]interface{}{"status": "ok"}
+		tools := NewTools(executor)
+		_, err := tools.ValidateSecurity(context.Background(), map[string]interface{}{
+			"resource": "AS15169",
+		})
+		if err != nil {
+			t.Fatalf("ValidateSecurity() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getAbuseContactFinder", "getASRoutingConsistency", "getBGPUpdates")
+	})
+}
+
+func TestSpecializedTools_ExecutionContracts(t *testing.T) {
+	t.Run("registry whois invokes only whois", func(t *testing.T) {
+		executor := &mockExecutor{results: map[string]interface{}{"getWhois": map[string]interface{}{"status": "ok"}}, errors: map[string]error{}}
+		tools := NewTools(executor)
+		_, err := tools.QueryRegistry(context.Background(), map[string]interface{}{
+			"resource": "8.8.8.8",
+			"data":     []string{DataTypeWhois},
+		})
+		if err != nil {
+			t.Fatalf("QueryRegistry() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getWhois")
+	})
+
+	t.Run("routing updates forwards timeframe", func(t *testing.T) {
+		executor := &mockExecutor{results: map[string]interface{}{"getBGPUpdates": map[string]interface{}{"status": "ok"}}, errors: map[string]error{}}
+		tools := NewTools(executor)
+		_, err := tools.AnalyzeRouting(context.Background(), map[string]interface{}{
+			"resource":  "8.8.8.0/24",
+			"analysis":  []string{AnalysisUpdates},
+			"timeframe": TimeframeCurrent,
+		})
+		if err != nil {
+			t.Fatalf("AnalyzeRouting() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getBGPUpdates")
+		call := requireCall(t, executor.calls, "getBGPUpdates")
+		if got := call.params["timeframe"]; got != TimeframeCurrent {
+			t.Errorf("timeframe = %v, want %s", got, TimeframeCurrent)
+		}
+	})
+
+	t.Run("announced prefixes does not expand to all routing analysis", func(t *testing.T) {
+		executor := &mockExecutor{results: map[string]interface{}{"getAnnouncedPrefixes": map[string]interface{}{"status": "ok"}}, errors: map[string]error{}}
+		tools := NewTools(executor)
+		_, err := tools.ExploreRelationships(context.Background(), map[string]interface{}{
+			"resource":      "AS15169",
+			"relationships": []string{RelationshipAnnouncedPrefixes},
+		})
+		if err != nil {
+			t.Fatalf("ExploreRelationships() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getAnnouncedPrefixes")
+	})
+
+	t.Run("prefix relationship default uses related networks", func(t *testing.T) {
+		executor := &mockExecutor{results: map[string]interface{}{"getRelatedPrefixes": map[string]interface{}{"status": "ok"}}, errors: map[string]error{}}
+		tools := NewTools(executor)
+		_, err := tools.ExploreRelationships(context.Background(), map[string]interface{}{
+			"resource": "8.8.8.0/24",
+		})
+		if err != nil {
+			t.Fatalf("ExploreRelationships() error = %v", err)
+		}
+		assertCalledEndpoints(t, executor.calls, "getRelatedPrefixes")
+	})
+}
+
+func TestExecuteAndAggregate_CompletenessMetadata(t *testing.T) {
+	resource := &DetectedResource{Type: IPPrefix, Value: "8.8.8.0/24", Validated: true}
+	routes := &RouteResult{
+		Endpoints:    []string{"getWhois", "getRoutingStatus"},
+		Dependencies: map[string][]string{},
+	}
+
+	t.Run("partial result is explicitly incomplete", func(t *testing.T) {
+		executor := &mockExecutor{
+			results: map[string]interface{}{"getWhois": map[string]interface{}{"status": "ok"}},
+			errors:  map[string]error{"getRoutingStatus": fmt.Errorf("upstream failed")},
+		}
+		result, err := NewTools(executor).executeAndAggregate(
+			context.Background(), resource, []Operation{OpOverview}, routes, DepthBasic, nil,
+		)
+		if err != nil {
+			t.Fatalf("executeAndAggregate() error = %v", err)
+		}
+		if complete, ok := result.Metadata["complete"].(bool); !ok || complete {
+			t.Errorf("complete = %v, want false", result.Metadata["complete"])
+		}
+		if len(result.Errors) != 1 {
+			t.Errorf("errors = %v, want one endpoint error", result.Errors)
+		}
+		if got := result.Metadata["endpoints_succeeded"].([]string); !reflect.DeepEqual(got, []string{"getWhois"}) {
+			t.Errorf("endpoints_succeeded = %v", got)
+		}
+	})
+
+	t.Run("total failure returns top-level error", func(t *testing.T) {
+		executor := &mockExecutor{
+			results: map[string]interface{}{},
+			errors: map[string]error{
+				"getWhois":         fmt.Errorf("upstream failed"),
+				"getRoutingStatus": fmt.Errorf("upstream failed"),
+			},
+		}
+		result, err := NewTools(executor).executeAndAggregate(
+			context.Background(), resource, []Operation{OpOverview}, routes, DepthBasic, nil,
+		)
+		if err == nil {
+			t.Fatal("executeAndAggregate() expected total failure error")
+		}
+		if result == nil || result.Metadata["complete"] != false {
+			t.Errorf("result metadata = %v, want complete=false", result)
+		}
+	})
+}
+
+func assertCalledEndpoints(t *testing.T, calls []executorCall, expected ...string) {
+	t.Helper()
+	got := make(map[string]int, len(calls))
+	for _, call := range calls {
+		got[call.endpoint]++
+	}
+	if len(got) != len(expected) {
+		t.Fatalf("called endpoints = %v, want exactly %v", got, expected)
+	}
+	for _, endpoint := range expected {
+		if got[endpoint] != 1 {
+			t.Errorf("endpoint %s called %d times, want once", endpoint, got[endpoint])
+		}
+	}
+}
+
+func requireCall(t *testing.T, calls []executorCall, endpoint string) executorCall {
+	t.Helper()
+	for _, call := range calls {
+		if call.endpoint == endpoint {
+			return call
+		}
+	}
+	t.Fatalf("endpoint %s was not called", endpoint)
+	return executorCall{}
 }
 
 func TestTools_ExploreRelationships(t *testing.T) {
@@ -661,12 +984,12 @@ func TestTools_ExploreRelationships(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "valid params with scope extended",
+			name: "unimplemented extended scope",
 			params: map[string]interface{}{
 				"resource": "AS15169",
 				"scope":    ScopeExtended,
 			},
-			expectError: false,
+			expectError: true,
 		},
 		{
 			name: "missing resource",
@@ -730,6 +1053,22 @@ func TestTools_SearchByLocation(t *testing.T) {
 			params: map[string]interface{}{
 				"country": "US",
 				"type":    "invalid",
+			},
+			expectError: true,
+		},
+		{
+			name: "unimplemented prefixes type",
+			params: map[string]interface{}{
+				"country": "US",
+				"type":    LocationTypePrefixes,
+			},
+			expectError: true,
+		},
+		{
+			name: "unimplemented statistics type",
+			params: map[string]interface{}{
+				"country": "US",
+				"type":    LocationTypeStatistics,
 			},
 			expectError: true,
 		},

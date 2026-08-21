@@ -5,25 +5,25 @@ import "fmt"
 var paramToOperationMap = map[string]map[string]Operation{
 	"analysis": {
 		AnalysisConsistency:      OpConsistency,
-		AnalysisPathOptimization: OpRouting,
+		AnalysisPathOptimization: OpPathOptimization,
 		AnalysisUpdates:          OpUpdates,
 		AnalysisLookingGlass:     OpLookingGlass,
 	},
 	"data": {
-		DataTypeWhois:             OpOverview,
-		DataTypeAllocationHistory: OpHistory,
+		DataTypeWhois:             OpWhois,
+		DataTypeAllocationHistory: OpAllocationHistory,
 		DataTypeHierarchy:         OpHierarchy,
-		DataTypeContacts:          OpSecurity,
+		DataTypeContacts:          OpContacts,
 	},
 	"checks": {
-		SecurityCheckRPKI:          OpSecurity,
-		SecurityCheckAbuseContacts: OpSecurity,
-		SecurityCheckBGPHijacking:  OpSecurity,
+		SecurityCheckRPKI:          OpRPKI,
+		SecurityCheckAbuseContacts: OpAbuseContacts,
+		SecurityCheckBGPHijacking:  OpBGPHijacking,
 	},
 	"relationships": {
 		RelationshipNeighbors:         OpNeighbors,
-		RelationshipAnnouncedPrefixes: OpRouting,
-		RelationshipRelatedNetworks:   OpRelationships,
+		RelationshipAnnouncedPrefixes: OpAnnouncedPrefixes,
+		RelationshipRelatedNetworks:   OpRelatedNetworks,
 	},
 }
 

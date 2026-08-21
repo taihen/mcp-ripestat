@@ -65,3 +65,12 @@ func toOperations(strings []string) []Operation {
 	}
 	return operations
 }
+
+func validateEnum(value, paramName string, allowed ...string) error {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported %s value: %s", paramName, value)
+}

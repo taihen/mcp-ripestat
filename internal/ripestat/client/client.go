@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -16,6 +17,11 @@ import (
 )
 
 var ripeLimiter = make(chan struct{}, 7)
+
+// MaxResponseBodyBytes bounds the decompressed upstream response held in
+// memory. RIPEstat responses are read before decoding so compressed payloads
+// cannot bypass the limit.
+const MaxResponseBodyBytes int64 = 16 << 20
 
 func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 
@@ -278,7 +284,20 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 		return errors.FromHTTPResponse(resp, "request failed")
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
+	if resp.ContentLength > MaxResponseBodyBytes {
+		return errors.ErrServerError.WithError(fmt.Errorf("response body exceeds %d bytes", MaxResponseBodyBytes))
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBodyBytes+1))
+	if err != nil {
+		c.Logger.Error("Failed to read response: %v", err)
+		return errors.ErrServerError.WithError(fmt.Errorf("failed to read response: %w", err))
+	}
+	if int64(len(body)) > MaxResponseBodyBytes {
+		return errors.ErrServerError.WithError(fmt.Errorf("response body exceeds %d bytes", MaxResponseBodyBytes))
+	}
+
+	if err := json.Unmarshal(body, target); err != nil {
 		c.Logger.Error("Failed to decode response: %v", err)
 		return errors.ErrServerError.WithError(fmt.Errorf("failed to decode response: %w", err))
 	}

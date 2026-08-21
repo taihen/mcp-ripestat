@@ -6,32 +6,57 @@ import (
 
 var routingMatrix = map[ResourceType]map[Operation][]string{
 	IPAddress: {
-		OpOverview:     {"getNetworkInfo", "getWhois"},
-		OpSecurity:     {"getAbuseContactFinder", "getRPKIValidation"},
-		OpRouting:      {"getRoutingStatus", "getBGPUpdates"},
-		OpHistory:      {"getRoutingHistory", "getAllocationHistory"},
-		OpHierarchy:    {"getAddressSpaceHierarchy"},
-		OpUpdates:      {"getBGPUpdates"},
-		OpLookingGlass: {"getLookingGlass", "getBGPState"},
+		OpOverview:          {"getNetworkInfo", "getWhois"},
+		OpSecurity:          {"getAbuseContactFinder", "getRPKIValidation"},
+		OpRouting:           {"getRoutingStatus", "getBGPUpdates"},
+		OpHistory:           {"getRoutingHistory", "getAllocationHistory"},
+		OpHierarchy:         {"getNetworkInfo", "getAddressSpaceHierarchy"},
+		OpUpdates:           {"getBGPUpdates"},
+		OpConsistency:       {"getNetworkInfo", "getPrefixRoutingConsistency"},
+		OpLookingGlass:      {"getLookingGlass", "getBGPState"},
+		OpWhois:             {"getWhois"},
+		OpAllocationHistory: {"getAllocationHistory"},
+		OpContacts:          {"getAbuseContactFinder"},
+		OpRPKI:              {"getRPKIValidation"},
+		OpAbuseContacts:     {"getAbuseContactFinder"},
+		OpBGPHijacking:      {"getNetworkInfo", "getRoutingStatus", "getPrefixRoutingConsistency", "getBGPUpdates"},
+		OpPathOptimization:  {"getLookingGlass", "getBGPState"},
+		OpRelatedNetworks:   {"getRelatedPrefixes"},
 	},
 	IPPrefix: {
-		OpOverview:      {"getPrefixOverview", "getNetworkInfo", "getWhois"},
-		OpSecurity:      {"getAbuseContactFinder", "getRPKIValidation", "getRPKIHistory"},
-		OpRouting:       {"getRoutingStatus", "getPrefixRoutingConsistency"},
-		OpHistory:       {"getRoutingHistory", "getAllocationHistory"},
-		OpConsistency:   {"getPrefixRoutingConsistency"},
-		OpRelationships: {"getRelatedPrefixes"},
-		OpHierarchy:     {"getAddressSpaceHierarchy"},
-		OpUpdates:       {"getBGPUpdates"},
-		OpLookingGlass:  {"getLookingGlass", "getBGPState"},
+		OpOverview:          {"getPrefixOverview", "getNetworkInfo", "getWhois"},
+		OpSecurity:          {"getAbuseContactFinder", "getRPKIValidation", "getRPKIHistory"},
+		OpRouting:           {"getRoutingStatus", "getPrefixRoutingConsistency"},
+		OpHistory:           {"getRoutingHistory", "getAllocationHistory"},
+		OpConsistency:       {"getPrefixRoutingConsistency"},
+		OpRelationships:     {"getRelatedPrefixes"},
+		OpHierarchy:         {"getAddressSpaceHierarchy"},
+		OpUpdates:           {"getBGPUpdates"},
+		OpLookingGlass:      {"getLookingGlass", "getBGPState"},
+		OpWhois:             {"getWhois"},
+		OpAllocationHistory: {"getAllocationHistory"},
+		OpContacts:          {"getAbuseContactFinder"},
+		OpRPKI:              {"getRPKIValidation", "getRPKIHistory"},
+		OpAbuseContacts:     {"getAbuseContactFinder"},
+		OpBGPHijacking:      {"getRoutingStatus", "getPrefixRoutingConsistency", "getBGPUpdates"},
+		OpPathOptimization:  {"getLookingGlass", "getBGPState"},
+		OpRelatedNetworks:   {"getRelatedPrefixes"},
 	},
 	ASN: {
-		OpOverview:      {"getASOverview", "getWhois"},
-		OpRouting:       {"getAnnouncedPrefixes", "getASRoutingConsistency", "getASPathLength"},
-		OpNeighbors:     {"getASNNeighbours"},
-		OpConsistency:   {"getASRoutingConsistency"},
-		OpRelationships: {"getASNNeighbours", "getAnnouncedPrefixes"},
-		OpHistory:       {"getRoutingHistory"},
+		OpOverview:          {"getASOverview", "getWhois"},
+		OpRouting:           {"getAnnouncedPrefixes", "getASRoutingConsistency", "getASPathLength"},
+		OpNeighbors:         {"getASNNeighbours"},
+		OpConsistency:       {"getASRoutingConsistency"},
+		OpRelationships:     {"getASNNeighbours", "getAnnouncedPrefixes"},
+		OpHistory:           {"getRoutingHistory"},
+		OpUpdates:           {"getBGPUpdates"},
+		OpWhois:             {"getWhois"},
+		OpContacts:          {"getAbuseContactFinder"},
+		OpAbuseContacts:     {"getAbuseContactFinder"},
+		OpBGPHijacking:      {"getASRoutingConsistency", "getBGPUpdates"},
+		OpPathOptimization:  {"getASPathLength"},
+		OpAnnouncedPrefixes: {"getAnnouncedPrefixes"},
+		OpRelatedNetworks:   {"getASNNeighbours", "getAnnouncedPrefixes"},
 	},
 	Country: {
 		OpOverview: {"getCountryASNs"},
@@ -87,22 +112,19 @@ func RouteOperations(resource *DetectedResource, operations []Operation) (*Route
 }
 
 func addMissingDependencyEndpoints(endpoints *[]string, dependencies map[string][]string, endpointSet map[string]bool) bool {
-	requiredDeps := make(map[string]bool)
-
-	for _, deps := range dependencies {
+	added := false
+	plannedEndpoints := append([]string(nil), (*endpoints)...)
+	for _, endpoint := range plannedEndpoints {
+		deps := dependencies[endpoint]
 		for _, dep := range deps {
 			if !endpointSet[dep] {
-				requiredDeps[dep] = true
+				*endpoints = append(*endpoints, dep)
+				endpointSet[dep] = true
+				added = true
 			}
 		}
 	}
-
-	for dep := range requiredDeps {
-		*endpoints = append(*endpoints, dep)
-		endpointSet[dep] = true
-	}
-
-	return len(requiredDeps) > 0
+	return added
 }
 
 func buildDependencies(endpoints []string) map[string][]string {
@@ -117,16 +139,12 @@ func buildDependencies(endpoints []string) map[string][]string {
 		dependencies["getRPKIValidation"] = []string{"getNetworkInfo"}
 	}
 
-	if endpointSet["getBGPUpdates"] {
-		dependencies["getBGPUpdates"] = []string{"getRoutingStatus"}
-	}
-
-	if endpointSet["getAddressSpaceHierarchy"] {
+	if endpointSet["getAddressSpaceHierarchy"] && endpointSet["getNetworkInfo"] {
 		dependencies["getAddressSpaceHierarchy"] = []string{"getNetworkInfo"}
 	}
 
-	if endpointSet["getRelatedPrefixes"] {
-		dependencies["getRelatedPrefixes"] = []string{"getPrefixOverview"}
+	if endpointSet["getPrefixRoutingConsistency"] && endpointSet["getNetworkInfo"] {
+		dependencies["getPrefixRoutingConsistency"] = []string{"getNetworkInfo"}
 	}
 
 	return dependencies
