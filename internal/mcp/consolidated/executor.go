@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/addressspacehierarchy"
@@ -66,7 +67,7 @@ func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, 
 	case "getBGPlay":
 		return bgplay.GetBGPlay(ctx, resource)
 	case "getBGPUpdates":
-		return bgpupdates.GetBGPUpdates(ctx, resource)
+		return de.handleBGPUpdates(ctx, resource, params)
 	case "getBGPState":
 		return de.handleBGPState(ctx, resource, params)
 	case "getPrefixRoutingConsistency":
@@ -84,6 +85,45 @@ func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, 
 	default:
 		return nil, fmt.Errorf("unknown endpoint: %s", endpoint)
 	}
+}
+
+func (de *DirectExecutor) handleBGPUpdates(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
+	opts, err := bgpUpdateOptions(params, time.Now().UTC())
+	if err != nil {
+		return nil, err
+	}
+	if opts == nil {
+		return bgpupdates.GetBGPUpdates(ctx, resource)
+	}
+	return bgpupdates.DefaultClient().GetWithOptions(ctx, resource, opts)
+}
+
+func bgpUpdateOptions(params map[string]interface{}, now time.Time) (*bgpupdates.GetOptions, error) {
+	timeframe := getOptionalStringParam(params, "timeframe")
+	if timeframe == "" {
+		return nil, nil
+	}
+	startTime, endTime, err := timeframeBounds(timeframe, now)
+	if err != nil {
+		return nil, err
+	}
+	return &bgpupdates.GetOptions{
+		StartTime: startTime.Format(time.RFC3339),
+		EndTime:   endTime.Format(time.RFC3339),
+	}, nil
+}
+
+func timeframeBounds(timeframe string, now time.Time) (time.Time, time.Time, error) {
+	var duration time.Duration
+	switch timeframe {
+	case TimeframeCurrent:
+		duration = time.Hour
+	default:
+		return time.Time{}, time.Time{}, fmt.Errorf("unsupported timeframe value: %s", timeframe)
+	}
+
+	endTime := now.UTC()
+	return endTime.Add(-duration), endTime, nil
 }
 
 func (de *DirectExecutor) handleRoutingHistory(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {

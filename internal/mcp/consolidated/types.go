@@ -46,6 +46,19 @@ const (
 	OpLookingGlass  Operation = "looking-glass"
 	OpRelationships Operation = "relationships"
 	OpHierarchy     Operation = "hierarchy"
+
+	// Selector-specific operations preserve the semantics exposed by the
+	// specialized consolidated tools. They intentionally remain separate from
+	// the broad investigateResource operations above.
+	OpWhois             Operation = "whois"
+	OpAllocationHistory Operation = "allocation-history"
+	OpContacts          Operation = "contacts"
+	OpRPKI              Operation = "rpki"
+	OpAbuseContacts     Operation = "abuse-contacts"
+	OpBGPHijacking      Operation = "bgp-hijacking"
+	OpPathOptimization  Operation = "path-optimization"
+	OpAnnouncedPrefixes Operation = "announced-prefixes"
+	OpRelatedNetworks   Operation = "related-networks"
 )
 
 type RouteResult struct {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -336,6 +337,54 @@ func TestClient_GetJSON_BadJSON(t *testing.T) {
 	}
 }
 
+func TestClient_GetJSON_RejectsOversizedResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Length", strconv.FormatInt(MaxResponseBodyBytes+1, 10))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := New(server.URL, server.Client())
+	var result map[string]interface{}
+	err := c.GetJSON(context.Background(), "/test", nil, &result)
+	if err == nil {
+		t.Fatal("GetJSON() expected an oversized response error")
+	}
+}
+
+func TestClient_GetJSON_RejectsOversizedChunkedResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+
+		chunk := make([]byte, 64<<10)
+		remaining := MaxResponseBodyBytes + 1
+		for remaining > 0 {
+			writeSize := int64(len(chunk))
+			if remaining < writeSize {
+				writeSize = remaining
+			}
+			if _, err := w.Write(chunk[:writeSize]); err != nil {
+				return
+			}
+			remaining -= writeSize
+		}
+	}))
+	defer server.Close()
+
+	c := New(server.URL, server.Client())
+	var result map[string]interface{}
+	err := c.GetJSON(context.Background(), "/test", nil, &result)
+	if err == nil {
+		t.Fatal("GetJSON() expected an oversized chunked response error")
+	}
+	if !strings.Contains(err.Error(), "exceeds") {
+		t.Errorf("GetJSON() error = %v, want size limit error", err)
+	}
+}
+
 func TestNewWithConfig_WithHTTPClient(t *testing.T) {
 	cfg := config.DefaultConfig().WithBaseURL("https://example.com")
 	httpClient := &http.Client{Timeout: 30 * time.Second}
@@ -509,6 +558,29 @@ func TestClient_Get_HTTPDoError(t *testing.T) {
 // mockHTTPClient is a mock implementation of HTTPDoer.
 type mockHTTPClient struct {
 	doFunc func(req *http.Request) (*http.Response, error)
+}
+
+type failingReadCloser struct{}
+
+func (failingReadCloser) Read([]byte) (int, error) { return 0, fmt.Errorf("read failed") }
+func (failingReadCloser) Close() error             { return nil }
+
+func TestClient_GetJSON_ReadFailure(t *testing.T) {
+	mockClient := &mockHTTPClient{doFunc: func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       failingReadCloser{},
+			Header:     make(http.Header),
+		}, nil
+	}}
+	c := New("https://example.com", mockClient)
+	c.RetryConfig.RetryCount = 0
+
+	var target map[string]interface{}
+	err := c.GetJSON(context.Background(), "/test", nil, &target)
+	if err == nil || !strings.Contains(err.Error(), "failed to read response") {
+		t.Fatalf("GetJSON() error = %v, want read failure", err)
+	}
 }
 
 func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {

@@ -70,6 +70,57 @@ func TestClient_Get_Success(t *testing.T) {
 	}
 }
 
+func TestClient_GetWithOptions_ForwardsTimeBounds(t *testing.T) {
+	var gotStartTime, gotEndTime string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotStartTime = r.URL.Query().Get("starttime")
+		gotEndTime = r.URL.Query().Get("endtime")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {"resource": "8.8.8.0/24", "updates": [], "nr_updates": 0},
+			"status": "ok",
+			"status_code": 200
+		}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient(client.New(ts.URL, ts.Client()))
+	_, err := c.GetWithOptions(context.Background(), "8.8.8.0/24", &GetOptions{
+		StartTime: "2026-08-14T10:00:00Z",
+		EndTime:   "2026-08-21T10:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("GetWithOptions() error = %v", err)
+	}
+	if gotStartTime != "2026-08-14T10:00:00Z" {
+		t.Errorf("starttime = %q", gotStartTime)
+	}
+	if gotEndTime != "2026-08-21T10:00:00Z" {
+		t.Errorf("endtime = %q", gotEndTime)
+	}
+}
+
+func TestClient_Get_RejectsExcessiveUpdateCount(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"data": {"resource": "8.8.8.0/24", "updates": [], "nr_updates": 10001},
+			"status": "ok",
+			"status_code": 200
+		}`))
+	}))
+	defer ts.Close()
+
+	c := NewClient(client.New(ts.URL, ts.Client()))
+	result, err := c.Get(context.Background(), "8.8.8.0/24")
+	if err == nil {
+		t.Fatal("Get() expected an excessive update count error")
+	}
+	if result != nil {
+		t.Errorf("Get() result = %#v, want nil", result)
+	}
+}
+
 func TestClient_Get_EmptyResource(t *testing.T) {
 	client := NewClient(nil)
 	ctx := context.Background()

@@ -54,10 +54,12 @@ func DetectResource(input string) (*DetectedResource, error) {
 	}
 
 	if cidrV4Pattern.MatchString(input) || cidrV6Pattern.MatchString(input) {
-		if _, _, err := net.ParseCIDR(input); err != nil {
+		_, network, err := net.ParseCIDR(input)
+		if err != nil {
 			return nil, fmt.Errorf("invalid CIDR: %s", input)
 		}
 		resource.Type = IPPrefix
+		resource.Value = network.String()
 		if strings.Contains(input, ":") {
 			resource.Version = 6
 		} else {

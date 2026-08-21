@@ -172,6 +172,13 @@ func TestDetectResource_IPPrefix(t *testing.T) {
 			wantErr:   false,
 		},
 		{
+			name:      "canonicalizes IPv4 CIDR host bits",
+			input:     "192.168.1.99/24",
+			wantType:  IPPrefix,
+			wantValue: "192.168.1.0/24",
+			wantErr:   false,
+		},
+		{
 			name:      "valid IPv6 CIDR",
 			input:     "2001:db8::/32",
 			wantType:  IPPrefix,

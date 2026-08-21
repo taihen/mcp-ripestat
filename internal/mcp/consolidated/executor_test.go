@@ -4,7 +4,55 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 )
+
+func TestTimeframeBounds(t *testing.T) {
+	now := time.Date(2026, 8, 21, 10, 0, 0, 0, time.UTC)
+	tests := []struct {
+		timeframe string
+		wantStart time.Time
+		wantErr   bool
+	}{
+		{timeframe: TimeframeCurrent, wantStart: now.Add(-time.Hour)},
+		{timeframe: Timeframe1Day, wantErr: true},
+		{timeframe: Timeframe1Week, wantErr: true},
+		{timeframe: Timeframe1Month, wantErr: true},
+		{timeframe: "invalid", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.timeframe, func(t *testing.T) {
+			start, end, err := timeframeBounds(tt.timeframe, now)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("timeframeBounds() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if !start.Equal(tt.wantStart) || !end.Equal(now) {
+				t.Errorf("timeframeBounds() = (%v, %v), want (%v, %v)", start, end, tt.wantStart, now)
+			}
+		})
+	}
+}
+
+func TestBGPUpdateOptions(t *testing.T) {
+	now := time.Date(2026, 8, 21, 10, 0, 0, 0, time.UTC)
+
+	opts, err := bgpUpdateOptions(nil, now)
+	if err != nil || opts != nil {
+		t.Fatalf("bgpUpdateOptions(nil) = (%v, %v), want (nil, nil)", opts, err)
+	}
+
+	opts, err = bgpUpdateOptions(map[string]interface{}{"timeframe": TimeframeCurrent}, now)
+	if err != nil {
+		t.Fatalf("bgpUpdateOptions(current) error = %v", err)
+	}
+	if opts == nil || opts.StartTime != "2026-08-21T09:00:00Z" || opts.EndTime != "2026-08-21T10:00:00Z" {
+		t.Errorf("bgpUpdateOptions(current) = %#v", opts)
+	}
+}
 
 func TestNewDirectExecutor(t *testing.T) {
 	executor := NewDirectExecutor()
@@ -23,6 +71,57 @@ func TestDirectExecutor_ExecuteEndpoint_UnknownEndpoint(t *testing.T) {
 	}
 	if result != nil {
 		t.Error("ExecuteEndpoint() expected nil result for unknown endpoint")
+	}
+}
+
+func TestDirectExecutor_ExecuteEndpoint_EmptyResourceValidation(t *testing.T) {
+	executor := NewDirectExecutor()
+	tests := []struct {
+		endpoint string
+		params   map[string]interface{}
+	}{
+		{endpoint: "getNetworkInfo"},
+		{endpoint: "getASOverview"},
+		{endpoint: "getAnnouncedPrefixes"},
+		{endpoint: "getRelatedPrefixes"},
+		{endpoint: "getRoutingStatus"},
+		{endpoint: "getWhois"},
+		{endpoint: "getAbuseContactFinder"},
+		{endpoint: "getRPKIValidation"},
+		{endpoint: "getRPKIHistory"},
+		{endpoint: "getASNNeighbours"},
+		{endpoint: "getLookingGlass"},
+		{endpoint: "getCountryASNs"},
+		{endpoint: "getBGPlay"},
+		{endpoint: "getBGPUpdates"},
+		{endpoint: "getBGPState"},
+		{endpoint: "getPrefixRoutingConsistency"},
+		{endpoint: "getPrefixOverview"},
+		{endpoint: "getAddressSpaceHierarchy"},
+		{endpoint: "getAllocationHistory"},
+		{endpoint: "getASPathLength"},
+		{endpoint: "getASRoutingConsistency"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.endpoint, func(t *testing.T) {
+			result, err := executor.ExecuteEndpoint(context.Background(), tt.endpoint, "", tt.params)
+			if err == nil {
+				t.Fatalf("ExecuteEndpoint(%s) expected validation error, result=%v", tt.endpoint, result)
+			}
+		})
+	}
+}
+
+func TestDirectExecutor_HandleBGPUpdates_InvalidTimeframe(t *testing.T) {
+	result, err := NewDirectExecutor().ExecuteEndpoint(
+		context.Background(),
+		"getBGPUpdates",
+		"AS15169",
+		map[string]interface{}{"timeframe": "invalid"},
+	)
+	if err == nil || result != nil {
+		t.Fatalf("ExecuteEndpoint(getBGPUpdates) = (%v, %v), want nil result and error", result, err)
 	}
 }
 

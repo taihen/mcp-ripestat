@@ -333,12 +333,11 @@ Use `investigateResource` with multiple operations to gather related data in a s
 Use `analyzeRouting` with timeframe parameters to analyze routing changes over time:
 
 ```shell
-"Analyze routing consistency for 8.8.8.0/24 over the past week"
-"Get routing updates for AS15169 in the last month"
-"Show BGP path optimization for 193.0.0.0/21 over the past day"
+"Get current routing updates for AS15169"
 ```
 
-**Timeframes**: `current`, `1d`, `1w`, `1m`
+**Timeframe**: `current`, implemented as a bounded one-hour raw update window.
+Longer historical windows require an aggregated endpoint that is not yet implemented.
 
 **Analysis types**: `consistency`, `path-optimization`, `updates`, `looking-glass`
 
@@ -348,7 +347,7 @@ Combine `validateSecurity` with `investigateResource` for security assessments:
 
 ```shell
 "Validate security for 8.8.8.0/24 with RPKI, abuse contacts, and BGP hijacking checks"
-"Check security compliance for AS15169 including all validation checks"
+"Check abuse contacts and BGP hijacking risk signals for AS15169"
 ```
 
 **Security checks**: `rpki`, `abuse-contacts`, `bgp-hijacking`
@@ -359,27 +358,27 @@ Use `exploreRelationships` with different scopes to map network topology:
 
 ```shell
 "Explore direct neighbors for AS15169"
-"Show extended relationships for 193.0.0.0/21 including announced prefixes and related networks"
-"Get all relationship types for AS3333 with extended scope"
+"Show related networks for 193.0.0.0/21"
+"Get all supported relationship types for AS3333"
 ```
 
 **Relationship types**: `neighbors`, `announced-prefixes`, `related-networks`
 
-**Scope options**: `direct` (immediate relationships) or `extended` (broader network view)
+**Scope option**: `direct`. Extended graph traversal is not yet implemented.
 
 #### Registry Data Retrieval
 
 Use `queryRegistry` with format control for administrative data:
 
 ```shell
-"Get detailed WHOIS information for 8.8.8.8"
+"Get WHOIS information for 8.8.8.8"
 "Query registry for 193.0.0.0/21 with allocation history and hierarchy"
 "Retrieve comprehensive registry data for AS15169 including contacts"
 ```
 
 **Data types**: `whois`, `allocation-history`, `hierarchy`, `contacts`
 
-**Format options**: `summary` (default) or `detailed` (more comprehensive)
+**Format option**: `summary`. Detailed registry presentation is not yet implemented.
 
 #### Geographic Analysis
 
@@ -387,11 +386,10 @@ Use `searchByLocation` for country-based network analysis:
 
 ```shell
 "Show all ASNs registered in the Netherlands"
-"Get prefix statistics for Germany"
-"List all prefixes announced from Switzerland"
 ```
 
-**Location types**: `asns`, `prefixes`, `statistics`
+**Location type**: `asns`. Country prefix inventories and resource statistics
+are not yet implemented.
 
 #### Cross-Validation Techniques
 

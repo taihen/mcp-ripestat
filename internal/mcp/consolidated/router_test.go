@@ -36,9 +36,7 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 			},
 			operations:    []Operation{OpRouting},
 			shouldContain: []string{"getRoutingStatus", "getBGPUpdates"},
-			wantDeps: map[string][]string{
-				"getBGPUpdates": {"getRoutingStatus"},
-			},
+			wantDeps:      map[string][]string{},
 		},
 		{
 			name: "OpHierarchy for IPAddress includes getNetworkInfo dependency",
@@ -54,17 +52,15 @@ func TestRouteOperations_IncludesDependencyEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "OpRelationships for IPPrefix includes getPrefixOverview dependency",
+			name: "OpRelationships for IPPrefix routes directly",
 			resource: &DetectedResource{
 				Type:      IPPrefix,
 				Value:     "8.8.8.0/24",
 				Validated: true,
 			},
 			operations:    []Operation{OpRelationships},
-			shouldContain: []string{"getRelatedPrefixes", "getPrefixOverview"},
-			wantDeps: map[string][]string{
-				"getRelatedPrefixes": {"getPrefixOverview"},
-			},
+			shouldContain: []string{"getRelatedPrefixes"},
+			wantDeps:      map[string][]string{},
 		},
 		{
 			name: "Multiple operations with dependencies",
@@ -226,32 +222,25 @@ func TestBuildDependencies(t *testing.T) {
 			},
 		},
 		{
-			name:      "getBGPUpdates dependency",
+			name:      "getBGPUpdates has no data dependency",
 			endpoints: []string{"getBGPUpdates"},
-			wantDeps: map[string][]string{
-				"getBGPUpdates": {"getRoutingStatus"},
-			},
+			wantDeps:  map[string][]string{},
 		},
 		{
-			name:      "getAddressSpaceHierarchy dependency",
+			name:      "getAddressSpaceHierarchy requires an explicitly planned dependency",
 			endpoints: []string{"getAddressSpaceHierarchy"},
-			wantDeps: map[string][]string{
-				"getAddressSpaceHierarchy": {"getNetworkInfo"},
-			},
+			wantDeps:  map[string][]string{},
 		},
 		{
-			name:      "getRelatedPrefixes dependency",
+			name:      "getRelatedPrefixes has no data dependency",
 			endpoints: []string{"getRelatedPrefixes"},
-			wantDeps: map[string][]string{
-				"getRelatedPrefixes": {"getPrefixOverview"},
-			},
+			wantDeps:  map[string][]string{},
 		},
 		{
 			name:      "multiple dependencies",
 			endpoints: []string{"getRPKIValidation", "getBGPUpdates"},
 			wantDeps: map[string][]string{
 				"getRPKIValidation": {"getNetworkInfo"},
-				"getBGPUpdates":     {"getRoutingStatus"},
 			},
 		},
 		{
