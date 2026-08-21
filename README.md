@@ -69,20 +69,21 @@ rather than stdio transport, enabling deployment as a standalone network
 service that multiple MCP clients can access concurrently without process
 spawning overhead.
 
-**Legacy Protocol Fallback**: The server maintains backwards compatibility with
-the deprecated transports.
+**Protocol Compatibility**: The server implements the stateless `2026-07-28`
+protocol. Initialization-based Streamable HTTP revisions are disabled by
+default and can be enabled explicitly with `MCP_ENABLE_LEGACY_PROTOCOLS=true`.
+The retired HTTP+SSE transport is not exposed.
 
 **Concurrent Request Management**: Semaphore-based rate limiting operates
-per-server instance rather than per-client-connection, managing RIPE API quotas
-across multiple concurrent sessions.
+per-server instance rather than per protocol session, managing RIPE API quotas
+across stateless concurrent requests.
 
 > [!WARNING]
 > At current stage this MCP server does not provide authentication. The initial
-> version of MCP released on 2024-11-05 did not support authorization. However,
-> in the 2025-03-26 update, the MCP protocol introduced an OAuth 2.1-based
-> authorization mechanism. It is still not widely adopted and might be subject
-> to change in the future - therefore, we recommend using a firewall or other
-> native MCP solution, such as MCPProxy, to restrict access to the server.
+> server is intentionally public and read-only, but its upstream RIPEstat calls
+> still consume shared service capacity. Deployments that require caller
+> isolation or policy enforcement should add authentication and authorization at
+> the endpoint or a trusted gateway; a firewall alone is not an identity layer.
 
 ## Installation
 
@@ -133,16 +134,33 @@ These endpoints are essential for load balancers, monitoring systems, and deploy
 ### Streamable HTTP Transport
 
 • Endpoint: /mcp (streaming occurs over the same request/response channel)
-• Protocol: Stream-framed HTTP (per MCP spec 2025-06-18)
-• Status: Default transport for all MCP clients implementing the 2025-06-18 spec
-• Features: Bidirectional streaming, incremental responses, zero-copy frames
+• Protocol: Stateless Streamable HTTP (MCP spec 2026-07-28)
+• Status: Primary transport; POST only; modern protocol required by default
+• Features: Per-request metadata, `server/discover`, header-based routing, cacheable deterministic tool lists, and request-scoped cancellation
 
 ### JSON-RPC 2.0 Endpoint
 
 • Endpoint: /mcp
 • Protocol: JSON-RPC 2.0
 • Status: Recommended production endpoint (replaces REST)
-• Features: Full MCP handshake, capability negotiation, tool invocation, compatible with Cursor IDE and other MCP-compliant clients
+• Features: Stateless discovery and tool invocation
+
+### Security and compatibility configuration
+
+- `MCP_ENABLE_LEGACY_PROTOCOLS=true` enables initialization-based Streamable
+  HTTP clients (`2025-11-25`, `2025-06-18`, and `2025-03-26`). Legacy calls do
+  not carry the modern routing headers; gateways must authenticate and inspect
+  their JSON-RPC bodies independently. Because the runtime is stateless, the
+  compatibility shim does not use initialization as an authorization gate;
+  headerless calls are treated as `2025-03-26`. Keep this disabled unless needed.
+- `TRUSTED_PROXIES` is a comma-separated list of proxy CIDRs whose forwarding
+  headers may identify the caller. The default is empty. Configure only proxy
+  addresses you operate; private and loopback networks are not implicitly
+  trusted.
+- `CORS_ALLOWED_ORIGINS` adds browser origins to the loopback-only defaults.
+  Third-party web origins are opt-in.
+- `RATE_LIMIT_MAX_CLIENTS` bounds individually tracked rate-limit identities
+  (default `10000`); additional identities share an overflow bucket.
 
 ## MCP Client Configuration
 

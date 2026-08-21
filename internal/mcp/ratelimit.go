@@ -12,9 +12,10 @@ import (
 
 // RateLimiter implements a per-client token bucket rate limiter.
 type RateLimiter struct {
-	mu      sync.Mutex
-	clients map[string]*clientBucket
-	config  RateLimitConfig
+	mu       sync.Mutex
+	clients  map[string]*clientBucket
+	overflow *clientBucket
+	config   RateLimitConfig
 
 	// cleanupInterval is how often to clean up expired buckets
 	cleanupInterval time.Duration
@@ -31,7 +32,13 @@ type RateLimitConfig struct {
 
 	// Enabled controls whether rate limiting is active.
 	Enabled bool
+
+	// MaxClients bounds the number of individually tracked client buckets.
+	// Additional identities share a single overflow bucket.
+	MaxClients int
 }
+
+const defaultMaxRateLimitClients = 10_000
 
 // clientBucket tracks rate limit state for a single client.
 type clientBucket struct {
@@ -41,12 +48,14 @@ type clientBucket struct {
 
 // DefaultRateLimitConfig returns the default rate limit configuration.
 // It can be overridden via environment variables:
-// RATE_LIMIT_ENABLED, RATE_LIMIT_RPS, and RATE_LIMIT_BURST.
+// RATE_LIMIT_ENABLED, RATE_LIMIT_RPS, RATE_LIMIT_BURST, and
+// RATE_LIMIT_MAX_CLIENTS.
 func DefaultRateLimitConfig() RateLimitConfig {
 	config := RateLimitConfig{
 		RequestsPerSecond: 10,
 		BurstSize:         20,
 		Enabled:           true,
+		MaxClients:        defaultMaxRateLimitClients,
 	}
 
 	if enabled := os.Getenv("RATE_LIMIT_ENABLED"); enabled != "" {
@@ -65,11 +74,20 @@ func DefaultRateLimitConfig() RateLimitConfig {
 		}
 	}
 
+	if maxClients := os.Getenv("RATE_LIMIT_MAX_CLIENTS"); maxClients != "" {
+		if val, err := strconv.Atoi(maxClients); err == nil && val > 0 {
+			config.MaxClients = val
+		}
+	}
+
 	return config
 }
 
 // NewRateLimiter creates a new rate limiter with the given configuration.
 func NewRateLimiter(config RateLimitConfig) *RateLimiter {
+	if config.MaxClients <= 0 {
+		config.MaxClients = defaultMaxRateLimitClients
+	}
 	return &RateLimiter{
 		clients:         make(map[string]*clientBucket),
 		config:          config,
@@ -98,11 +116,21 @@ func (rl *RateLimiter) Allow(clientIP string) bool {
 
 	bucket, exists := rl.clients[clientIP]
 	if !exists {
-		bucket = &clientBucket{
-			tokens:     float64(rl.config.BurstSize),
-			lastUpdate: now,
+		if len(rl.clients) >= rl.config.MaxClients {
+			if rl.overflow == nil {
+				rl.overflow = &clientBucket{
+					tokens:     float64(rl.config.BurstSize),
+					lastUpdate: now,
+				}
+			}
+			bucket = rl.overflow
+		} else {
+			bucket = &clientBucket{
+				tokens:     float64(rl.config.BurstSize),
+				lastUpdate: now,
+			}
+			rl.clients[clientIP] = bucket
 		}
-		rl.clients[clientIP] = bucket
 	}
 
 	// Calculate tokens to add based on time elapsed

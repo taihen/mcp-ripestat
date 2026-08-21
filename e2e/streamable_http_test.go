@@ -3,8 +3,6 @@
 package e2e
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,8 +37,8 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("Expected status 400 for legacy GET query style, got %d", resp.StatusCode)
+		if resp.StatusCode != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405 for GET, got %d", resp.StatusCode)
 		}
 	})
 
@@ -68,8 +66,8 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("Expected status 400 for legacy GET query style, got %d", resp.StatusCode)
+		if resp.StatusCode != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405 for GET, got %d", resp.StatusCode)
 		}
 	})
 
@@ -97,8 +95,8 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("Expected status 400 for legacy GET query style, got %d", resp.StatusCode)
+		if resp.StatusCode != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405 for GET, got %d", resp.StatusCode)
 		}
 	})
 
@@ -126,8 +124,8 @@ func TestStreamableHTTP(t *testing.T) {
 		// Check CORS headers
 		expectedHeaders := map[string]string{
 			"Access-Control-Allow-Origin":  "http://localhost:3000",
-			"Access-Control-Allow-Methods": "POST, GET, OPTIONS, DELETE",
-			"Access-Control-Allow-Headers": "Content-Type, MCP-Protocol-Version, MCP-Session-ID, Accept",
+			"Access-Control-Allow-Methods": "POST, OPTIONS",
+			"Access-Control-Allow-Headers": "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id",
 			"Access-Control-Max-Age":       "86400",
 		}
 
@@ -182,71 +180,35 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("session management", func(t *testing.T) {
-		// Initialize should create a session.
-		initReq := mcp.NewRequest("initialize", map[string]interface{}{
-			"protocolVersion": "2025-06-18",
-			"capabilities":    map[string]interface{}{},
-			"clientInfo": map[string]interface{}{
-				"name":    "streamable-http-test",
-				"version": "1.0.0",
-			},
-		}, 1001)
-		initResp, initResult := sendMCPRequestWithHeaders(t, mcpURL, initReq, nil)
-		if initResult.Error != nil {
-			t.Fatalf("Initialize failed: %v", initResult.Error)
+	t.Run("stateless discovery", func(t *testing.T) {
+		discoverReq := mcp.NewRequest("server/discover", nil, 1001)
+		resp, discoverResult := sendMCPRequestWithHeaders(t, mcpURL, discoverReq, nil)
+		if discoverResult.Error != nil {
+			t.Fatalf("server/discover failed: %v", discoverResult.Error)
 		}
-		sessionID := initResp.Header.Get("Mcp-Session-Id")
-		if sessionID == "" {
-			t.Fatal("Expected session ID in initialize response")
+		if sessionID := resp.Header.Get("Mcp-Session-Id"); sessionID != "" {
+			t.Fatalf("stateless response unexpectedly set session ID %q", sessionID)
 		}
-
-		// Follow-up request with same session should succeed.
-		pingReq := mcp.NewRequest("ping", nil, 1002)
-		_, pingResult := sendMCPRequestWithSession(t, mcpURL, pingReq, sessionID)
-		if pingResult.Error != nil {
-			t.Fatalf("Ping with existing session failed: %v", pingResult.Error)
+		result := discoverResult.Result.(map[string]interface{})
+		if result["resultType"] != mcp.ResultTypeComplete {
+			t.Errorf("resultType = %v", result["resultType"])
 		}
 	})
 
 	t.Run("supported protocol version", func(t *testing.T) {
-		// Test with current protocol version using POST
-		requestData := map[string]interface{}{
-			"jsonrpc": "2.0",
-			"method":  "ping",
-			"id":      1,
+		response := sendMCPRequest(t, mcpURL, mcp.NewRequest("server/discover", nil, 1))
+		if response.Error != nil {
+			t.Fatalf("server/discover failed: %v", response.Error)
 		}
-
-		reqBody, _ := json.Marshal(requestData)
-		req, err := http.NewRequest("POST", mcpURL, bytes.NewBuffer(reqBody))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "application/json, text/event-stream")
-		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Request failed: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status 200 for current protocol version, got %d", resp.StatusCode)
-		}
-
-		// Check protocol version in response
-		responseVersion := resp.Header.Get("MCP-Protocol-Version")
-		if responseVersion != "2025-06-18" {
-			t.Errorf("Expected response protocol version '2025-06-18', got '%s'", responseVersion)
+		result := response.Result.(map[string]interface{})
+		versions := result["supportedVersions"].([]interface{})
+		if len(versions) == 0 || versions[0] != mcp.ProtocolVersion {
+			t.Errorf("supportedVersions = %v", versions)
 		}
 	})
 
 	t.Run("GET request missing method parameter", func(t *testing.T) {
-		// Test GET without method parameter - should return endpoint info
+		// Stateless 2026 transport does not expose endpoint information over GET.
 		req, err := http.NewRequest("GET", mcpURL, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
@@ -262,18 +224,8 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status 200 for endpoint info, got %d", resp.StatusCode)
-		}
-
-		// Should return endpoint info JSON
-		var response map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			t.Fatalf("Failed to decode response: %v", err)
-		}
-
-		if response["service"] != "mcp-ripestat" {
-			t.Errorf("Expected service 'mcp-ripestat', got %v", response["service"])
+		if resp.StatusCode != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405 for GET, got %d", resp.StatusCode)
 		}
 	})
 
@@ -293,8 +245,8 @@ func TestStreamableHTTP(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusBadRequest {
-			t.Errorf("Expected status 400, got %d", resp.StatusCode)
+		if resp.StatusCode != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405, got %d", resp.StatusCode)
 		}
 	})
 }
@@ -302,20 +254,13 @@ func TestStreamableHTTP(t *testing.T) {
 func TestStreamableHTTPCapabilities(t *testing.T) {
 	mcpURL := serverURL + "/mcp"
 
-	// Test that initialize returns capabilities
-	req := mcp.NewRequest("initialize", map[string]interface{}{
-		"protocolVersion": "2025-06-18",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo": map[string]interface{}{
-			"name":    "test-client",
-			"version": "1.0.0",
-		},
-	}, 1)
+	// Modern clients discover capabilities without an initialization handshake.
+	req := mcp.NewRequest("server/discover", nil, 1)
 
 	response := sendMCPRequest(t, mcpURL, req)
 
 	if response.Error != nil {
-		t.Fatalf("Initialize failed: %v", response.Error)
+		t.Fatalf("server/discover failed: %v", response.Error)
 	}
 
 	// Verify response structure
@@ -329,17 +274,18 @@ func TestStreamableHTTPCapabilities(t *testing.T) {
 		t.Fatal("Capabilities is not an object")
 	}
 
-	// SDK returns tools capability when tools are registered
 	if _, hasTools := capabilities["tools"]; !hasTools {
-		t.Log("Tools capability not present (may be expected depending on SDK version)")
+		t.Error("Tools capability not present")
 	}
 
-	// Verify serverInfo
-	serverInfo, ok := result["serverInfo"].(map[string]interface{})
+	meta, ok := result["_meta"].(map[string]interface{})
 	if !ok {
-		t.Fatal("ServerInfo is not an object")
+		t.Fatal("_meta is not an object")
 	}
-
+	serverInfo, ok := meta[mcp.MetaKeyServerInfo].(map[string]interface{})
+	if !ok {
+		t.Fatal("serverInfo is not an object")
+	}
 	if serverInfo["name"] == "" {
 		t.Error("Server name should not be empty")
 	}
@@ -348,34 +294,14 @@ func TestStreamableHTTPCapabilities(t *testing.T) {
 func TestStreamableHTTPFullWorkflow(t *testing.T) {
 	mcpURL := serverURL + "/mcp"
 
-	// Step 1: Initialize via POST and capture session.
-	initReq := mcp.NewRequest("initialize", map[string]interface{}{
-		"protocolVersion": "2025-06-18",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo": map[string]interface{}{
-			"name":    "test-client",
-			"version": "1.0.0",
-		},
-	}, 1)
-
-	initResp, initResponse := sendMCPRequestWithHeaders(t, mcpURL, initReq, nil)
-	if initResponse.Error != nil {
-		t.Fatalf("Initialize failed: %v", initResponse.Error)
-	}
-	sessionID := initResp.Header.Get("Mcp-Session-Id")
-	if sessionID == "" {
-		t.Fatal("Expected session ID from initialize response")
-	}
-
-	// Step 2: Send initialized notification via POST
-	initializedNotif := mcp.NewNotification("initialized", nil)
-	sendMCPNotificationViaHTTP(t, mcpURL, initializedNotif)
-
-	// Step 3: List tools via POST JSON-RPC.
+	// Step 1: List tools directly; modern requests are self-describing.
 	listReq := mcp.NewRequest("tools/list", nil, "list-tools")
-	_, listResponse := sendMCPRequestWithSession(t, mcpURL, listReq, sessionID)
+	listResp, listResponse := sendMCPRequestWithHeaders(t, mcpURL, listReq, nil)
 	if listResponse.Error != nil {
 		t.Fatalf("Tools list failed: %v", listResponse.Error)
+	}
+	if sessionID := listResp.Header.Get("Mcp-Session-Id"); sessionID != "" {
+		t.Fatalf("stateless response unexpectedly set session ID %q", sessionID)
 	}
 
 	// Verify tools list
@@ -393,12 +319,12 @@ func TestStreamableHTTPFullWorkflow(t *testing.T) {
 		t.Error("Expected at least one tool")
 	}
 
-	// Step 4: Call a tool via POST JSON-RPC.
+	// Step 2: Call a tool in an independent POST.
 	callReq := mcp.NewRequest("tools/call", map[string]interface{}{
 		"name":      "getWhatsMyIP",
 		"arguments": map[string]interface{}{},
 	}, "call-whatsmyip")
-	_, callResponse := sendMCPRequestWithSession(t, mcpURL, callReq, sessionID)
+	_, callResponse := sendMCPRequestWithHeaders(t, mcpURL, callReq, nil)
 
 	// Tool call should succeed (or fail due to network, but not protocol error)
 	if callResponse.Error != nil {
@@ -409,33 +335,5 @@ func TestStreamableHTTPFullWorkflow(t *testing.T) {
 		}
 		// Network or tool execution error is acceptable in tests
 		t.Logf("Tool call failed (likely network issue): %v", callResponse.Error)
-	}
-}
-
-func sendMCPNotificationViaHTTP(t *testing.T, url string, notif *mcp.Notification) {
-	reqBody, err := json.Marshal(notif)
-	if err != nil {
-		t.Fatalf("Failed to marshal notification: %v", err)
-	}
-
-	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
-	if err != nil {
-		t.Fatalf("Failed to create request: %v", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Accept", "application/json, text/event-stream")
-
-	resp, err := http.DefaultClient.Do(httpReq)
-	if err != nil {
-		t.Fatalf("Failed to send notification: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// SDK may be strict with notification/session semantics depending on state.
-	if resp.StatusCode != http.StatusOK &&
-		resp.StatusCode != http.StatusAccepted &&
-		resp.StatusCode != http.StatusNoContent &&
-		resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("Expected status 200/202/204/400 for notification, got %d", resp.StatusCode)
 	}
 }

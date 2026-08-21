@@ -17,24 +17,6 @@ func TestASPathLengthE2E(t *testing.T) {
 
 	mcpURL := serverURL + "/mcp"
 
-	// Initialize a dedicated session for this test.
-	initReq := mcp.NewRequest("initialize", map[string]interface{}{
-		"protocolVersion": "2025-06-18",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo": map[string]interface{}{
-			"name":    "test-client",
-			"version": "1.0.0",
-		},
-	}, "aspath-init")
-	initResp, initResult := sendMCPRequestWithHeaders(t, mcpURL, initReq, nil)
-	if initResult.Error != nil {
-		t.Fatalf("Initialize failed: %v", initResult.Error)
-	}
-	sessionID := initResp.Header.Get("Mcp-Session-Id")
-	if sessionID == "" {
-		t.Fatal("Expected session ID from initialize response")
-	}
-
 	// AS path length is now reached via consolidated analyzeRouting tool.
 	req := mcp.NewRequest("tools/call", map[string]interface{}{
 		"name": "analyzeRouting",
@@ -43,7 +25,7 @@ func TestASPathLengthE2E(t *testing.T) {
 			"analysis": []string{"path-optimization"},
 		},
 	}, "test-as-path-length")
-	_, response := sendMCPRequestWithSession(t, mcpURL, req, sessionID)
+	_, response := sendMCPRequestWithHeaders(t, mcpURL, req, nil)
 
 	// Check if there's an error field
 	if response.Error != nil {

@@ -33,35 +33,26 @@ var (
 // DefaultProxyConfig returns the default proxy configuration.
 // It reads trusted proxies from the TRUSTED_PROXIES environment variable,
 // which should be a comma-separated list of CIDR ranges.
-// Common private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8)
-// are trusted by default for local/container deployments.
+// No proxies are trusted unless explicitly configured. Trusting private or
+// loopback ranges by default would let direct local clients spoof forwarding
+// headers and bypass per-client controls.
 func DefaultProxyConfig() *ProxyConfig {
 	proxyConfigOnce.Do(func() {
 		defaultProxyConfig = &ProxyConfig{
 			TrustedProxies: make([]*net.IPNet, 0),
 		}
 
-		// Default private ranges commonly used in container/proxy deployments
-		defaultCIDRs := []string{
-			"10.0.0.0/8",
-			"172.16.0.0/12",
-			"192.168.0.0/16",
-			"127.0.0.0/8",
-			"::1/128",
-			"fc00::/7",
-		}
-
-		// Add user-configured trusted proxies from environment
+		var configuredCIDRs []string
 		if envProxies := os.Getenv("TRUSTED_PROXIES"); envProxies != "" {
 			for _, cidr := range strings.Split(envProxies, ",") {
 				cidr = strings.TrimSpace(cidr)
 				if cidr != "" {
-					defaultCIDRs = append(defaultCIDRs, cidr)
+					configuredCIDRs = append(configuredCIDRs, cidr)
 				}
 			}
 		}
 
-		for _, cidr := range defaultCIDRs {
+		for _, cidr := range configuredCIDRs {
 			_, network, err := net.ParseCIDR(cidr)
 			if err == nil {
 				defaultProxyConfig.TrustedProxies = append(defaultProxyConfig.TrustedProxies, network)
@@ -167,19 +158,26 @@ func ExtractClientIPWithConfig(r *http.Request, config *ProxyConfig) string {
 		return remoteIP
 	}
 
-	// Request is from a trusted proxy - we can trust the proxy headers
+	// Walk X-Forwarded-For from the closest hop to the original caller. Every
+	// trusted proxy is stripped from the right; the first untrusted address is
+	// the effective client. Reject malformed chains instead of skipping entries,
+	// because skipping lets an attacker control which address is selected.
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		ips := strings.Split(xff, ",")
-		for i, ip := range ips {
-			ips[i] = strings.TrimSpace(ip)
+		for i := range ips {
+			ips[i] = strings.TrimSpace(ips[i])
+			if !isValidIP(ips[i]) {
+				return remoteIP
+			}
 		}
-
-		// Return the first valid IP (the original client)
-		for _, ip := range ips {
-			if isValidIP(ip) {
+		for i := len(ips) - 1; i >= 0; i-- {
+			ip := ips[i]
+			if !config.IsTrustedProxy(ip) {
 				return ip
 			}
 		}
+
+		return remoteIP
 	}
 
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {

@@ -9,7 +9,25 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
 )
 
-const ProtocolVersion = "2025-06-18"
+const (
+	ProtocolVersion       = "2026-07-28"
+	LegacyProtocolVersion = "2025-11-25"
+	ToolsListTTLMs        = 3_600_000
+	CacheScopePublic      = "public"
+	ResultTypeComplete    = "complete"
+
+	MetaKeyProtocolVersion    = "io.modelcontextprotocol/protocolVersion"
+	MetaKeyClientCapabilities = "io.modelcontextprotocol/clientCapabilities"
+	MetaKeyClientInfo         = "io.modelcontextprotocol/clientInfo"
+	MetaKeyServerInfo         = "io.modelcontextprotocol/serverInfo"
+)
+
+var supportedLegacyProtocolVersions = map[string]struct{}{
+	"2025-11-25": {},
+	"2025-06-18": {},
+	"2025-03-26": {},
+	"2024-11-05": {},
+}
 
 type InitializeParams struct {
 	ProtocolVersion string      `json:"protocolVersion"`
@@ -98,7 +116,7 @@ type ToolContent struct {
 
 func CreateInitializeResult(serverName, serverVersion string) *InitializeResult {
 	return &InitializeResult{
-		ProtocolVersion: ProtocolVersion,
+		ProtocolVersion: LegacyProtocolVersion,
 		Capabilities: &Capabilities{
 			Tools:     &ToolsCapability{ListChanged: false},
 			Resources: &ResourcesCapability{Subscribe: false, ListChanged: false},

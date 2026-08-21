@@ -86,6 +86,9 @@ func run(ctx context.Context, port string) error {
 		Addr:              addr,
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	serveErrCh := make(chan error, 1)

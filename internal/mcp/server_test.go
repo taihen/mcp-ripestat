@@ -602,7 +602,7 @@ func TestHandleInitialize_EdgeCases(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 	if response, ok := result.(*Response); !ok || response.Error != nil {
-		t.Error("Expected successful response with nil params")
+		t.Error("Expected successful legacy negotiation with nil params")
 	}
 
 	req.Params = make(chan int)
@@ -614,6 +614,43 @@ func TestHandleInitialize_EdgeCases(t *testing.T) {
 		if response.Error == nil || response.Error.Code != InvalidParams {
 			t.Error("Expected InvalidParams for unmarshalable params")
 		}
+	}
+}
+
+func TestHandleInitialize_LegacyVersionNegotiation(t *testing.T) {
+	tests := []struct {
+		requested string
+		want      string
+	}{
+		{"2025-11-25", "2025-11-25"},
+		{"2025-06-18", "2025-06-18"},
+		{"2025-03-26", "2025-03-26"},
+		{"2024-11-05", "2024-11-05"},
+		{"2099-01-01", LegacyProtocolVersion},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.requested, func(t *testing.T) {
+			server := NewServer("test-server", "1.0.0", false)
+			responseValue, err := server.handleInitialize(&Request{
+				JSONRPC: "2.0",
+				Method:  "initialize",
+				ID:      1,
+				Params: InitializeParams{
+					ProtocolVersion: tt.requested,
+					Capabilities:    map[string]interface{}{},
+					ClientInfo:      ClientInfo{Name: "test", Version: "1.0.0"},
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := responseValue.(*Response)
+			result := response.Result.(*InitializeResult)
+			if result.ProtocolVersion != tt.want {
+				t.Fatalf("negotiated version = %q, want %q", result.ProtocolVersion, tt.want)
+			}
+		})
 	}
 }
 

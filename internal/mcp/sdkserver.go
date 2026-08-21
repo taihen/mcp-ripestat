@@ -1,13 +1,16 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -16,28 +19,30 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
-// supportedProtocolVersion uses the protocol version constant from protocol.go.
-// This ensures consistency across the codebase.
-var supportedProtocolVersion = ProtocolVersion
-
 // SDKServer wraps the official MCP SDK server with RIPEstat-specific functionality.
 type SDKServer struct {
 	mcpServer         *mcp.Server
 	consolidatedTools *consolidated.Tools
 	disableWhatsMyIP  bool
 	rateLimiter       *RateLimiter
+	allowLegacy       bool
+	allowedVersions   []string
 }
 
 // NewSDKServer creates a new MCP server using the official SDK.
 func NewSDKServer(serverName, serverVersion string, disableWhatsMyIP bool) *SDKServer {
+	allowLegacy := legacyProtocolsEnabled()
+	allowedVersions := allowedProtocolVersions(allowLegacy)
 	impl := &mcp.Implementation{
 		Name:    serverName,
 		Version: serverVersion,
 	}
 
 	mcpServer := mcp.NewServer(impl, &mcp.ServerOptions{
-		Logger: slog.Default(),
+		Logger:       slog.Default(),
+		Capabilities: &mcp.ServerCapabilities{},
 	})
+	mcpServer.AddReceivingMiddleware(protocolResultMiddleware(ToolsListTTLMs, allowedVersions))
 
 	executor := consolidated.NewDirectExecutor()
 	consolidatedTools := consolidated.NewTools(executor)
@@ -47,11 +52,44 @@ func NewSDKServer(serverName, serverVersion string, disableWhatsMyIP bool) *SDKS
 		consolidatedTools: consolidatedTools,
 		disableWhatsMyIP:  disableWhatsMyIP,
 		rateLimiter:       NewRateLimiter(DefaultRateLimitConfig()),
+		allowLegacy:       allowLegacy,
+		allowedVersions:   allowedVersions,
 	}
 
 	s.registerTools()
 
 	return s
+}
+
+// protocolResultMiddleware applies deployment policy to discovery and marks
+// caller-independent discovery/tool-list results as publicly cacheable.
+func protocolResultMiddleware(ttlMs int, allowedVersions []string) mcp.Middleware {
+	return func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			result, err := next(ctx, method, req)
+			if err != nil {
+				return result, err
+			}
+			switch cacheable := result.(type) {
+			case *mcp.DiscoverResult:
+				cacheable.TTLMs = ttlMs
+				cacheable.CacheScope = CacheScopePublic
+				cacheable.SupportedVersions = append([]string(nil), allowedVersions...)
+			case *mcp.ListToolsResult:
+				cacheable.TTLMs = ttlMs
+				cacheable.CacheScope = CacheScopePublic
+			}
+			return result, nil
+		}
+	}
+}
+
+func allowedProtocolVersions(allowLegacy bool) []string {
+	versions := []string{ProtocolVersion}
+	if allowLegacy {
+		versions = append(versions, "2025-11-25", "2025-06-18", "2025-03-26")
+	}
+	return versions
 }
 
 // MCPServer returns the underlying MCP SDK server.
@@ -221,19 +259,25 @@ func (s *SDKServer) NewStreamableHTTPHandler() http.Handler {
 	sdkHandler := mcp.NewStreamableHTTPHandler(func(_ *http.Request) *mcp.Server {
 		return s.mcpServer
 	}, &mcp.StreamableHTTPOptions{
-		JSONResponse: true, // Return JSON instead of SSE for simpler client compatibility
+		Stateless:                    true,
+		JSONResponse:                 true, // Return JSON when no request-scoped notifications need streaming.
+		PropagateRequestCancellation: true,
 	})
 
 	return &httpHandler{
-		sdkHandler:  sdkHandler,
-		rateLimiter: s.rateLimiter,
+		sdkHandler:      sdkHandler,
+		rateLimiter:     s.rateLimiter,
+		allowLegacy:     s.allowLegacy,
+		allowedVersions: append([]string(nil), s.allowedVersions...),
 	}
 }
 
 // httpHandler wraps the SDK handler with custom middleware.
 type httpHandler struct {
-	sdkHandler  http.Handler
-	rateLimiter *RateLimiter
+	sdkHandler      http.Handler
+	rateLimiter     *RateLimiter
+	allowLegacy     bool
+	allowedVersions []string
 }
 
 // Default allowed origins for CORS.
@@ -242,8 +286,6 @@ var defaultAllowedOrigins = []string{
 	"https://localhost",
 	"http://127.0.0.1",
 	"https://127.0.0.1",
-	"https://cursor.sh",
-	"https://claude.ai",
 }
 
 var (
@@ -341,8 +383,31 @@ func sanitizeForLog(value string) string {
 	}, value)
 }
 
+func legacyProtocolsEnabled() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("MCP_ENABLE_LEGACY_PROTOCOLS")))
+	return value == "1" || value == "true"
+}
+
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Apply rate limiting
+	origin := r.Header.Get("Origin")
+	w.Header().Add("Vary", "Origin")
+	if origin != "" && !isValidOrigin(origin) {
+		//nolint:gosec // value is sanitized before structured logging.
+		slog.Warn("invalid origin rejected", "origin", sanitizeForLog(origin))
+		http.Error(w, "Invalid origin", http.StatusForbidden)
+		return
+	}
+	if origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+
+	// Handle OPTIONS for CORS preflight
+	if r.Method == http.MethodOptions {
+		h.handleCORS(w, r)
+		return
+	}
+
+	// Apply rate limiting only to protocol traffic, not browser preflights.
 	if h.rateLimiter != nil {
 		clientIP := extractClientIPForRateLimit(r)
 		if !h.rateLimiter.Allow(clientIP) {
@@ -353,45 +418,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	origin := r.Header.Get("Origin")
-	protocolVersion := r.Header.Get("MCP-Protocol-Version")
-
-	// Default to the only supported protocol version
-	if protocolVersion == "" {
-		protocolVersion = supportedProtocolVersion
-	}
-
-	// Only support the specified protocol version
-	if protocolVersion != supportedProtocolVersion {
-		//nolint:gosec // value is sanitized before structured logging.
-		slog.Warn("unsupported protocol version", "version", sanitizeForLog(protocolVersion))
-		http.Error(w, "Unsupported protocol version. Only "+supportedProtocolVersion+" is supported.", http.StatusBadRequest)
-		return
-	}
-
-	// Set protocol version header
-	w.Header().Set("MCP-Protocol-Version", protocolVersion)
-
-	// Handle OPTIONS for CORS preflight
-	if r.Method == http.MethodOptions {
-		h.handleCORS(w, r)
-		return
-	}
-
-	// Validate origin for requests with Origin header
-	if origin != "" {
-		if !isValidOrigin(origin) {
-			//nolint:gosec // value is sanitized before structured logging.
-			slog.Warn("invalid origin rejected", "origin", sanitizeForLog(origin))
-			http.Error(w, "Invalid origin", http.StatusForbidden)
-			return
-		}
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-
-	// Handle GET without method parameter (endpoint info)
-	if r.Method == http.MethodGet && r.URL.Query().Get("method") == "" {
-		h.handleEndpointInfo(w, r)
+	if r.Method == http.MethodPost && !h.enforceProtocolPolicy(w, r) {
 		return
 	}
 
@@ -403,43 +430,140 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.sdkHandler.ServeHTTP(w, r)
 }
 
+const maxPolicyBodyBytes = 4 << 20
+
+type policyEnvelope struct {
+	ID     json.RawMessage `json:"id"`
+	Method string          `json:"method"`
+	Params struct {
+		ProtocolVersion string `json:"protocolVersion"`
+	} `json:"params"`
+}
+
+func (h *httpHandler) enforceProtocolPolicy(w http.ResponseWriter, r *http.Request) bool {
+	requested := r.Header.Get("MCP-Protocol-Version")
+	if requested == ProtocolVersion {
+		return true
+	}
+
+	envelopes, ok := readPolicyEnvelopes(w, r)
+	if !ok {
+		return false
+	}
+	firstID := firstPolicyID(envelopes)
+	if h.allowLegacy && h.supportsVersion(requested) {
+		for _, envelope := range envelopes {
+			if envelope.Method != "initialize" {
+				continue
+			}
+			bodyVersion := envelope.Params.ProtocolVersion
+			if bodyVersion == ProtocolVersion || !h.supportsVersion(bodyVersion) {
+				h.rejectProtocolRequest(w, bodyVersion, envelope.ID)
+				return false
+			}
+			if bodyVersion != requested {
+				h.rejectLegacyHeaderMismatch(w, requested, bodyVersion, envelope.ID)
+				return false
+			}
+		}
+		return true
+	}
+	if requested == "" && h.allowLegacy {
+		// 2025-03-26 predates MCP-Protocol-Version. Headerless non-initialize
+		// requests are necessarily handled as that compatibility revision.
+		for _, envelope := range envelopes {
+			if envelope.Method != "initialize" {
+				continue
+			}
+			bodyVersion := envelope.Params.ProtocolVersion
+			if bodyVersion == ProtocolVersion || !h.supportsVersion(bodyVersion) {
+				h.rejectProtocolRequest(w, bodyVersion, envelope.ID)
+				return false
+			}
+		}
+		return true
+	}
+
+	h.rejectProtocolRequest(w, requested, firstID)
+	return false
+}
+
+func (h *httpHandler) rejectLegacyHeaderMismatch(w http.ResponseWriter, headerVersion, bodyVersion string, id json.RawMessage) {
+	response := NewErrorResponse(HeaderMismatchError, "MCP-Protocol-Version header does not match initialize protocolVersion", map[string]interface{}{
+		"header": headerVersion,
+		"body":   bodyVersion,
+	}, id)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to write protocol mismatch response", "err", err)
+	}
+}
+
+func (h *httpHandler) supportsVersion(version string) bool {
+	return slices.Contains(h.allowedVersions, version)
+}
+
+func readPolicyEnvelopes(w http.ResponseWriter, r *http.Request) ([]policyEnvelope, bool) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxPolicyBodyBytes+1))
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return nil, false
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	if len(body) > maxPolicyBodyBytes {
+		http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
+		return nil, false
+	}
+
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var envelopes []policyEnvelope
+		_ = json.Unmarshal(trimmed, &envelopes)
+		return envelopes, true
+	}
+	var envelope policyEnvelope
+	_ = json.Unmarshal(trimmed, &envelope)
+	return []policyEnvelope{envelope}, true
+}
+
+func firstPolicyID(envelopes []policyEnvelope) json.RawMessage {
+	if len(envelopes) == 0 {
+		return nil
+	}
+	return envelopes[0].ID
+}
+
+func (h *httpHandler) rejectProtocolRequest(w http.ResponseWriter, requested string, id json.RawMessage) {
+	code := HeaderMismatchError
+	message := "MCP-Protocol-Version header is required"
+	if requested != "" {
+		code = UnsupportedProtocolVersionError
+		message = "Unsupported protocol version"
+	}
+	response := NewErrorResponse(code, message, map[string]interface{}{
+		"supported": append([]string(nil), h.allowedVersions...),
+		"requested": requested,
+		"hint":      "Set MCP_ENABLE_LEGACY_PROTOCOLS=true only when legacy clients are explicitly required.",
+	}, id)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("failed to write protocol policy response", "err", err)
+	}
+}
+
 func (h *httpHandler) handleCORS(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	if origin != "" && isValidOrigin(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Protocol-Version, MCP-Session-ID, Accept")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Session-Id")
 	w.Header().Set("Access-Control-Max-Age", "86400")
+	w.Header().Add("Vary", "Access-Control-Request-Method")
+	w.Header().Add("Vary", "Access-Control-Request-Headers")
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (h *httpHandler) handleEndpointInfo(w http.ResponseWriter, _ *http.Request) {
-	response := map[string]interface{}{
-		"service":     "mcp-ripestat",
-		"protocol":    "MCP",
-		"version":     ProtocolVersion,
-		"methods":     []string{"POST", "GET", "DELETE"},
-		"description": "RIPEstat Data API MCP Server",
-		"endpoints": map[string]interface{}{
-			"mcp": map[string]interface{}{
-				"url":         "/mcp",
-				"methods":     []string{"POST", "GET", "DELETE"},
-				"description": "Main MCP JSON-RPC endpoint",
-				"usage": map[string]string{
-					"POST":   "Send JSON-RPC 2.0 requests",
-					"GET":    "Open SSE stream or use query parameters: ?method=<method>&params=<json>",
-					"DELETE": "Terminate session",
-				},
-			},
-		},
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		slog.Error("failed to write endpoint info response", "err", err)
-	}
 }

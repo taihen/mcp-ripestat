@@ -129,6 +129,9 @@ func validateMaxResultsParam(args map[string]interface{}) (int, *ToolResult) {
 	return maxResults, nil
 }
 
+// Server is the legacy in-process JSON-RPC test fixture.
+//
+// Deprecated: production protocol handling is owned by SDKServer.
 type Server struct {
 	serverName        string
 	serverVersion     string
@@ -265,30 +268,20 @@ func (s *Server) handleInitialize(req *Request) (interface{}, error) {
 		}
 	}
 
-	isLegacyClient := params.ProtocolVersion != "" && params.ProtocolVersion < "2025-06-18"
-
 	slog.Info("MCP server responding to initialize request",
 		"server_name", s.serverName,
 		"version", s.serverVersion,
-		"client_protocol", params.ProtocolVersion,
-		"is_legacy", isLegacyClient)
+		"client_protocol", params.ProtocolVersion)
 
-	if isLegacyClient {
-		s.setGloballyInitialized(true)
-		slog.Info("auto-initialized server for legacy protocol version", "version", params.ProtocolVersion)
-
-		result := CreateLegacyInitializeResult(s.serverName, s.serverVersion)
-		return NewResponse(result, req.ID), nil
+	s.setGloballyInitialized(true)
+	negotiatedVersion := LegacyProtocolVersion
+	if _, supported := supportedLegacyProtocolVersions[params.ProtocolVersion]; supported {
+		negotiatedVersion = params.ProtocolVersion
 	}
-
-	if params.ProtocolVersion != ProtocolVersion {
-		slog.Warn("protocol version mismatch", "client", params.ProtocolVersion, "server", ProtocolVersion)
-	}
-
-	s.setInitialized(true)
-	slog.Info("auto-initialized server for protocol version", "version", params.ProtocolVersion)
+	slog.Info("auto-initialized legacy server", "requested", params.ProtocolVersion, "negotiated", negotiatedVersion)
 
 	result := CreateInitializeResult(s.serverName, s.serverVersion)
+	result.ProtocolVersion = negotiatedVersion
 	return NewResponse(result, req.ID), nil
 }
 
