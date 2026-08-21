@@ -85,6 +85,28 @@ func TestIsValidOrigin(t *testing.T) {
 	}
 }
 
+func TestEffectivePort(t *testing.T) {
+	tests := []struct {
+		name   string
+		scheme string
+		port   string
+		want   string
+	}{
+		{name: "explicit port", scheme: "https", port: "8443", want: "8443"},
+		{name: "default HTTP", scheme: "http", want: "80"},
+		{name: "default HTTPS", scheme: "https", want: "443"},
+		{name: "unknown scheme", scheme: "custom", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := effectivePort(tt.scheme, tt.port); got != tt.want {
+				t.Fatalf("effectivePort(%q, %q) = %q, want %q", tt.scheme, tt.port, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFormatToolError(t *testing.T) {
 	tests := []struct {
 		name     string
