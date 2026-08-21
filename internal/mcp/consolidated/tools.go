@@ -399,7 +399,7 @@ func extractPrefixFromNetworkInfo(result interface{}) string {
 	}
 
 	resultValue := reflect.ValueOf(result)
-	if resultValue.Kind() == reflect.Ptr {
+	if resultValue.Kind() == reflect.Pointer {
 		resultValue = resultValue.Elem()
 	}
 

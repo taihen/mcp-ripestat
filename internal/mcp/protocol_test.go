@@ -2,14 +2,15 @@ package mcp
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 )
 
 func TestCreateInitializeResult(t *testing.T) {
 	result := CreateInitializeResult("test-server", "1.0.0")
 
-	if result.ProtocolVersion != ProtocolVersion {
-		t.Errorf("Expected ProtocolVersion to be %s, got %s", ProtocolVersion, result.ProtocolVersion)
+	if result.ProtocolVersion != LegacyProtocolVersion {
+		t.Errorf("Expected ProtocolVersion to be %s, got %s", LegacyProtocolVersion, result.ProtocolVersion)
 	}
 	if result.ServerInfo.Name != "test-server" {
 		t.Errorf("Expected ServerInfo.Name to be 'test-server', got %s", result.ServerInfo.Name)
@@ -40,10 +41,8 @@ func TestCreateInitializeResult(t *testing.T) {
 			if len(caps.Transport.HTTP.Methods) != len(expectedMethods) {
 				t.Errorf("Expected %d HTTP methods, got %d", len(expectedMethods), len(caps.Transport.HTTP.Methods))
 			}
-			for i, method := range caps.Transport.HTTP.Methods {
-				if method != expectedMethods[i] {
-					t.Errorf("Expected method %s at index %d, got %s", expectedMethods[i], i, method)
-				}
+			if !slices.Equal(caps.Transport.HTTP.Methods, expectedMethods) {
+				t.Errorf("Expected methods %v, got %v", expectedMethods, caps.Transport.HTTP.Methods)
 			}
 		}
 	}
@@ -208,8 +207,8 @@ func TestCreateToolResultFromJSON(t *testing.T) {
 }
 
 func TestProtocolVersion(t *testing.T) {
-	if ProtocolVersion != "2025-06-18" {
-		t.Errorf("ProtocolVersion = %s, want '2025-06-18'", ProtocolVersion)
+	if ProtocolVersion != "2026-07-28" {
+		t.Errorf("ProtocolVersion = %s, want '2026-07-28'", ProtocolVersion)
 	}
 }
 

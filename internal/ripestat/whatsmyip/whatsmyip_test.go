@@ -2,6 +2,7 @@ package whatsmyip
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -157,6 +158,7 @@ func TestGetWhatsMyIPWithClientIP(t *testing.T) {
 }
 
 func TestExtractClientIP(t *testing.T) {
+	config := proxyConfigForCIDRs(t, "10.0.0.0/8", "192.168.0.0/16", "35.191.0.1/32")
 	tests := []struct {
 		name       string
 		headers    map[string]string
@@ -239,15 +241,15 @@ func TestExtractClientIP(t *testing.T) {
 				"X-Forwarded-For": "192.168.1.100, 203.0.113.8, 35.191.0.1",
 			},
 			remoteAddr: "10.0.0.1:12345",
-			expected:   "192.168.1.100", // First IP in traditional multi-proxy case
+			expected:   "203.0.113.8",
 		},
 		{
-			name: "Invalid IP in X-Forwarded-For should be skipped",
+			name: "Invalid IP in X-Forwarded-For rejects the chain",
 			headers: map[string]string{
 				"X-Forwarded-For": "invalid-ip, 203.0.113.9, 35.191.0.1",
 			},
 			remoteAddr: "10.0.0.1:12345",
-			expected:   "203.0.113.9",
+			expected:   "10.0.0.1",
 		},
 		{
 			name: "All invalid IPs should fallback to RemoteAddr",
@@ -268,7 +270,7 @@ func TestExtractClientIP(t *testing.T) {
 				req.Header.Set(key, value)
 			}
 
-			result := ExtractClientIP(req)
+			result := ExtractClientIPWithConfig(req, config)
 			if result != tt.expected {
 				t.Errorf("Expected %s, got %s", tt.expected, result)
 			}
@@ -330,7 +332,7 @@ func TestIsValidIP(t *testing.T) {
 }
 
 func TestProxyConfig_IsTrustedProxy(t *testing.T) {
-	config := DefaultProxyConfig()
+	config := proxyConfigForCIDRs(t, "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "::1/128", "fc00::/7")
 
 	tests := []struct {
 		ip       string
@@ -368,7 +370,7 @@ func TestProxyConfig_NilConfig(t *testing.T) {
 
 func TestExtractClientIPWithConfig(t *testing.T) {
 	// Create a config that trusts 10.0.0.0/8
-	config := DefaultProxyConfig()
+	config := proxyConfigForCIDRs(t, "10.0.0.0/8")
 
 	t.Run("trusts XFF from trusted proxy", func(t *testing.T) {
 		req := httptest.NewRequestWithContext(context.Background(), "GET", "/", nil)
@@ -402,6 +404,27 @@ func TestExtractClientIPWithConfig(t *testing.T) {
 			t.Errorf("Expected 10.0.0.1, got %s", ip)
 		}
 	})
+}
+
+func TestDefaultProxyConfigTrustsNothing(t *testing.T) {
+	t.Setenv("TRUSTED_PROXIES", "")
+	config := DefaultProxyConfig()
+	if len(config.TrustedProxies) != 0 {
+		t.Fatalf("expected no proxies to be trusted by default, got %d", len(config.TrustedProxies))
+	}
+}
+
+func proxyConfigForCIDRs(t *testing.T, cidrs ...string) *ProxyConfig {
+	t.Helper()
+	config := &ProxyConfig{}
+	for _, cidr := range cidrs {
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			t.Fatalf("parse test CIDR %q: %v", cidr, err)
+		}
+		config.TrustedProxies = append(config.TrustedProxies, network)
+	}
+	return config
 }
 
 func TestExtractRemoteIP(t *testing.T) {

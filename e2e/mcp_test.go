@@ -31,10 +31,10 @@ func TestMCPProtocol(t *testing.T) {
 
 		resp, response := sendMCPRequestWithHeaders(t, mcpURL, req, nil)
 
-		// Store session ID for subsequent requests
+		// Stateless SDK compatibility deliberately does not create a session.
 		testSessionID = resp.Header.Get("Mcp-Session-Id")
-		if testSessionID == "" {
-			t.Log("No session ID received, tests may fail")
+		if testSessionID != "" {
+			t.Fatalf("stateless compatibility response set session ID %q", testSessionID)
 		}
 
 		if response.Error != nil {
@@ -220,22 +220,31 @@ func TestMCPProtocol(t *testing.T) {
 		}
 	})
 
-	t.Run("Ping", func(t *testing.T) {
-		req := mcp.NewRequest("ping", nil, 5)
-		_, response := sendMCPRequestWithSession(t, mcpURL, req, testSessionID)
-
-		if response.Error != nil {
-			t.Fatalf("Ping failed: %v", response.Error)
+	t.Run("PingRemovedInModernProtocol", func(t *testing.T) {
+		req := modernRequest("ping", nil, 5)
+		reqBody, err := json.Marshal(req)
+		if err != nil {
+			t.Fatal(err)
 		}
-
-		// Ping should return an empty object
-		result, ok := response.Result.(map[string]interface{})
-		if !ok {
-			t.Fatal("Ping result is not an object")
+		httpReq, err := http.NewRequest("POST", mcpURL, bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatal(err)
 		}
-
-		if len(result) != 0 {
-			t.Errorf("Expected empty object for ping result, got %v", result)
+		setModernHeaders(httpReq, req)
+		resp, err := http.DefaultClient.Do(httpReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404", resp.StatusCode)
+		}
+		var response mcp.Response
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			t.Fatal(err)
+		}
+		if response.Error == nil || response.Error.Code != mcp.MethodNotFound {
+			t.Errorf("error = %+v, want MethodNotFound", response.Error)
 		}
 	})
 
@@ -320,6 +329,79 @@ func TestMCPProtocol(t *testing.T) {
 	})
 }
 
+func TestLegacyStreamableHTTPCompatibility(t *testing.T) {
+	mcpURL := serverURL + "/mcp"
+	versions := []string{"2025-11-25", "2025-06-18", "2025-03-26"}
+
+	for _, version := range versions {
+		t.Run(version, func(t *testing.T) {
+			usesVersionHeader := version != "2025-03-26"
+			initialize := mcp.NewRequest("initialize", map[string]interface{}{
+				"protocolVersion": version,
+				"capabilities":    map[string]interface{}{},
+				"clientInfo": map[string]interface{}{
+					"name": "legacy-e2e", "version": "1.0.0",
+				},
+			}, "legacy-init")
+			initializeHTTP, initializeResponse := sendRawMCPRequestWithHeaders(t, mcpURL, initialize, nil)
+			if initializeResponse.Error != nil {
+				t.Fatalf("initialize failed: %v", initializeResponse.Error)
+			}
+			result := initializeResponse.Result.(map[string]interface{})
+			if result["protocolVersion"] != version {
+				t.Fatalf("negotiated version = %v, want %s", result["protocolVersion"], version)
+			}
+			if sessionID := initializeHTTP.Header.Get("Mcp-Session-Id"); sessionID != "" {
+				t.Fatalf("stateless compatibility response set session ID %q", sessionID)
+			}
+
+			initializedBody, err := json.Marshal(mcp.NewNotification("notifications/initialized", nil))
+			if err != nil {
+				t.Fatal(err)
+			}
+			initializedRequest, err := http.NewRequest("POST", mcpURL, bytes.NewReader(initializedBody))
+			if err != nil {
+				t.Fatal(err)
+			}
+			initializedRequest.Header.Set("Content-Type", "application/json")
+			initializedRequest.Header.Set("Accept", "application/json, text/event-stream")
+			if usesVersionHeader {
+				initializedRequest.Header.Set("MCP-Protocol-Version", version)
+			}
+			initializedResponse, err := http.DefaultClient.Do(initializedRequest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			initializedResponse.Body.Close()
+			if initializedResponse.StatusCode != http.StatusAccepted {
+				t.Fatalf("initialized status = %d, want 202", initializedResponse.StatusCode)
+			}
+
+			legacyHeaders := map[string]string{}
+			if usesVersionHeader {
+				legacyHeaders["MCP-Protocol-Version"] = version
+			}
+			_, listResponse := sendRawMCPRequestWithHeaders(
+				t, mcpURL, mcp.NewRequest("tools/list", nil, "legacy-list"), legacyHeaders,
+			)
+			if listResponse.Error != nil {
+				t.Fatalf("legacy tools/list failed: %v", listResponse.Error)
+			}
+			listResult := listResponse.Result.(map[string]interface{})
+			if tools, ok := listResult["tools"].([]interface{}); !ok || len(tools) == 0 {
+				t.Fatalf("legacy tools/list result = %v", listResult)
+			}
+
+			_, callResponse := sendRawMCPRequestWithHeaders(t, mcpURL, mcp.NewRequest("tools/call", map[string]interface{}{
+				"name": "getWhatsMyIP", "arguments": map[string]interface{}{},
+			}, "legacy-call"), legacyHeaders)
+			if callResponse.Error != nil {
+				t.Fatalf("legacy tools/call failed: %v", callResponse.Error)
+			}
+		})
+	}
+}
+
 func sendMCPRequest(t *testing.T, url string, req *mcp.Request) *mcp.Response {
 	_, response := sendMCPRequestWithHeaders(t, url, req, nil)
 	return response
@@ -334,6 +416,17 @@ func sendMCPRequestWithSession(t *testing.T, url string, req *mcp.Request, sessi
 }
 
 func sendMCPRequestWithHeaders(t *testing.T, url string, req *mcp.Request, headers map[string]string) (*http.Response, *mcp.Response) {
+	if req.Method != "initialize" {
+		req = modernRequest(req.Method, req.Params, req.ID)
+	}
+	return sendMCPRequestInternal(t, url, req, headers, req.Method != "initialize")
+}
+
+func sendRawMCPRequestWithHeaders(t *testing.T, url string, req *mcp.Request, headers map[string]string) (*http.Response, *mcp.Response) {
+	return sendMCPRequestInternal(t, url, req, headers, false)
+}
+
+func sendMCPRequestInternal(t *testing.T, url string, req *mcp.Request, headers map[string]string, modern bool) (*http.Response, *mcp.Response) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		t.Fatalf("Failed to marshal request: %v", err)
@@ -345,6 +438,9 @@ func sendMCPRequestWithHeaders(t *testing.T, url string, req *mcp.Request, heade
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json, text/event-stream")
+	if modern {
+		setModernHeaders(httpReq, req)
+	}
 	for key, value := range headers {
 		httpReq.Header.Set(key, value)
 	}
@@ -367,6 +463,35 @@ func sendMCPRequestWithHeaders(t *testing.T, url string, req *mcp.Request, heade
 	resp.Body.Close()
 
 	return resp, &response
+}
+
+func modernRequest(method string, params interface{}, id interface{}) *mcp.Request {
+	modernParams := make(map[string]interface{})
+	if existing, ok := params.(map[string]interface{}); ok {
+		for key, value := range existing {
+			modernParams[key] = value
+		}
+	}
+	modernParams["_meta"] = map[string]interface{}{
+		mcp.MetaKeyProtocolVersion:    mcp.ProtocolVersion,
+		mcp.MetaKeyClientCapabilities: map[string]interface{}{},
+		mcp.MetaKeyClientInfo: map[string]interface{}{
+			"name": "mcp-ripestat-e2e", "version": "1.0.0",
+		},
+	}
+	return mcp.NewRequest(method, modernParams, id)
+}
+
+func setModernHeaders(httpReq *http.Request, req *mcp.Request) {
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json, text/event-stream")
+	httpReq.Header.Set("MCP-Protocol-Version", mcp.ProtocolVersion)
+	httpReq.Header.Set("Mcp-Method", req.Method)
+	if params, ok := req.Params.(map[string]interface{}); ok {
+		if name, ok := params["name"].(string); ok {
+			httpReq.Header.Set("Mcp-Name", name)
+		}
+	}
 }
 
 func TestMCPConcurrency(t *testing.T) {

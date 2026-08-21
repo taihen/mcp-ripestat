@@ -19,6 +19,10 @@ func TestMain(m *testing.M) {
 	// Start the server
 	serverURL = "http://localhost:8081"
 	serverProcess = exec.Command("../bin/mcp-ripestat", "--port", "8081")
+	serverProcess.Env = append(os.Environ(),
+		"MCP_ENABLE_LEGACY_PROTOCOLS=true",
+		"RATE_LIMIT_ENABLED=false",
+	)
 
 	// Redirect stdout and stderr to os.Stdout and os.Stderr
 	serverProcess.Stdout = os.Stdout

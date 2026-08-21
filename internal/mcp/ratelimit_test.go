@@ -20,6 +20,31 @@ func TestDefaultRateLimitConfig(t *testing.T) {
 	if !config.Enabled {
 		t.Error("Expected Enabled to be true by default")
 	}
+	if config.MaxClients != defaultMaxRateLimitClients {
+		t.Errorf("Expected MaxClients to be %d, got %d", defaultMaxRateLimitClients, config.MaxClients)
+	}
+}
+
+func TestRateLimiter_BoundsClientBuckets(t *testing.T) {
+	limiter := NewRateLimiter(RateLimitConfig{
+		RequestsPerSecond: 0.0001,
+		BurstSize:         1,
+		Enabled:           true,
+		MaxClients:        2,
+	})
+
+	if !limiter.Allow("192.0.2.1") || !limiter.Allow("192.0.2.2") {
+		t.Fatal("expected tracked clients to receive their initial token")
+	}
+	if !limiter.Allow("192.0.2.3") {
+		t.Fatal("expected first overflow identity to receive the shared initial token")
+	}
+	if limiter.Allow("192.0.2.4") {
+		t.Fatal("expected subsequent overflow identity to share the exhausted bucket")
+	}
+	if got := len(limiter.clients); got != 2 {
+		t.Fatalf("expected client map to remain bounded at 2, got %d", got)
+	}
 }
 
 func TestNewRateLimiter(t *testing.T) {

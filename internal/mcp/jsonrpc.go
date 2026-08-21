@@ -40,10 +40,12 @@ const (
 )
 
 const (
-	InitializationError = -32000
-	ProtocolError       = -32001
-	ResourceError       = -32002
-	ToolError           = -32003
+	InitializationError             = -32000
+	ProtocolError                   = -32001 // Legacy implementation-defined error.
+	ResourceError                   = -32002
+	ToolError                       = -32003
+	HeaderMismatchError             = -32020
+	UnsupportedProtocolVersionError = -32022
 )
 
 func NewRequest(method string, params interface{}, id interface{}) *Request {

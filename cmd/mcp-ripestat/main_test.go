@@ -545,6 +545,7 @@ func TestMCPEndpointIntegration(t *testing.T) {
 
 // TestSDKServerMCPHandler tests the SDK-based MCP handler.
 func TestSDKServerMCPHandler(t *testing.T) {
+	t.Setenv("MCP_ENABLE_LEGACY_PROTOCOLS", "true")
 	server := mcp.NewSDKServer("test-server", "1.0.0", false)
 	handler := server.NewStreamableHTTPHandler()
 
@@ -623,7 +624,13 @@ func TestSDKServerMCPHandler(t *testing.T) {
 			"jsonrpc": "2.0",
 			"id":      1,
 			"method":  "initialize",
-			"params":  map[string]interface{}{},
+			"params": map[string]interface{}{
+				"protocolVersion": "2025-06-18",
+				"capabilities":    map[string]interface{}{},
+				"clientInfo": map[string]interface{}{
+					"name": "cors-test", "version": "1.0.0",
+				},
+			},
 		}
 
 		reqBody, _ := json.Marshal(initReq)
@@ -672,7 +679,7 @@ func TestSDKServerMCPHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("EndpointInfo", func(t *testing.T) {
+	t.Run("GETRejectedByStatelessEndpoint", func(t *testing.T) {
 		req := httptest.NewRequestWithContext(context.Background(), "GET", "/mcp", nil)
 		req.Header.Set("Origin", "http://localhost:3000")
 		req.Header.Set("MCP-Protocol-Version", "2025-06-18")
@@ -683,17 +690,11 @@ func TestSDKServerMCPHandler(t *testing.T) {
 		resp := w.Result()
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status code 200 for endpoint info, got %d", resp.StatusCode)
+		if resp.StatusCode != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status code 405 for GET, got %d", resp.StatusCode)
 		}
-
-		var response map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			t.Fatalf("Failed to decode response: %v", err)
-		}
-
-		if response["service"] != "mcp-ripestat" {
-			t.Errorf("Expected service 'mcp-ripestat', got %v", response["service"])
+		if resp.Header.Get("Allow") != "POST" {
+			t.Errorf("Expected Allow header to be POST, got %q", resp.Header.Get("Allow"))
 		}
 	})
 }

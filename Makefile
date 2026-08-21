@@ -47,7 +47,7 @@ check-coverage:
 	fi
 
 # Run end-to-end tests
-e2e-test:
+e2e-test: build
 	@echo "Running end-to-end tests..."
 	go test -v -tags=e2e ./e2e/...
 
