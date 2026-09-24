@@ -268,3 +268,14 @@ func TestGetWhois(t *testing.T) {
 		})
 	}
 }
+
+func TestNewClient_UsesProvidedClient(t *testing.T) {
+	ripe := client.New("https://stat.ripe.net", nil)
+	got := NewClient(ripe)
+	if got == nil || got.client != ripe {
+		t.Fatal("NewClient did not keep the provided client")
+	}
+	if New(ripe).client != got.client {
+		t.Fatal("NewClient and New wrapped different clients")
+	}
+}
