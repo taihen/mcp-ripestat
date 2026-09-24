@@ -17,6 +17,12 @@ func New(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
+// NewClient wraps a process-lifetime RIPEstat client.
+// c must be non-nil on the MCP path. DefaultClient still calls New.
+func NewClient(c *client.Client) *Client {
+	return New(c)
+}
+
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))
