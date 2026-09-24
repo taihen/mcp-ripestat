@@ -330,6 +330,57 @@ func TestClient_GetJSON(t *testing.T) {
 	}
 }
 
+func TestGetJSON_RepeatedQueryHitsCache(t *testing.T) {
+	var hits int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.URL.Path != "/data/network-info/data.json" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		if r.URL.Query().Get("sourceapp") != config.DefaultSourceApp {
+			t.Errorf("sourceapp = %q", r.URL.Query().Get("sourceapp"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"}}`))
+	}))
+	defer server.Close()
+
+	c := New(server.URL, server.Client())
+	c.RetryConfig.RetryCount = 0
+	ctx := context.Background()
+
+	params := url.Values{}
+	params.Set("resource", "140.78.90.50")
+	var first struct {
+		Data struct {
+			Prefix string `json:"prefix"`
+		} `json:"data"`
+	}
+	if err := c.GetJSON(ctx, "/data/network-info/data.json", params, &first); err != nil {
+		t.Fatalf("first GetJSON: %v", err)
+	}
+	if params.Get("sourceapp") != "" {
+		t.Fatalf("GetJSON mutated caller params, sourceapp=%q", params.Get("sourceapp"))
+	}
+
+	again := url.Values{}
+	again.Set("resource", "140.78.90.50")
+	var second struct {
+		Data struct {
+			Prefix string `json:"prefix"`
+		} `json:"data"`
+	}
+	if err := c.GetJSON(ctx, "/data/network-info/data.json", again, &second); err != nil {
+		t.Fatalf("second GetJSON: %v", err)
+	}
+	if hits != 1 {
+		t.Fatalf("upstream hits = %d, want 1", hits)
+	}
+	if first.Data.Prefix != "140.78.0.0/16" || second.Data.Prefix != "140.78.0.0/16" {
+		t.Fatalf("prefixes = %q and %q", first.Data.Prefix, second.Data.Prefix)
+	}
+}
+
 func TestClient_GetJSON_BadJSON(t *testing.T) {
 	// Setup test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

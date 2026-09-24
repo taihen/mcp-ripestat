@@ -125,6 +125,14 @@ func DefaultClient() *Client {
 	return NewWithConfig(config.DefaultConfig(), nil)
 }
 
+func cloneValues(params url.Values) url.Values {
+	cloned := make(url.Values, len(params))
+	for key, values := range params {
+		cloned[key] = append([]string(nil), values...)
+	}
+	return cloned
+}
+
 func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*http.Response, error) {
 	u, err := url.Parse(c.BaseURL + endpoint)
 	if err != nil {
@@ -132,10 +140,7 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("failed to parse URL: %w", err))
 	}
 
-	if params == nil {
-		params = url.Values{}
-	}
-
+	params = cloneValues(params)
 	if c.SourceApp != "" {
 		params.Set("sourceapp", c.SourceApp)
 	}
