@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/addressspacehierarchy"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/allocationhistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
@@ -30,10 +31,19 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
-type DirectExecutor struct{}
+type DirectExecutor struct {
+	ripe *client.Client
+}
 
-func NewDirectExecutor() *DirectExecutor {
-	return &DirectExecutor{}
+func NewDirectExecutor(ripe *client.Client) *DirectExecutor {
+	if ripe == nil {
+		panic("consolidated.NewDirectExecutor: ripe client is nil")
+	}
+	return &DirectExecutor{ripe: ripe}
+}
+
+func (de *DirectExecutor) RIPEClient() *client.Client {
+	return de.ripe
 }
 
 func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error) {

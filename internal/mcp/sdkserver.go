@@ -16,6 +16,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/config"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
@@ -23,6 +25,8 @@ import (
 type SDKServer struct {
 	mcpServer         *mcp.Server
 	consolidatedTools *consolidated.Tools
+	ripeClient        *client.Client
+	executor          *consolidated.DirectExecutor
 	disableWhatsMyIP  bool
 	rateLimiter       *RateLimiter
 	allowLegacy       bool
@@ -44,12 +48,15 @@ func NewSDKServer(serverName, serverVersion string, disableWhatsMyIP bool) *SDKS
 	})
 	mcpServer.AddReceivingMiddleware(protocolResultMiddleware(ToolsListTTLMs, allowedVersions))
 
-	executor := consolidated.NewDirectExecutor()
+	ripeClient := client.NewWithConfig(config.DefaultConfig(), nil)
+	executor := consolidated.NewDirectExecutor(ripeClient)
 	consolidatedTools := consolidated.NewTools(executor)
 
 	s := &SDKServer{
 		mcpServer:         mcpServer,
 		consolidatedTools: consolidatedTools,
+		ripeClient:        ripeClient,
+		executor:          executor,
 		disableWhatsMyIP:  disableWhatsMyIP,
 		rateLimiter:       NewRateLimiter(DefaultRateLimitConfig()),
 		allowLegacy:       allowLegacy,

@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/config"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
@@ -137,6 +139,8 @@ type Server struct {
 	serverVersion     string
 	disableWhatsMyIP  bool
 	consolidatedTools *consolidated.Tools
+	ripeClient        *client.Client
+	executor          *consolidated.DirectExecutor
 
 	// mu protects the initialization state fields
 	mu                  sync.RWMutex
@@ -146,7 +150,8 @@ type Server struct {
 
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
 
-	executor := consolidated.NewDirectExecutor()
+	ripeClient := client.NewWithConfig(config.DefaultConfig(), nil)
+	executor := consolidated.NewDirectExecutor(ripeClient)
 	consolidatedTools := consolidated.NewTools(executor)
 
 	return &Server{
@@ -154,6 +159,8 @@ func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server 
 		serverVersion:     serverVersion,
 		disableWhatsMyIP:  disableWhatsMyIP,
 		consolidatedTools: consolidatedTools,
+		ripeClient:        ripeClient,
+		executor:          executor,
 	}
 }
 

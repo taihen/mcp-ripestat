@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/config"
 )
 
 func TestTimeframeBounds(t *testing.T) {
@@ -54,15 +57,45 @@ func TestBGPUpdateOptions(t *testing.T) {
 	}
 }
 
+func testExecutor(t *testing.T) *DirectExecutor {
+	t.Helper()
+	return NewDirectExecutor(client.NewWithConfig(config.DefaultConfig(), nil))
+}
+
+func TestNewDirectExecutor_NilPanics(t *testing.T) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("NewDirectExecutor(nil) did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "consolidated.NewDirectExecutor: ripe client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	NewDirectExecutor(nil)
+}
+
+func TestNewDirectExecutor_KeepsProvidedClient(t *testing.T) {
+	ripe := client.New("https://stat.ripe.net", nil)
+	executor := NewDirectExecutor(ripe)
+	if executor.RIPEClient() != ripe {
+		t.Fatal("executor stored a different client")
+	}
+}
+
 func TestNewDirectExecutor(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	if executor == nil {
-		t.Error("NewDirectExecutor() returned nil")
+		t.Fatal("NewDirectExecutor() returned nil")
+	}
+	if executor.RIPEClient() == nil {
+		t.Fatal("executor client is nil")
 	}
 }
 
 func TestDirectExecutor_ExecuteEndpoint_UnknownEndpoint(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	ctx := context.Background()
 
 	result, err := executor.ExecuteEndpoint(ctx, "unknownEndpoint", "8.8.8.8", nil)
@@ -75,7 +108,7 @@ func TestDirectExecutor_ExecuteEndpoint_UnknownEndpoint(t *testing.T) {
 }
 
 func TestDirectExecutor_ExecuteEndpoint_EmptyResourceValidation(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	tests := []struct {
 		endpoint string
 		params   map[string]interface{}
@@ -114,7 +147,7 @@ func TestDirectExecutor_ExecuteEndpoint_EmptyResourceValidation(t *testing.T) {
 }
 
 func TestDirectExecutor_HandleBGPUpdates_InvalidTimeframe(t *testing.T) {
-	result, err := NewDirectExecutor().ExecuteEndpoint(
+	result, err := testExecutor(t).ExecuteEndpoint(
 		context.Background(),
 		"getBGPUpdates",
 		"AS15169",
@@ -126,7 +159,7 @@ func TestDirectExecutor_HandleBGPUpdates_InvalidTimeframe(t *testing.T) {
 }
 
 func TestDirectExecutor_HandleRoutingHistory(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -196,7 +229,7 @@ func TestDirectExecutor_HandleRoutingHistory(t *testing.T) {
 }
 
 func TestDirectExecutor_HandleRPKIValidation(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -229,7 +262,7 @@ func TestDirectExecutor_HandleRPKIValidation(t *testing.T) {
 }
 
 func TestDirectExecutor_HandleASNNeighbours(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -291,7 +324,7 @@ func TestDirectExecutor_HandleASNNeighbours(t *testing.T) {
 }
 
 func testEndpointWithIntParam(t *testing.T, endpointName, resource, paramName string, paramValue int) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -348,7 +381,7 @@ func TestDirectExecutor_HandleCountryASNs(t *testing.T) {
 }
 
 func TestDirectExecutor_HandleBGPState(t *testing.T) {
-	executor := NewDirectExecutor()
+	executor := testExecutor(t)
 	ctx := context.Background()
 
 	tests := []struct {

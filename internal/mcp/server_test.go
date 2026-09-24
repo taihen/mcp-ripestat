@@ -10,6 +10,16 @@ import (
 	"testing"
 )
 
+func TestNewServer_SharesOneClientWithExecutor(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	if server.ripeClient == nil {
+		t.Fatal("ripeClient is nil")
+	}
+	if server.executor == nil || server.executor.RIPEClient() != server.ripeClient {
+		t.Fatal("executor client is not the server client")
+	}
+}
+
 func TestNewServer(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
 

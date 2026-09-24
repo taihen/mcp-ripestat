@@ -13,6 +13,16 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func TestNewSDKServer_SharesOneClientWithExecutor(t *testing.T) {
+	server := NewSDKServer("test-server", "1.0.0", false)
+	if server.ripeClient == nil {
+		t.Fatal("ripeClient is nil")
+	}
+	if server.executor == nil || server.executor.RIPEClient() != server.ripeClient {
+		t.Fatal("executor client is not the server client")
+	}
+}
+
 func TestNewSDKServer(t *testing.T) {
 	t.Run("creates server with WhatsMyIP enabled", func(t *testing.T) {
 		server := NewSDKServer("test-server", "1.0.0", false)
