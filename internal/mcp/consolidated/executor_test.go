@@ -3,6 +3,10 @@ package consolidated
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -466,6 +470,112 @@ func TestGetOptionalStringParam(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDirectExecutor_SharedCacheSkipsRepeatUpstream(t *testing.T) {
+	var networkHits, whoisHits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/data/network-info/data.json":
+			networkHits++
+			_, _ = w.Write([]byte(`{
+				"status":"ok","status_code":200,
+				"data":{"asns":["1205"],"prefix":"140.78.0.0/16"}
+			}`))
+		case "/data/whois/data.json":
+			whoisHits++
+			_, _ = w.Write([]byte(`{
+				"status":"ok","status_code":200,
+				"data":{
+					"records":[[{"key":"NetName","value":"LEVEL3"}]],
+					"irr_records":[],
+					"authorities":["whois.arin.net"],
+					"resource":"8.8.8.8"
+				}
+			}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			http.Error(w, "unexpected", http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	ripe := client.New(ts.URL, ts.Client())
+	ripe.RetryConfig.RetryCount = 0
+	executor := NewDirectExecutor(ripe)
+	ctx := context.Background()
+
+	if _, err := executor.ExecuteEndpoint(ctx, "getNetworkInfo", "140.78.90.50", nil); err != nil {
+		t.Fatalf("getNetworkInfo: %v", err)
+	}
+	if _, err := executor.ExecuteEndpoint(ctx, "getWhois", "8.8.8.8", nil); err != nil {
+		t.Fatalf("getWhois: %v", err)
+	}
+	if got := ripe.Cache.Stats().TotalEntries; got != 2 {
+		t.Fatalf("shared cache entries = %d, want 2 (network-info and whois on one client)", got)
+	}
+	if _, err := executor.ExecuteEndpoint(ctx, "getNetworkInfo", "140.78.90.50", nil); err != nil {
+		t.Fatalf("repeated getNetworkInfo: %v", err)
+	}
+	if networkHits != 1 {
+		t.Fatalf("network-info upstream hits = %d, want 1", networkHits)
+	}
+	if whoisHits != 1 {
+		t.Fatalf("whois upstream hits = %d, want 1", whoisHits)
+	}
+}
+
+func TestExecutorSourceAvoidsPackageHelpers(t *testing.T) {
+	src, err := os.ReadFile("executor.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(src)
+	forbidden := []string{
+		"DefaultClient(",
+		"networkinfo.GetNetworkInfo",
+		"asoverview.GetASOverview",
+		"announcedprefixes.GetAnnouncedPrefixes",
+		"relatedprefixes.GetRelatedPrefixes",
+		"routingstatus.GetRoutingStatus",
+		"routinghistory.GetRoutingHistory",
+		"whois.GetWhois",
+		"abusecontactfinder.GetAbuseContactFinder",
+		"rpkivalidation.GetRPKIValidation",
+		"rpkihistory.GetRPKIHistory",
+		"asnneighbours.GetASNNeighbours",
+		"lookingglass.GetLookingGlass",
+		"countryasns.GetCountryASNs",
+		"bgplay.GetBGPlay",
+		"bgpupdates.GetBGPUpdates",
+		"prefixroutingconsistency.GetPrefixRoutingConsistency",
+		"prefixoverview.GetPrefixOverview",
+		"addressspacehierarchy.GetAddressSpaceHierarchy",
+		"allocationhistory.GetAllocationHistory",
+		"aspathlength.GetASPathLength",
+		"asroutingconsistency.GetASRoutingConsistency",
+	}
+	for _, needle := range forbidden {
+		if strings.Contains(text, needle) {
+			t.Errorf("executor.go still contains %q", needle)
+		}
+	}
+}
+
+func TestDirectExecutor_ZeroValuePanics(t *testing.T) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("zero DirectExecutor did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "consolidated.DirectExecutor: ripe client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	var executor DirectExecutor
+	_, _ = executor.ExecuteEndpoint(context.Background(), "no-such-endpoint", "8.8.8.8", nil)
 }
 
 func TestGetOptionalIntParam(t *testing.T) {
