@@ -1106,3 +1106,92 @@ func TestConnectionPoolingBehavior(t *testing.T) {
 		t.Errorf("Expected %d requests, got %d", numRequests, atomic.LoadInt64(&requestCount))
 	}
 }
+
+func TestGetJSON_CacheIgnoresCallerMutation(t *testing.T) {
+	var hits int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"prefix":"140.78.0.0/16"}}`))
+	}))
+	defer server.Close()
+
+	c := New(server.URL, server.Client())
+	c.RetryConfig.RetryCount = 0
+	ctx := context.Background()
+
+	type payload struct {
+		Data struct {
+			Prefix string `json:"prefix"`
+		} `json:"data"`
+	}
+
+	params := url.Values{}
+	params.Set("resource", "140.78.90.50")
+	var first payload
+	if err := c.GetJSON(ctx, "/data/network-info/data.json", params, &first); err != nil {
+		t.Fatalf("first GetJSON: %v", err)
+	}
+	first.Data.Prefix = "mutated"
+
+	again := url.Values{}
+	again.Set("resource", "140.78.90.50")
+	var second payload
+	if err := c.GetJSON(ctx, "/data/network-info/data.json", again, &second); err != nil {
+		t.Fatalf("second GetJSON: %v", err)
+	}
+	if hits != 1 {
+		t.Fatalf("upstream hits = %d, want 1", hits)
+	}
+	if second.Data.Prefix != "140.78.0.0/16" {
+		t.Fatalf("cached prefix = %q, want 140.78.0.0/16", second.Data.Prefix)
+	}
+}
+
+func TestGetJSON_ConcurrentHitDoesNotRace(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"prefix":"140.78.0.0/16"}}`))
+	}))
+	defer server.Close()
+
+	c := New(server.URL, server.Client())
+	c.RetryConfig.RetryCount = 0
+	ctx := context.Background()
+
+	type payload struct {
+		Data struct {
+			Prefix string `json:"prefix"`
+		} `json:"data"`
+	}
+
+	var first payload
+	params := url.Values{}
+	params.Set("resource", "140.78.90.50")
+	if err := c.GetJSON(ctx, "/data/network-info/data.json", params, &first); err != nil {
+		t.Fatalf("prime GetJSON: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			first.Data.Prefix = "mutated"
+			first.Data.Prefix = "140.78.0.0/16"
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			again := url.Values{}
+			again.Set("resource", "140.78.90.50")
+			var got payload
+			if err := c.GetJSON(ctx, "/data/network-info/data.json", again, &got); err != nil {
+				t.Errorf("GetJSON: %v", err)
+				return
+			}
+		}
+	}()
+	wg.Wait()
+}

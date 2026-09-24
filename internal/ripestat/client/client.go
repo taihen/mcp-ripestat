@@ -313,8 +313,13 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	}
 
 	if c.Cache != nil {
-		c.Cache.Set(ctx, endpoint, params, target)
-		c.Logger.Debug("Cached response for endpoint %s", endpoint)
+		snapshot, err := json.Marshal(target)
+		if err != nil {
+			c.Logger.Warning("Failed to snapshot response for cache: %v", err)
+		} else {
+			c.Cache.Set(ctx, endpoint, params, json.RawMessage(snapshot))
+			c.Logger.Debug("Cached response for endpoint %s", endpoint)
+		}
 	}
 
 	c.Logger.Debug("Successfully decoded response")
