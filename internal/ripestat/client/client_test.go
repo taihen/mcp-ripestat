@@ -56,6 +56,29 @@ func TestDefaultClient(t *testing.T) {
 	}
 }
 
+func TestDefaultClient_AllocatesFreshClientAndCache(t *testing.T) {
+	a := DefaultClient()
+	b := DefaultClient()
+	if a == nil || b == nil {
+		t.Fatal("DefaultClient() returned nil")
+	}
+	if a == b {
+		t.Fatal("DefaultClient() returned the same client twice")
+	}
+	if a.Cache == nil || b.Cache == nil {
+		t.Fatal("DefaultClient() returned a client with a nil cache")
+	}
+	if a.Cache == b.Cache {
+		t.Fatal("DefaultClient() reused a cache")
+	}
+	if a.HTTPClient == nil || b.HTTPClient == nil {
+		t.Fatal("DefaultClient() returned a client with a nil HTTP client")
+	}
+	if a.HTTPClient == b.HTTPClient {
+		t.Fatal("DefaultClient() reused an HTTP client")
+	}
+}
+
 func TestNewWithConfig(t *testing.T) {
 	cfg := config.DefaultConfig().
 		WithBaseURL("https://example.com").

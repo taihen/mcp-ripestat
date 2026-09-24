@@ -116,6 +116,11 @@ func NewWithConfig(cfg *config.Config, httpClient HTTPDoer) *Client {
 	}
 }
 
+// DefaultClient returns a new RIPEstat client using config.DefaultConfig().
+// Every call allocates a new HTTP client and an empty LRU cache, so connection
+// pooling and response caching do not span calls. Tests and legacy package
+// helpers may use it. The MCP server must keep one client from NewWithConfig
+// for the process lifetime instead.
 func DefaultClient() *Client {
 	return NewWithConfig(config.DefaultConfig(), nil)
 }
