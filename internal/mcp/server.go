@@ -440,24 +440,25 @@ func (s *Server) validateGetEndpointParams(endpointName string, args map[string]
 }
 
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
-
+	if s.ripeClient == nil {
+		panic("mcp: ripe client is nil")
+	}
+	wip := whatsmyip.NewClient(s.ripeClient)
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
-
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
 		slog.Debug("extracted client IP from HTTP request", "client_ip", clientIP, "remote_addr", httpReq.RemoteAddr)
 
-		result, err := whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
+		result, err := wip.GetWithClientIP(ctx, clientIP)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
 	}
 
-	result, err := whatsmyip.GetWhatsMyIP(ctx)
+	result, err := wip.Get(ctx)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
-
 	return CreateToolResultFromJSON(result), nil
 }
 

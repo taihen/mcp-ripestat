@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewServer_SharesOneClientWithExecutor(t *testing.T) {
@@ -1741,4 +1744,68 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 	t.Run("analyzeRouting", func(t *testing.T) {
 		testBasicResourceTool(t, "analyzeRouting", "8.8.8.8")
 	})
+}
+
+func TestNewServer_WhatsMyIPUsesSharedClient(t *testing.T) {
+	var hits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.URL.Path != "/data/whats-my-ip/data.json" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"ip":"203.0.113.5"},"time":"2026-09-24T12:00:00"}`))
+	}))
+	defer ts.Close()
+
+	server := NewServer("test-server", "1.0.0", false)
+	server.ripeClient.BaseURL = ts.URL
+	server.ripeClient.HTTPClient = ts.Client()
+	server.ripeClient.RetryConfig.RetryCount = 0
+
+	ctx := context.Background()
+	first, err := server.callWhatsMyIP(ctx, nil)
+	if err != nil || first == nil || first.IsError {
+		t.Fatalf("first callWhatsMyIP = (%v, %v)", first, err)
+	}
+	second, err := server.callWhatsMyIP(ctx, nil)
+	if err != nil || second == nil || second.IsError {
+		t.Fatalf("second callWhatsMyIP = (%v, %v)", second, err)
+	}
+	if hits != 1 {
+		t.Fatalf("whats-my-ip upstream hits = %d, want 1", hits)
+	}
+}
+
+func TestServerSourceAvoidsWhatsMyIPPackageHelpers(t *testing.T) {
+	for _, name := range []string{"sdkserver.go", "server.go"} {
+		src, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(src)
+		for _, needle := range []string{"whatsmyip.GetWhatsMyIP", "client.DefaultClient("} {
+			if strings.Contains(text, needle) {
+				t.Errorf("%s still contains %q", name, needle)
+			}
+		}
+	}
+}
+
+func TestCallWhatsMyIP_NilClientPanics(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	server.ripeClient = nil
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("nil ripeClient did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "mcp: ripe client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	_, _ = server.callWhatsMyIP(ctx, nil)
 }

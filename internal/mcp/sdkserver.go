@@ -210,12 +210,15 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 
 // handleGetWhatsMyIP handles the getWhatsMyIP tool call.
 func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Try to extract client IP from HTTP request context
+	if s.ripeClient == nil {
+		panic("mcp: ripe client is nil")
+	}
+	wip := whatsmyip.NewClient(s.ripeClient)
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
 		slog.Debug("extracted client IP from HTTP request", "client_ip", clientIP, "remote_addr", httpReq.RemoteAddr)
 
-		result, err := whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
+		result, err := wip.GetWithClientIP(ctx, clientIP)
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: formatToolError(err)}},
@@ -225,8 +228,7 @@ func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolReque
 		return createToolResultFromJSON(result), nil
 	}
 
-	// Fallback to server's IP
-	result, err := whatsmyip.GetWhatsMyIP(ctx)
+	result, err := wip.Get(ctx)
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: formatToolError(err)}},

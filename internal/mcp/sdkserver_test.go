@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -678,6 +679,55 @@ func TestNewStreamableHTTPHandler(t *testing.T) {
 	if !ok {
 		t.Error("Expected handler to be of type *httpHandler")
 	}
+}
+
+func TestNewSDKServer_WhatsMyIPUsesSharedClient(t *testing.T) {
+	var hits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.URL.Path != "/data/whats-my-ip/data.json" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"ip":"203.0.113.5"},"time":"2026-09-24T12:00:00"}`))
+	}))
+	defer ts.Close()
+
+	server := NewSDKServer("test-server", "1.0.0", false)
+	server.ripeClient.BaseURL = ts.URL
+	server.ripeClient.HTTPClient = ts.Client()
+	server.ripeClient.RetryConfig.RetryCount = 0
+
+	ctx := context.Background()
+	first, err := server.handleGetWhatsMyIP(ctx, nil)
+	if err != nil || first == nil || first.IsError {
+		t.Fatalf("first handleGetWhatsMyIP = (%v, %v)", first, err)
+	}
+	second, err := server.handleGetWhatsMyIP(ctx, nil)
+	if err != nil || second == nil || second.IsError {
+		t.Fatalf("second handleGetWhatsMyIP = (%v, %v)", second, err)
+	}
+	if hits != 1 {
+		t.Fatalf("whats-my-ip upstream hits = %d, want 1", hits)
+	}
+}
+
+func TestHandleGetWhatsMyIP_NilClientPanics(t *testing.T) {
+	server := NewSDKServer("test-server", "1.0.0", false)
+	server.ripeClient = nil
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("nil ripeClient did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "mcp: ripe client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	_, _ = server.handleGetWhatsMyIP(ctx, nil)
 }
 
 func TestHTTPRequestContext(t *testing.T) {
