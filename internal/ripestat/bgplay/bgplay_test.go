@@ -188,6 +188,20 @@ func TestNewClient_UsesProvidedClient(t *testing.T) {
 	}
 }
 
+func TestNewClient_NilPanics(t *testing.T) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("NewClient(nil) did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "bgplay.NewClient: client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	NewClient(nil)
+}
+
 func TestDefaultClient(t *testing.T) {
 	defaultClient := DefaultClient()
 	if defaultClient == nil {

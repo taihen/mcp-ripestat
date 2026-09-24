@@ -18,8 +18,11 @@ func New(c *client.Client) *Client {
 }
 
 // NewClient wraps a process-lifetime RIPEstat client.
-// c must be non-nil on the MCP path. DefaultClient still calls New.
+// c must be non-nil; nil panics. DefaultClient still calls New with a fresh client.
 func NewClient(c *client.Client) *Client {
+	if c == nil {
+		panic("bgplay.NewClient: client is nil")
+	}
 	return New(c)
 }
 

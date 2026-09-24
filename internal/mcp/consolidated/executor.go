@@ -37,7 +37,7 @@ type DirectExecutor struct {
 
 func NewDirectExecutor(ripe *client.Client) *DirectExecutor {
 	if ripe == nil {
-		panic("consolidated.NewDirectExecutor: ripe client is nil")
+		panic("mcp: ripe client is nil")
 	}
 	return &DirectExecutor{ripe: ripe}
 }
@@ -48,7 +48,7 @@ func (de *DirectExecutor) RIPEClient() *client.Client {
 
 func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error) {
 	if de == nil || de.ripe == nil {
-		panic("consolidated.DirectExecutor: ripe client is nil")
+		panic("mcp: ripe client is nil")
 	}
 	switch endpoint {
 	case "getNetworkInfo":

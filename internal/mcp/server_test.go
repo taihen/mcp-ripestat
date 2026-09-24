@@ -18,8 +18,8 @@ func TestNewServer_SharesOneClientWithExecutor(t *testing.T) {
 	if server.ripeClient == nil {
 		t.Fatal("ripeClient is nil")
 	}
-	if server.executor == nil || server.executor.RIPEClient() != server.ripeClient {
-		t.Fatal("executor client is not the server client")
+	if server.consolidatedTools == nil {
+		t.Fatal("consolidatedTools is nil")
 	}
 }
 

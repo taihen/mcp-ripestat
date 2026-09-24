@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -73,7 +74,7 @@ func TestNewDirectExecutor_NilPanics(t *testing.T) {
 			t.Fatal("NewDirectExecutor(nil) did not panic")
 		}
 		msg, ok := recovered.(string)
-		if !ok || msg != "consolidated.NewDirectExecutor: ripe client is nil" {
+		if !ok || msg != "mcp: ripe client is nil" {
 			t.Fatalf("panic = %v", recovered)
 		}
 	}()
@@ -540,6 +541,7 @@ func TestExecutorSourceAvoidsPackageHelpers(t *testing.T) {
 		"relatedprefixes.GetRelatedPrefixes",
 		"routingstatus.GetRoutingStatus",
 		"routinghistory.GetRoutingHistory",
+		"routinghistory.GetRoutingHistoryWithOptions",
 		"whois.GetWhois",
 		"abusecontactfinder.GetAbuseContactFinder",
 		"rpkivalidation.GetRPKIValidation",
@@ -549,6 +551,7 @@ func TestExecutorSourceAvoidsPackageHelpers(t *testing.T) {
 		"countryasns.GetCountryASNs",
 		"bgplay.GetBGPlay",
 		"bgpupdates.GetBGPUpdates",
+		"bgpstate.DefaultClient",
 		"prefixroutingconsistency.GetPrefixRoutingConsistency",
 		"prefixoverview.GetPrefixOverview",
 		"addressspacehierarchy.GetAddressSpaceHierarchy",
@@ -561,6 +564,16 @@ func TestExecutorSourceAvoidsPackageHelpers(t *testing.T) {
 			t.Errorf("executor.go still contains %q", needle)
 		}
 	}
+	required := []string{
+		"NewClient(de.ripe)",
+		"networkinfo.NewClient(de.ripe)",
+		"whois.NewClient(de.ripe)",
+	}
+	for _, needle := range required {
+		if !strings.Contains(text, needle) {
+			t.Errorf("executor.go missing %q", needle)
+		}
+	}
 }
 
 func TestDirectExecutor_ZeroValuePanics(t *testing.T) {
@@ -570,12 +583,95 @@ func TestDirectExecutor_ZeroValuePanics(t *testing.T) {
 			t.Fatal("zero DirectExecutor did not panic")
 		}
 		msg, ok := recovered.(string)
-		if !ok || msg != "consolidated.DirectExecutor: ripe client is nil" {
+		if !ok || msg != "mcp: ripe client is nil" {
 			t.Fatalf("panic = %v", recovered)
 		}
 	}()
 	var executor DirectExecutor
 	_, _ = executor.ExecuteEndpoint(context.Background(), "no-such-endpoint", "8.8.8.8", nil)
+}
+
+func TestDirectExecutor_DistinctEndpointsKeepSeparateCacheKeys(t *testing.T) {
+	var networkHits, asHits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/data/network-info/data.json":
+			networkHits++
+			_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"}}`))
+		case "/data/as-overview/data.json":
+			asHits++
+			_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"asn":1205,"holder":"example"}}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			http.Error(w, "unexpected", http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	ripe := client.New(ts.URL, ts.Client())
+	ripe.RetryConfig.RetryCount = 0
+	executor := NewDirectExecutor(ripe)
+	ctx := context.Background()
+	resource := "AS1205"
+
+	if _, err := executor.ExecuteEndpoint(ctx, "getNetworkInfo", resource, nil); err != nil {
+		t.Fatalf("getNetworkInfo: %v", err)
+	}
+	if _, err := executor.ExecuteEndpoint(ctx, "getASOverview", resource, nil); err != nil {
+		t.Fatalf("getASOverview: %v", err)
+	}
+	if networkHits != 1 || asHits != 1 {
+		t.Fatalf("hits network=%d as=%d, want 1 each (distinct cache keys)", networkHits, asHits)
+	}
+	if got := ripe.Cache.Stats().TotalEntries; got != 2 {
+		t.Fatalf("cache entries = %d, want 2", got)
+	}
+}
+
+func TestDirectExecutor_ConcurrentCallsShareClient(t *testing.T) {
+	var networkHits int
+	var mu sync.Mutex
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/data/network-info/data.json" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+			http.Error(w, "unexpected", http.StatusNotFound)
+			return
+		}
+		mu.Lock()
+		networkHits++
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"asns":["1205"],"prefix":"140.78.0.0/16"}}`))
+	}))
+	defer ts.Close()
+
+	ripe := client.New(ts.URL, ts.Client())
+	ripe.RetryConfig.RetryCount = 0
+	executor := NewDirectExecutor(ripe)
+	ctx := context.Background()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := executor.ExecuteEndpoint(ctx, "getNetworkInfo", "140.78.90.50", nil); err != nil {
+				t.Errorf("getNetworkInfo: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	mu.Lock()
+	hits := networkHits
+	mu.Unlock()
+	if hits < 1 {
+		t.Fatal("expected at least one upstream hit")
+	}
+	if got := ripe.Cache.Stats().TotalEntries; got != 1 {
+		t.Fatalf("shared cache entries = %d, want 1", got)
+	}
 }
 
 func TestGetOptionalIntParam(t *testing.T) {

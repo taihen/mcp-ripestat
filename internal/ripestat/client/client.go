@@ -313,13 +313,10 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	}
 
 	if c.Cache != nil {
-		snapshot, err := json.Marshal(target)
-		if err != nil {
-			c.Logger.Warning("Failed to snapshot response for cache: %v", err)
-		} else {
-			c.Cache.Set(ctx, endpoint, params, json.RawMessage(snapshot))
-			c.Logger.Debug("Cached response for endpoint %s", endpoint)
-		}
+		// Cache the wire body so callers cannot mutate the LRU entry and we
+		// avoid a second marshal of the typed target.
+		c.Cache.Set(ctx, endpoint, params, json.RawMessage(append([]byte(nil), body...)))
+		c.Logger.Debug("Cached response for endpoint %s", endpoint)
 	}
 
 	c.Logger.Debug("Successfully decoded response")
@@ -327,12 +324,17 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	return nil
 }
 
+// extractEndpointType maps a RIPEstat path to a short label for metrics.
+// "/data/network-info/data.json" becomes "network-info".
 func extractEndpointType(endpoint string) string {
-
-	if len(endpoint) > 6 && endpoint[:6] == "/data/" {
-		return endpoint[6:]
+	const dataPrefix = "/data/"
+	const dataSuffix = "/data.json"
+	if len(endpoint) >= len(dataPrefix) && endpoint[:len(dataPrefix)] == dataPrefix {
+		endpoint = endpoint[len(dataPrefix):]
 	}
-
+	if len(endpoint) >= len(dataSuffix) && endpoint[len(endpoint)-len(dataSuffix):] == dataSuffix {
+		endpoint = endpoint[:len(endpoint)-len(dataSuffix)]
+	}
 	return endpoint
 }
 

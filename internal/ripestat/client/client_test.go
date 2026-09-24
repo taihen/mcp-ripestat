@@ -1149,7 +1149,9 @@ func TestGetJSON_CacheIgnoresCallerMutation(t *testing.T) {
 }
 
 func TestGetJSON_ConcurrentHitDoesNotRace(t *testing.T) {
+	var hits int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits++
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"prefix":"140.78.0.0/16"}}`))
 	}))
@@ -1171,6 +1173,9 @@ func TestGetJSON_ConcurrentHitDoesNotRace(t *testing.T) {
 	if err := c.GetJSON(ctx, "/data/network-info/data.json", params, &first); err != nil {
 		t.Fatalf("prime GetJSON: %v", err)
 	}
+	if hits != 1 {
+		t.Fatalf("prime upstream hits = %d, want 1", hits)
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -1191,7 +1196,14 @@ func TestGetJSON_ConcurrentHitDoesNotRace(t *testing.T) {
 				t.Errorf("GetJSON: %v", err)
 				return
 			}
+			if got.Data.Prefix != "140.78.0.0/16" {
+				t.Errorf("cached prefix = %q, want 140.78.0.0/16", got.Data.Prefix)
+				return
+			}
 		}
 	}()
 	wg.Wait()
+	if hits != 1 {
+		t.Fatalf("upstream hits after concurrent cache reads = %d, want 1", hits)
+	}
 }
