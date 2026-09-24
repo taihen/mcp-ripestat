@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"expvar"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/taihen/mcp-ripestat/internal/mcp"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/metrics"
 )
 
 var version = "dev"
@@ -61,30 +59,15 @@ func main() {
 
 func run(ctx context.Context, port string) error {
 	startTime := time.Now()
-	mux := http.NewServeMux()
 
 	// Create the SDK-based MCP server
 	mcpServer := mcp.NewSDKServer("mcp-ripestat", version, false)
-
-	// Use the SDK's streamable HTTP handler with our custom middleware
-	mux.Handle("/mcp", mcpServer.NewStreamableHTTPHandler())
-
-	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
-
-	mux.HandleFunc("/warmup", warmupHandler)
-
-	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		statusHandler(w, r, startTime)
-	})
-
-	mux.Handle("/debug/vars", expvar.Handler())
-	mux.HandleFunc("/metrics", metricsHandler)
 
 	addr := ":" + port
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           newHTTPHandler(startTime, mcpServer.NewStreamableHTTPHandler()),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       2 * time.Minute,
@@ -129,6 +112,37 @@ func run(ctx context.Context, port string) error {
 	slog.Info("server exited gracefully")
 
 	return nil
+}
+
+// newHTTPHandler exposes only the public service paths. Operational/debug
+// endpoints stay out of the public router, and unknown paths are rejected
+// before reaching application handlers.
+func newHTTPHandler(startTime time.Time, mcpHandler http.Handler) http.Handler {
+	mux := http.NewServeMux()
+
+	mux.Handle("/mcp", mcpHandler)
+	mux.HandleFunc("/.well-known/mcp/manifest.json", manifestHandler)
+	mux.HandleFunc("/warmup", warmupHandler)
+	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		statusHandler(w, r, startTime)
+	})
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isPublicPath(r.URL.Path) {
+			http.NotFound(w, r)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
+}
+
+func isPublicPath(path string) bool {
+	switch path {
+	case "/mcp", "/.well-known/mcp/manifest.json", "/warmup", "/status":
+		return true
+	default:
+		return false
+	}
 }
 
 type Manifest struct {
@@ -203,15 +217,5 @@ func statusHandler(w http.ResponseWriter, _ *http.Request, startTime time.Time) 
 		"uptime":    time.Since(startTime).String(),
 	}); err != nil {
 		slog.Error("failed to encode status response", "err", err)
-	}
-}
-
-func metricsHandler(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	summary := metrics.Summary()
-	if err := json.NewEncoder(w).Encode(summary); err != nil {
-		slog.Error("failed to encode metrics response", "err", err)
 	}
 }

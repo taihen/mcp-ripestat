@@ -463,6 +463,49 @@ func TestStatusHandler(t *testing.T) {
 	}
 }
 
+func TestIsPublicPath(t *testing.T) {
+	tests := []struct {
+		path  string
+		allow bool
+	}{
+		{path: "/mcp", allow: true},
+		{path: "/.well-known/mcp/manifest.json", allow: true},
+		{path: "/warmup", allow: true},
+		{path: "/status", allow: true},
+		{path: "/", allow: false},
+		{path: "/debug/vars", allow: false},
+		{path: "/metrics", allow: false},
+		{path: "/mcp/", allow: false},
+		{path: "/.env", allow: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := isPublicPath(tt.path); got != tt.allow {
+				t.Fatalf("isPublicPath(%q) = %v, want %v", tt.path, got, tt.allow)
+			}
+		})
+	}
+}
+
+func TestHTTPHandlerRejectsUnknownPaths(t *testing.T) {
+	mcpServer := mcp.NewSDKServer("test-server", "test-version", false)
+	handler := newHTTPHandler(time.Now(), mcpServer.NewStreamableHTTPHandler())
+
+	for _, path := range []string{"/", "/debug/vars", "/metrics", "/.env", "/mcp/"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, path, nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			if w.Code != http.StatusNotFound {
+				t.Fatalf("path %q returned status %d, want %d", path, w.Code, http.StatusNotFound)
+			}
+		})
+	}
+}
+
 // Test error paths for handlers to increase coverage.
 func TestHandlerErrorPaths(t *testing.T) {
 	t.Run("basic_test", func(t *testing.T) {
