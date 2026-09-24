@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/taihen/mcp-ripestat/internal/ripestat/abusecontactfinder"
-	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/addressspacehierarchy"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/allocationhistory"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/announcedprefixes"
@@ -18,6 +17,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgplay"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpstate"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpupdates"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
