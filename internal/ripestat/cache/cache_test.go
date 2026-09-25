@@ -357,6 +357,10 @@ func TestGetEndpointType(t *testing.T) {
 	}{
 		{"/data/whois", "whois"},
 		{"/data/network-info", "network-info"},
+		{"/data/whois/data.json", "whois"},
+		{"/data/network-info/data.json", "network-info"},
+		{"/data/looking-glass/data.json", "looking-glass"},
+		{"/data/whats-my-ip/data.json", "whats-my-ip"},
 		{"/other/endpoint", "/other/endpoint"},
 		{"simple", "simple"},
 	}
@@ -366,6 +370,26 @@ func TestGetEndpointType(t *testing.T) {
 		if result != test.expected {
 			t.Errorf("For endpoint %s, expected %s, got %s", test.endpoint, test.expected, result)
 		}
+	}
+}
+
+func TestCache_SetUsesEndpointTTLForDataJSONPaths(t *testing.T) {
+	ttls := map[string]time.Duration{
+		"network-info": 40 * time.Millisecond,
+	}
+	c := NewWithOptions(ttls, 100)
+	ctx := context.Background()
+	params := url.Values{}
+	params.Set("resource", "140.78.90.50")
+
+	c.Set(ctx, "/data/network-info/data.json", params, "payload")
+	if _, ok := c.Get(ctx, "/data/network-info/data.json", params); !ok {
+		t.Fatal("expected cache hit immediately after Set")
+	}
+
+	time.Sleep(80 * time.Millisecond)
+	if _, ok := c.Get(ctx, "/data/network-info/data.json", params); ok {
+		t.Fatal("expected network-info TTL to expire; path was treated as 5m fallback")
 	}
 }
 

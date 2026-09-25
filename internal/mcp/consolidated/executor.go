@@ -17,6 +17,7 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgplay"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpstate"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/bgpupdates"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/countryasns"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/lookingglass"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/networkinfo"
@@ -30,34 +31,46 @@ import (
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whois"
 )
 
-type DirectExecutor struct{}
+type DirectExecutor struct {
+	ripe *client.Client
+}
 
-func NewDirectExecutor() *DirectExecutor {
-	return &DirectExecutor{}
+func NewDirectExecutor(ripe *client.Client) *DirectExecutor {
+	if ripe == nil {
+		panic("mcp: ripe client is nil")
+	}
+	return &DirectExecutor{ripe: ripe}
+}
+
+func (de *DirectExecutor) RIPEClient() *client.Client {
+	return de.ripe
 }
 
 func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, resource string, params map[string]interface{}) (interface{}, error) {
+	if de == nil || de.ripe == nil {
+		panic("mcp: ripe client is nil")
+	}
 	switch endpoint {
 	case "getNetworkInfo":
-		return networkinfo.GetNetworkInfo(ctx, resource)
+		return networkinfo.NewClient(de.ripe).Get(ctx, resource)
 	case "getASOverview":
-		return asoverview.GetASOverview(ctx, resource)
+		return asoverview.NewClient(de.ripe).Get(ctx, resource)
 	case "getAnnouncedPrefixes":
-		return announcedprefixes.GetAnnouncedPrefixes(ctx, resource)
+		return announcedprefixes.NewClient(de.ripe).Get(ctx, resource)
 	case "getRelatedPrefixes":
-		return relatedprefixes.GetRelatedPrefixes(ctx, resource)
+		return relatedprefixes.NewClient(de.ripe).Get(ctx, resource)
 	case "getRoutingStatus":
-		return routingstatus.GetRoutingStatus(ctx, resource)
+		return routingstatus.NewClient(de.ripe).Get(ctx, resource)
 	case "getRoutingHistory":
 		return de.handleRoutingHistory(ctx, resource, params)
 	case "getWhois":
-		return whois.GetWhois(ctx, resource)
+		return whois.NewClient(de.ripe).Get(ctx, resource)
 	case "getAbuseContactFinder":
-		return abusecontactfinder.GetAbuseContactFinder(ctx, resource)
+		return abusecontactfinder.NewClient(de.ripe).Get(ctx, resource)
 	case "getRPKIValidation":
 		return de.handleRPKIValidation(ctx, resource, params)
 	case "getRPKIHistory":
-		return rpkihistory.GetRPKIHistory(ctx, resource)
+		return rpkihistory.NewClient(de.ripe).Get(ctx, resource)
 	case "getASNNeighbours":
 		return de.handleASNNeighbours(ctx, resource, params)
 	case "getLookingGlass":
@@ -65,23 +78,23 @@ func (de *DirectExecutor) ExecuteEndpoint(ctx context.Context, endpoint string, 
 	case "getCountryASNs":
 		return de.handleCountryASNs(ctx, resource, params)
 	case "getBGPlay":
-		return bgplay.GetBGPlay(ctx, resource)
+		return bgplay.NewClient(de.ripe).Get(ctx, resource)
 	case "getBGPUpdates":
 		return de.handleBGPUpdates(ctx, resource, params)
 	case "getBGPState":
 		return de.handleBGPState(ctx, resource, params)
 	case "getPrefixRoutingConsistency":
-		return prefixroutingconsistency.GetPrefixRoutingConsistency(ctx, resource)
+		return prefixroutingconsistency.NewClient(de.ripe).Get(ctx, resource)
 	case "getPrefixOverview":
-		return prefixoverview.GetPrefixOverview(ctx, resource)
+		return prefixoverview.NewClient(de.ripe).Get(ctx, resource)
 	case "getAddressSpaceHierarchy":
-		return addressspacehierarchy.GetAddressSpaceHierarchy(ctx, resource)
+		return addressspacehierarchy.NewClient(de.ripe).Get(ctx, resource)
 	case "getAllocationHistory":
-		return allocationhistory.GetAllocationHistory(ctx, resource)
+		return allocationhistory.NewClient(de.ripe).Get(ctx, resource)
 	case "getASPathLength":
-		return aspathlength.GetASPathLength(ctx, resource)
+		return aspathlength.NewClient(de.ripe).Get(ctx, resource)
 	case "getASRoutingConsistency":
-		return asroutingconsistency.GetASRoutingConsistency(ctx, resource)
+		return asroutingconsistency.NewClient(de.ripe).Get(ctx, resource)
 	default:
 		return nil, fmt.Errorf("unknown endpoint: %s", endpoint)
 	}
@@ -92,10 +105,11 @@ func (de *DirectExecutor) handleBGPUpdates(ctx context.Context, resource string,
 	if err != nil {
 		return nil, err
 	}
+	endpoint := bgpupdates.NewClient(de.ripe)
 	if opts == nil {
-		return bgpupdates.GetBGPUpdates(ctx, resource)
+		return endpoint.Get(ctx, resource)
 	}
-	return bgpupdates.DefaultClient().GetWithOptions(ctx, resource, opts)
+	return endpoint.GetWithOptions(ctx, resource, opts)
 }
 
 func bgpUpdateOptions(params map[string]interface{}, now time.Time) (*bgpupdates.GetOptions, error) {
@@ -131,10 +145,11 @@ func (de *DirectExecutor) handleRoutingHistory(ctx context.Context, resource str
 	endTime := getOptionalStringParam(params, "end_time")
 	maxResults := getOptionalIntParam(params, "max_results")
 
+	endpoint := routinghistory.NewClient(de.ripe)
 	if startTime != "" || endTime != "" || maxResults > 0 {
-		return routinghistory.GetRoutingHistoryWithOptions(ctx, resource, startTime, endTime, maxResults)
+		return endpoint.GetWithOptions(ctx, resource, startTime, endTime, maxResults)
 	}
-	return routinghistory.GetRoutingHistory(ctx, resource)
+	return endpoint.Get(ctx, resource)
 }
 
 func (de *DirectExecutor) handleRPKIValidation(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
@@ -142,24 +157,24 @@ func (de *DirectExecutor) handleRPKIValidation(ctx context.Context, resource str
 	if prefix == "" {
 		return nil, fmt.Errorf("prefix parameter is required for RPKI validation")
 	}
-	return rpkivalidation.GetRPKIValidation(ctx, resource, prefix)
+	return rpkivalidation.NewClient(de.ripe).Get(ctx, resource, prefix)
 }
 
 func (de *DirectExecutor) handleASNNeighbours(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
 	lod := getOptionalIntParam(params, "lod")
 	queryTime := getOptionalStringParam(params, "query_time")
-	return asnneighbours.GetASNNeighbours(ctx, resource, lod, queryTime)
+	return asnneighbours.NewClient(de.ripe).Get(ctx, resource, lod, queryTime)
 }
 
 func (de *DirectExecutor) handleLookingGlass(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
 	lookBackLimit := getOptionalIntParam(params, "look_back_limit")
-	return lookingglass.GetLookingGlass(ctx, resource, lookBackLimit)
+	return lookingglass.NewClient(de.ripe).Get(ctx, resource, lookBackLimit)
 }
 
 func (de *DirectExecutor) handleCountryASNs(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
 	lod := getOptionalIntParam(params, "lod")
 	opts := &countryasns.GetOptions{LOD: lod}
-	return countryasns.GetCountryASNs(ctx, resource, opts)
+	return countryasns.NewClient(de.ripe).Get(ctx, resource, opts)
 }
 
 func (de *DirectExecutor) handleBGPState(ctx context.Context, resource string, params map[string]interface{}) (interface{}, error) {
@@ -175,8 +190,7 @@ func (de *DirectExecutor) handleBGPState(ctx context.Context, resource string, p
 		opts.UnixTimestamps = unixTimestamps
 	}
 
-	client := bgpstate.DefaultClient()
-	return client.Get(ctx, opts)
+	return bgpstate.NewClient(de.ripe).Get(ctx, opts)
 }
 
 func getOptionalStringParam(params map[string]interface{}, key string) string {

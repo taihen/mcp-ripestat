@@ -17,6 +17,15 @@ func New(c *client.Client) *Client {
 	return &Client{client: c}
 }
 
+// NewClient wraps a process-lifetime RIPEstat client.
+// c must be non-nil; nil panics. DefaultClient still calls New with a fresh client.
+func NewClient(c *client.Client) *Client {
+	if c == nil {
+		panic("bgplay.NewClient: client is nil")
+	}
+	return New(c)
+}
+
 func (c *Client) Get(ctx context.Context, resource string) (*Response, error) {
 	if resource == "" {
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("resource parameter is required"))

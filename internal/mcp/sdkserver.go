@@ -16,6 +16,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/config"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
@@ -23,6 +25,8 @@ import (
 type SDKServer struct {
 	mcpServer         *mcp.Server
 	consolidatedTools *consolidated.Tools
+	ripeClient        *client.Client
+	executor          *consolidated.DirectExecutor
 	disableWhatsMyIP  bool
 	rateLimiter       *RateLimiter
 	allowLegacy       bool
@@ -44,12 +48,15 @@ func NewSDKServer(serverName, serverVersion string, disableWhatsMyIP bool) *SDKS
 	})
 	mcpServer.AddReceivingMiddleware(protocolResultMiddleware(ToolsListTTLMs, allowedVersions))
 
-	executor := consolidated.NewDirectExecutor()
+	ripeClient := client.NewWithConfig(config.DefaultConfig(), nil)
+	executor := consolidated.NewDirectExecutor(ripeClient)
 	consolidatedTools := consolidated.NewTools(executor)
 
 	s := &SDKServer{
 		mcpServer:         mcpServer,
 		consolidatedTools: consolidatedTools,
+		ripeClient:        ripeClient,
+		executor:          executor,
 		disableWhatsMyIP:  disableWhatsMyIP,
 		rateLimiter:       NewRateLimiter(DefaultRateLimitConfig()),
 		allowLegacy:       allowLegacy,
@@ -203,12 +210,15 @@ func (s *SDKServer) createConsolidatedToolHandler(toolName string) mcp.ToolHandl
 
 // handleGetWhatsMyIP handles the getWhatsMyIP tool call.
 func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Try to extract client IP from HTTP request context
+	if s.ripeClient == nil {
+		panic("mcp: ripe client is nil")
+	}
+	wip := whatsmyip.NewClient(s.ripeClient)
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
 		slog.Debug("extracted client IP from HTTP request", "client_ip", clientIP, "remote_addr", httpReq.RemoteAddr)
 
-		result, err := whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
+		result, err := wip.GetWithClientIP(ctx, clientIP)
 		if err != nil {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{&mcp.TextContent{Text: formatToolError(err)}},
@@ -218,8 +228,7 @@ func (s *SDKServer) handleGetWhatsMyIP(ctx context.Context, _ *mcp.CallToolReque
 		return createToolResultFromJSON(result), nil
 	}
 
-	// Fallback to server's IP
-	result, err := whatsmyip.GetWhatsMyIP(ctx)
+	result, err := wip.Get(ctx)
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: formatToolError(err)}},

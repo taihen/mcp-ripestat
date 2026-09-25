@@ -268,3 +268,28 @@ func TestGetWhois(t *testing.T) {
 		})
 	}
 }
+
+func TestNewClient_UsesProvidedClient(t *testing.T) {
+	ripe := client.New("https://stat.ripe.net", nil)
+	got := NewClient(ripe)
+	if got == nil || got.client != ripe {
+		t.Fatal("NewClient did not keep the provided client")
+	}
+	if New(ripe).client != got.client {
+		t.Fatal("NewClient and New wrapped different clients")
+	}
+}
+
+func TestNewClient_NilPanics(t *testing.T) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("NewClient(nil) did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "whois.NewClient: client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	NewClient(nil)
+}

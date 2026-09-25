@@ -101,9 +101,16 @@ func generateKey(endpoint string, params url.Values) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// getEndpointType maps a RIPEstat path to a DefaultTTLs key.
+// "/data/network-info/data.json" and "/data/network-info" both become "network-info".
 func getEndpointType(endpoint string) string {
-	if len(endpoint) > 6 && endpoint[:6] == "/data/" {
-		return endpoint[6:]
+	const dataPrefix = "/data/"
+	const dataSuffix = "/data.json"
+	if len(endpoint) >= len(dataPrefix) && endpoint[:len(dataPrefix)] == dataPrefix {
+		endpoint = endpoint[len(dataPrefix):]
+	}
+	if len(endpoint) >= len(dataSuffix) && endpoint[len(endpoint)-len(dataSuffix):] == dataSuffix {
+		endpoint = endpoint[:len(endpoint)-len(dataSuffix)]
 	}
 	return endpoint
 }

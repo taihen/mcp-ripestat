@@ -9,9 +9,23 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+func TestNewSDKServer_SharesOneClientWithExecutor(t *testing.T) {
+	server := NewSDKServer("test-server", "1.0.0", false)
+	if server.ripeClient == nil {
+		t.Fatal("ripeClient is nil")
+	}
+	if server.executor == nil || server.executor.RIPEClient() != server.ripeClient {
+		t.Fatal("executor client is not the server client")
+	}
+	if server.consolidatedTools == nil {
+		t.Fatal("consolidatedTools is nil")
+	}
+}
 
 func TestNewSDKServer(t *testing.T) {
 	t.Run("creates server with WhatsMyIP enabled", func(t *testing.T) {
@@ -668,6 +682,32 @@ func TestNewStreamableHTTPHandler(t *testing.T) {
 	if !ok {
 		t.Error("Expected handler to be of type *httpHandler")
 	}
+}
+
+func TestNewSDKServer_WhatsMyIPUsesSharedClient(t *testing.T) {
+	server := NewSDKServer("test-server", "1.0.0", false)
+	testWhatsMyIPSharedCache(t, server.ripeClient, func(ctx context.Context) (bool, error) {
+		result, err := server.handleGetWhatsMyIP(ctx, nil)
+		return result != nil && !result.IsError, err
+	})
+}
+
+func TestHandleGetWhatsMyIP_NilClientPanics(t *testing.T) {
+	server := NewSDKServer("test-server", "1.0.0", false)
+	server.ripeClient = nil
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("nil ripeClient did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "mcp: ripe client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	_, _ = server.handleGetWhatsMyIP(ctx, nil)
 }
 
 func TestHTTPRequestContext(t *testing.T) {

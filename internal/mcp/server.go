@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"github.com/taihen/mcp-ripestat/internal/mcp/consolidated"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/client"
+	"github.com/taihen/mcp-ripestat/internal/ripestat/config"
 	"github.com/taihen/mcp-ripestat/internal/ripestat/whatsmyip"
 )
 
@@ -137,6 +139,8 @@ type Server struct {
 	serverVersion     string
 	disableWhatsMyIP  bool
 	consolidatedTools *consolidated.Tools
+	ripeClient        *client.Client
+	executor          *consolidated.DirectExecutor
 
 	// mu protects the initialization state fields
 	mu                  sync.RWMutex
@@ -146,7 +150,8 @@ type Server struct {
 
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
 
-	executor := consolidated.NewDirectExecutor()
+	ripeClient := client.NewWithConfig(config.DefaultConfig(), nil)
+	executor := consolidated.NewDirectExecutor(ripeClient)
 	consolidatedTools := consolidated.NewTools(executor)
 
 	return &Server{
@@ -154,6 +159,8 @@ func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server 
 		serverVersion:     serverVersion,
 		disableWhatsMyIP:  disableWhatsMyIP,
 		consolidatedTools: consolidatedTools,
+		ripeClient:        ripeClient,
+		executor:          executor,
 	}
 }
 
@@ -433,24 +440,25 @@ func (s *Server) validateGetEndpointParams(endpointName string, args map[string]
 }
 
 func (s *Server) callWhatsMyIP(ctx context.Context, _ map[string]interface{}) (*ToolResult, error) {
-
+	if s.ripeClient == nil {
+		panic("mcp: ripe client is nil")
+	}
+	wip := whatsmyip.NewClient(s.ripeClient)
 	if httpReq, ok := HTTPRequestFromContext(ctx); ok {
-
 		clientIP := whatsmyip.ExtractClientIP(httpReq)
 		slog.Debug("extracted client IP from HTTP request", "client_ip", clientIP, "remote_addr", httpReq.RemoteAddr)
 
-		result, err := whatsmyip.GetWhatsMyIPWithClientIP(ctx, clientIP)
+		result, err := wip.GetWithClientIP(ctx, clientIP)
 		if err != nil {
 			return CreateToolResult(formatErrorMessage(err), true), nil
 		}
 		return CreateToolResultFromJSON(result), nil
 	}
 
-	result, err := whatsmyip.GetWhatsMyIP(ctx)
+	result, err := wip.Get(ctx)
 	if err != nil {
 		return CreateToolResult(formatErrorMessage(err), true), nil
 	}
-
 	return CreateToolResultFromJSON(result), nil
 }
 

@@ -6,9 +6,24 @@ import (
 	"errors"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestNewServer_SharesOneClientWithExecutor(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	if server.ripeClient == nil {
+		t.Fatal("ripeClient is nil")
+	}
+	if server.executor == nil || server.executor.RIPEClient() != server.ripeClient {
+		t.Fatal("executor client is not the server client")
+	}
+	if server.consolidatedTools == nil {
+		t.Fatal("consolidatedTools is nil")
+	}
+}
 
 func TestNewServer(t *testing.T) {
 	server := NewServer("test-server", "1.0.0", false)
@@ -1731,4 +1746,45 @@ func TestExecuteToolCall_UncoveredFunctions(t *testing.T) {
 	t.Run("analyzeRouting", func(t *testing.T) {
 		testBasicResourceTool(t, "analyzeRouting", "8.8.8.8")
 	})
+}
+
+func TestNewServer_WhatsMyIPUsesSharedClient(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	testWhatsMyIPSharedCache(t, server.ripeClient, func(ctx context.Context) (bool, error) {
+		result, err := server.callWhatsMyIP(ctx, nil)
+		return result != nil && !result.IsError, err
+	})
+}
+
+func TestServerSourceAvoidsWhatsMyIPPackageHelpers(t *testing.T) {
+	for _, name := range []string{"sdkserver.go", "server.go"} {
+		src, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := string(src)
+		for _, needle := range []string{"whatsmyip.GetWhatsMyIP", "client.DefaultClient("} {
+			if strings.Contains(text, needle) {
+				t.Errorf("%s still contains %q", name, needle)
+			}
+		}
+	}
+}
+
+func TestCallWhatsMyIP_NilClientPanics(t *testing.T) {
+	server := NewServer("test-server", "1.0.0", false)
+	server.ripeClient = nil
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("nil ripeClient did not panic")
+		}
+		msg, ok := recovered.(string)
+		if !ok || msg != "mcp: ripe client is nil" {
+			t.Fatalf("panic = %v", recovered)
+		}
+	}()
+	_, _ = server.callWhatsMyIP(ctx, nil)
 }

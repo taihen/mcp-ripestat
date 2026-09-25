@@ -116,8 +116,21 @@ func NewWithConfig(cfg *config.Config, httpClient HTTPDoer) *Client {
 	}
 }
 
+// DefaultClient returns a new RIPEstat client using config.DefaultConfig().
+// Every call allocates a new HTTP client and an empty LRU cache, so connection
+// pooling and response caching do not span calls. Tests and legacy package
+// helpers may use it. The MCP server must keep one client from NewWithConfig
+// for the process lifetime instead.
 func DefaultClient() *Client {
 	return NewWithConfig(config.DefaultConfig(), nil)
+}
+
+func cloneValues(params url.Values) url.Values {
+	cloned := make(url.Values, len(params))
+	for key, values := range params {
+		cloned[key] = append([]string(nil), values...)
+	}
+	return cloned
 }
 
 func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*http.Response, error) {
@@ -127,10 +140,7 @@ func (c *Client) Get(ctx context.Context, endpoint string, params url.Values) (*
 		return nil, errors.ErrInvalidParameter.WithError(fmt.Errorf("failed to parse URL: %w", err))
 	}
 
-	if params == nil {
-		params = url.Values{}
-	}
-
+	params = cloneValues(params)
 	if c.SourceApp != "" {
 		params.Set("sourceapp", c.SourceApp)
 	}
@@ -303,7 +313,9 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	}
 
 	if c.Cache != nil {
-		c.Cache.Set(ctx, endpoint, params, target)
+		// Cache the wire body so callers cannot mutate the LRU entry and we
+		// avoid a second marshal of the typed target.
+		c.Cache.Set(ctx, endpoint, params, json.RawMessage(append([]byte(nil), body...)))
 		c.Logger.Debug("Cached response for endpoint %s", endpoint)
 	}
 
@@ -312,12 +324,17 @@ func (c *Client) GetJSON(ctx context.Context, endpoint string, params url.Values
 	return nil
 }
 
+// extractEndpointType maps a RIPEstat path to a short label for metrics.
+// "/data/network-info/data.json" becomes "network-info".
 func extractEndpointType(endpoint string) string {
-
-	if len(endpoint) > 6 && endpoint[:6] == "/data/" {
-		return endpoint[6:]
+	const dataPrefix = "/data/"
+	const dataSuffix = "/data.json"
+	if len(endpoint) >= len(dataPrefix) && endpoint[:len(dataPrefix)] == dataPrefix {
+		endpoint = endpoint[len(dataPrefix):]
 	}
-
+	if len(endpoint) >= len(dataSuffix) && endpoint[len(endpoint)-len(dataSuffix):] == dataSuffix {
+		endpoint = endpoint[:len(endpoint)-len(dataSuffix)]
+	}
 	return endpoint
 }
 
