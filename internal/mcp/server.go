@@ -140,6 +140,7 @@ type Server struct {
 	disableWhatsMyIP  bool
 	consolidatedTools *consolidated.Tools
 	ripeClient        *client.Client
+	executor          *consolidated.DirectExecutor
 
 	// mu protects the initialization state fields
 	mu                  sync.RWMutex
@@ -150,7 +151,8 @@ type Server struct {
 func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server {
 
 	ripeClient := client.NewWithConfig(config.DefaultConfig(), nil)
-	consolidatedTools := consolidated.NewTools(consolidated.NewDirectExecutor(ripeClient))
+	executor := consolidated.NewDirectExecutor(ripeClient)
+	consolidatedTools := consolidated.NewTools(executor)
 
 	return &Server{
 		serverName:        serverName,
@@ -158,6 +160,7 @@ func NewServer(serverName, serverVersion string, disableWhatsMyIP bool) *Server 
 		disableWhatsMyIP:  disableWhatsMyIP,
 		consolidatedTools: consolidatedTools,
 		ripeClient:        ripeClient,
+		executor:          executor,
 	}
 }
 

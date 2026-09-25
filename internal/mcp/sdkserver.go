@@ -26,6 +26,7 @@ type SDKServer struct {
 	mcpServer         *mcp.Server
 	consolidatedTools *consolidated.Tools
 	ripeClient        *client.Client
+	executor          *consolidated.DirectExecutor
 	disableWhatsMyIP  bool
 	rateLimiter       *RateLimiter
 	allowLegacy       bool
@@ -48,12 +49,14 @@ func NewSDKServer(serverName, serverVersion string, disableWhatsMyIP bool) *SDKS
 	mcpServer.AddReceivingMiddleware(protocolResultMiddleware(ToolsListTTLMs, allowedVersions))
 
 	ripeClient := client.NewWithConfig(config.DefaultConfig(), nil)
-	consolidatedTools := consolidated.NewTools(consolidated.NewDirectExecutor(ripeClient))
+	executor := consolidated.NewDirectExecutor(ripeClient)
+	consolidatedTools := consolidated.NewTools(executor)
 
 	s := &SDKServer{
 		mcpServer:         mcpServer,
 		consolidatedTools: consolidatedTools,
 		ripeClient:        ripeClient,
+		executor:          executor,
 		disableWhatsMyIP:  disableWhatsMyIP,
 		rateLimiter:       NewRateLimiter(DefaultRateLimitConfig()),
 		allowLegacy:       allowLegacy,

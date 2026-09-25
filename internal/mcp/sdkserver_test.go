@@ -19,6 +19,9 @@ func TestNewSDKServer_SharesOneClientWithExecutor(t *testing.T) {
 	if server.ripeClient == nil {
 		t.Fatal("ripeClient is nil")
 	}
+	if server.executor == nil || server.executor.RIPEClient() != server.ripeClient {
+		t.Fatal("executor client is not the server client")
+	}
 	if server.consolidatedTools == nil {
 		t.Fatal("consolidatedTools is nil")
 	}
@@ -682,34 +685,11 @@ func TestNewStreamableHTTPHandler(t *testing.T) {
 }
 
 func TestNewSDKServer_WhatsMyIPUsesSharedClient(t *testing.T) {
-	var hits int
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits++
-		if r.URL.Path != "/data/whats-my-ip/data.json" {
-			t.Errorf("path = %q", r.URL.Path)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"ok","status_code":200,"data":{"ip":"203.0.113.5"},"time":"2026-09-24T12:00:00"}`))
-	}))
-	defer ts.Close()
-
 	server := NewSDKServer("test-server", "1.0.0", false)
-	server.ripeClient.BaseURL = ts.URL
-	server.ripeClient.HTTPClient = ts.Client()
-	server.ripeClient.RetryConfig.RetryCount = 0
-
-	ctx := context.Background()
-	first, err := server.handleGetWhatsMyIP(ctx, nil)
-	if err != nil || first == nil || first.IsError {
-		t.Fatalf("first handleGetWhatsMyIP = (%v, %v)", first, err)
-	}
-	second, err := server.handleGetWhatsMyIP(ctx, nil)
-	if err != nil || second == nil || second.IsError {
-		t.Fatalf("second handleGetWhatsMyIP = (%v, %v)", second, err)
-	}
-	if hits != 1 {
-		t.Fatalf("whats-my-ip upstream hits = %d, want 1", hits)
-	}
+	testWhatsMyIPSharedCache(t, server.ripeClient, func(ctx context.Context) (bool, error) {
+		result, err := server.handleGetWhatsMyIP(ctx, nil)
+		return result != nil && !result.IsError, err
+	})
 }
 
 func TestHandleGetWhatsMyIP_NilClientPanics(t *testing.T) {
