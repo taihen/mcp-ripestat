@@ -1022,6 +1022,16 @@ func TestOptimizedHTTPClientConfiguration(t *testing.T) {
 		t.Error("Expected ForceAttemptHTTP2 to be true")
 	}
 
+	if transport.HTTP2 == nil {
+		t.Fatal("Expected HTTP2 config to be set from defaults")
+	}
+	if transport.HTTP2.SendPingTimeout != cfg.HTTP2ReadIdleTimeout {
+		t.Errorf("Expected SendPingTimeout %v, got %v", cfg.HTTP2ReadIdleTimeout, transport.HTTP2.SendPingTimeout)
+	}
+	if transport.HTTP2.PingTimeout != cfg.HTTP2PingTimeout {
+		t.Errorf("Expected PingTimeout %v, got %v", cfg.HTTP2PingTimeout, transport.HTTP2.PingTimeout)
+	}
+
 	// Verify other performance settings
 	if transport.DisableCompression {
 		t.Error("Expected compression to be enabled")
@@ -1032,35 +1042,111 @@ func TestOptimizedHTTPClientConfiguration(t *testing.T) {
 	}
 }
 
-// TestHTTP2Support tests HTTP/2 support functionality.
+func TestHTTP2ConfigFrom(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		readIdle    time.Duration
+		pingTimeout time.Duration
+		want        *http.HTTP2Config
+	}{
+		{
+			name:        "both positive",
+			readIdle:    30 * time.Second,
+			pingTimeout: 15 * time.Second,
+			want: &http.HTTP2Config{
+				SendPingTimeout: 30 * time.Second,
+				PingTimeout:     15 * time.Second,
+			},
+		},
+		{
+			name:     "only read idle",
+			readIdle: 45 * time.Second,
+			want:     &http.HTTP2Config{SendPingTimeout: 45 * time.Second},
+		},
+		{
+			name:        "only ping timeout has no effect",
+			pingTimeout: 20 * time.Second,
+		},
+		{
+			name: "both zero",
+		},
+		{
+			name:        "negative ignored",
+			readIdle:    -1 * time.Second,
+			pingTimeout: -5 * time.Second,
+		},
+		{
+			name:        "negative read idle disables health checks",
+			readIdle:    -1 * time.Second,
+			pingTimeout: 10 * time.Second,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := http2ConfigFrom(&config.Config{
+				HTTP2ReadIdleTimeout: tt.readIdle,
+				HTTP2PingTimeout:     tt.pingTimeout,
+			})
+			if tt.want == nil {
+				if got != nil {
+					t.Fatalf("expected nil, got %+v", got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatal("expected HTTP2Config, got nil")
+			}
+			if got.SendPingTimeout != tt.want.SendPingTimeout || got.PingTimeout != tt.want.PingTimeout {
+				t.Errorf("got SendPingTimeout=%v PingTimeout=%v, want SendPingTimeout=%v PingTimeout=%v",
+					got.SendPingTimeout, got.PingTimeout, tt.want.SendPingTimeout, tt.want.PingTimeout)
+			}
+		})
+	}
+}
+
+// TestHTTP2Support covers createOptimizedHTTPClient wiring that unit tests of
+// http2ConfigFrom alone do not: ForceHTTP2 independence and nil omission.
 func TestHTTP2Support(t *testing.T) {
-	t.Run("HTTP2Enabled", func(t *testing.T) {
-		cfg := config.DefaultConfig().WithForceHTTP2(true)
-		client := createOptimizedHTTPClient(cfg)
-
-		transport, ok := client.Transport.(*http.Transport)
-		if !ok {
-			t.Fatal("Expected *http.Transport")
-		}
-
-		if !transport.ForceAttemptHTTP2 {
-			t.Error("Expected HTTP/2 to be enabled")
-		}
-	})
-
-	t.Run("HTTP2Disabled", func(t *testing.T) {
-		cfg := config.DefaultConfig().WithForceHTTP2(false)
-		client := createOptimizedHTTPClient(cfg)
-
-		transport, ok := client.Transport.(*http.Transport)
-		if !ok {
-			t.Fatal("Expected *http.Transport")
-		}
+	t.Run("ForceHTTP2FalseStillWiresHealthChecks", func(t *testing.T) {
+		transport := optimizedTransport(t, config.DefaultConfig().WithForceHTTP2(false))
 
 		if transport.ForceAttemptHTTP2 {
-			t.Error("Expected HTTP/2 to be disabled")
+			t.Error("Expected ForceAttemptHTTP2 to be false")
+		}
+		// ForceHTTP2 only controls ForceAttemptHTTP2; health-check timeouts
+		// still apply to opportunistic HTTP/2.
+		if transport.HTTP2 == nil {
+			t.Fatal("Expected HTTP2 health-check config independent of ForceHTTP2")
 		}
 	})
+
+	t.Run("ZeroTimeoutsOmitHTTP2Config", func(t *testing.T) {
+		transport := optimizedTransport(t, &config.Config{
+			Timeout:             30 * time.Second,
+			MaxIdleConns:        1,
+			MaxIdleConnsPerHost: 1,
+			MaxConnsPerHost:     1,
+			IdleConnTimeout:     90 * time.Second,
+			ForceHTTP2:          true,
+		})
+		if transport.HTTP2 != nil {
+			t.Fatalf("Expected nil HTTP2 config when timeouts unset, got %+v", transport.HTTP2)
+		}
+	})
+}
+
+func optimizedTransport(t *testing.T, cfg *config.Config) *http.Transport {
+	t.Helper()
+	client := createOptimizedHTTPClient(cfg)
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("Expected *http.Transport")
+	}
+	return transport
 }
 
 // TestConnectionPoolingBehavior tests connection pooling behavior under load.
