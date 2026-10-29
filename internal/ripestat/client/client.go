@@ -23,6 +23,23 @@ var ripeLimiter = make(chan struct{}, 7)
 // cannot bypass the limit.
 const MaxResponseBodyBytes int64 = 16 << 20
 
+// http2ConfigFrom maps positive HTTP/2 health-check timeouts from cfg onto
+// http.HTTP2Config. Returns nil unless HTTP2ReadIdleTimeout is positive,
+// because SendPingTimeout==0 disables health checks and PingTimeout alone
+// has no effect. Independent of ForceHTTP2 so opportunistic h2 still gets
+// health checks when a read-idle timeout is configured.
+func http2ConfigFrom(cfg *config.Config) *http.HTTP2Config {
+	if cfg.HTTP2ReadIdleTimeout <= 0 {
+		return nil
+	}
+
+	h2 := &http.HTTP2Config{SendPingTimeout: cfg.HTTP2ReadIdleTimeout}
+	if cfg.HTTP2PingTimeout > 0 {
+		h2.PingTimeout = cfg.HTTP2PingTimeout
+	}
+	return h2
+}
+
 func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 
 	transport := &http.Transport{
@@ -40,6 +57,7 @@ func createOptimizedHTTPClient(cfg *config.Config) *http.Client {
 		ExpectContinueTimeout: 1 * time.Second,
 
 		ForceAttemptHTTP2: cfg.ForceHTTP2,
+		HTTP2:             http2ConfigFrom(cfg),
 	}
 
 	return &http.Client{
