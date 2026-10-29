@@ -19,6 +19,7 @@ bin/
 *.swp
 *.swo
 local/
+docs/
 
 # OS specific files
 .DS_Store
