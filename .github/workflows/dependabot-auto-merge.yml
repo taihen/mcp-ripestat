@@ -1,6 +1,10 @@
 name: Dependabot Auto Merge
+# pull_request, not pull_request_target: GitHub's default event policy blocks
+# pull_request_target in public repos from 2026-12-02, and Dependabot's token is
+# read-only by default but elevatable through the permissions: key. No pull
+# request code is checked out here.
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
